@@ -144,8 +144,9 @@ def fetch_candidates(plan: RetrievalPlan) -> list[KBCandidate]:
         4. Return sorted by retrieval_score desc.
     """
     raise NotImplementedError(
-        "fetch_candidates() — STUB.  "
-        "FAISS retrieval implementation pending (feature/threat-agent-retrieval, Week 2)."
+        "fetch_candidates() — STUB. "
+        "FAISS retrieval implementation pending "
+        "(feature/threat-agent-retrieval, Week 2)."
     )
 
 
