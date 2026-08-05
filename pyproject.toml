@@ -1,77 +1,35 @@
-[build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
-
 [project]
 name = "trc-engine"
 version = "0.1.0"
-description = "Threat-Risk-Compliance Engine — Phase 1: Threat Agent"
+description = "AI-Assisted Threat–Risk–Compliance Engine — Phase 1: Threat Agent"
 requires-python = ">=3.11"
-dependencies = [
-    "pydantic==2.7.4",
-    "pydantic-settings==2.3.4",
-    "fastapi==0.111.1",
-    "uvicorn[standard]==0.30.1",
-]
 
-[project.optional-dependencies]
-dev = [
-    "pytest==8.2.2",
-    "pytest-asyncio==0.23.7",
-    "ruff==0.4.10",
-]
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["agents*", "scrp*", "common*", "config*"]
-
-# ---------------------------------------------------------------------------
-# ruff configuration
-# ---------------------------------------------------------------------------
 [tool.ruff]
 target-version = "py311"
-line-length = 100
+line-length = 88
+exclude = ["docs/"]
 
 [tool.ruff.lint]
-select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "N",   # pep8-naming
-    "UP",  # pyupgrade
-    "B",   # flake8-bugbear
-    "ANN", # flake8-annotations (type hints)
-    "S",   # flake8-bandit (security)
-    "RUF", # ruff-specific rules
-]
+# Rule sets active for this project (Day-1 agreed baseline)
+#   E/W  – pycodestyle errors & warnings
+#   F    – Pyflakes (unused imports, undefined names, etc.)
+#   I    – isort (import ordering)
+#   N    – pep8-naming
+#   UP   – pyupgrade (modern Python idioms)
+#   B    – flake8-bugbear (likely bugs & design issues)
+#   SIM  – flake8-simplify
+#   ANN  – flake8-annotations (type hint coverage enforcement)
+#   S    – flake8-bandit (security checks — critical for a cybersecurity project)
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "ANN", "S"]
 ignore = [
-    "ANN101", # Missing type annotation for `self`
-    "ANN102", # Missing type annotation for `cls`
-    "S101",   # Use of `assert` — allowed in tests
+    "S101",    # 'assert' — allow in test files (bandit)
+    "UP042",   # StrEnum is preferred by UP042, but str+Enum is used intentionally
+               # for Pydantic v2 StrEnum serialization compatibility — suppress globally
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = [
-    "ANN",  # type hints in tests are optional
-    "S101", # assert is fine in pytest
-]
-# schemas.py uses Unicode box-drawing chars and arrow symbols in section banners.
-# These are intentional decorative formatting — suppress the ambiguous-Unicode rules.
-"agents/threat_agent/schemas.py" = [
-    "E501",   # long decorative Unicode section-banner lines throughout the file
-    "RUF002", # ambiguous Unicode in docstrings (box-drawing / arrow chars)
-    "RUF003", # ambiguous Unicode in comments (box-drawing / arrow chars)
-    "W291",   # trailing whitespace from multi-byte Unicode arrow sequences
-]
+"tests/**" = ["S101", "ANN"]   # asserts + unannotated test helpers are fine
 
-
-
-# ---------------------------------------------------------------------------
-# pytest configuration
-# ---------------------------------------------------------------------------
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
