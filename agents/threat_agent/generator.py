@@ -68,7 +68,29 @@ from agents.threat_agent.schemas import (
 if TYPE_CHECKING:
     pass  # future: import common.llm_client types here when Manthan's module lands
 
-logger = logging.getLogger(__name__)
+try:
+    from common.logging import get_logger, log_step
+
+    logger = get_logger(__name__)
+except ImportError:
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    def log_step(
+        logger: logging.Logger,
+        level: str,
+        step: str,
+        run_id: str,
+        payload: dict | None = None,
+    ) -> None:
+        """Fallback log_step implementation until common.logging is on develop."""
+        record = {
+            "step": step,
+            "run_id": run_id,
+            "payload": payload or {},
+        }
+        getattr(logger, level.lower())(json.dumps(record))
 
 # ─── Configuration constants (all overridable via environment variables) ──────
 
@@ -245,10 +267,10 @@ def _call_llm(system_prompt: str, user_prompt: str, run_id: str) -> str:
         Raw string response from the LLM (expected to be valid JSON).
 
     Raises:
-        common.llm_client.LLMTimeoutError:    On request timeout.
-        common.llm_client.LLMRateLimitError:  After backoff exhausted.
-        common.llm_client.LLMCostCeilingError: If per-run token budget exceeded.
-        LLMResponseError:  If the response cannot be decoded as UTF-8 text.
+        common.llm_client.LLMTimeoutError: On request timeout.
+        common.llm_client.LLMAPIError: On rate-limit / API errors
+            (exponential backoff exhausted).
+        LLMResponseError: If the response cannot be decoded as UTF-8 text.
 
     TODO (Manthan):
         Replace this stub body with:
@@ -265,19 +287,17 @@ def _call_llm(system_prompt: str, user_prompt: str, run_id: str) -> str:
     """
     # STUB — logs the call and raises NotImplementedError so integration
     # tests that mock this function work without a live API key.
-    logger.info(
-        json.dumps(
-            {
-                "step": "llm_call_stub",
-                "run_id": run_id,
-                "payload": {
-                    "model": LLM_MODEL,
-                    "temperature": LLM_TEMPERATURE,
-                    "prompt_template_version": PROMPT_TEMPLATE_VERSION,
-                    "status": "stub",
-                },
-            }
-        )
+    log_step(
+        logger,
+        "INFO",
+        "llm_call_stub",
+        run_id,
+        {
+            "model": LLM_MODEL,
+            "temperature": LLM_TEMPERATURE,
+            "prompt_template_version": PROMPT_TEMPLATE_VERSION,
+            "status": "stub",
+        },
     )
     raise NotImplementedError(
         "_call_llm() is a stub.  "
@@ -479,22 +499,20 @@ def generate_scenarios(
         )
 
     # Structured log entry: Observe step start (Section 2.9 format)
-    logger.info(
-        json.dumps(
-            {
-                "step": "observe_start",
-                "run_id": run_id,
-                "payload": {
-                    "path_count": len(paths),
-                    "kb_snapshot_version": context.kb_snapshot_version,
-                    "prompt_template_version": PROMPT_TEMPLATE_VERSION,
-                    "model": LLM_MODEL,
-                    "temperature": LLM_TEMPERATURE,
-                    "retry": validation_failure_context is not None,
-                    "status": "started",
-                },
-            }
-        )
+    log_step(
+        logger,
+        "INFO",
+        "observe_start",
+        run_id,
+        {
+            "path_count": len(paths),
+            "kb_snapshot_version": context.kb_snapshot_version,
+            "prompt_template_version": PROMPT_TEMPLATE_VERSION,
+            "model": LLM_MODEL,
+            "temperature": LLM_TEMPERATURE,
+            "retry": validation_failure_context is not None,
+            "status": "started",
+        },
     )
 
     system_prompt = _build_system_prompt()
@@ -517,19 +535,17 @@ def generate_scenarios(
     for path in paths:
         user_prompt = retry_preamble + _build_user_prompt(path, context)
 
-        logger.info(
-            json.dumps(
-                {
-                    "step": "llm_call_start",
-                    "run_id": run_id,
-                    "payload": {
-                        "path_id": path.path_id,
-                        "step_count": len(path.steps),
-                        "is_forced": path.is_forced,
-                        "status": "pending",
-                    },
-                }
-            )
+        log_step(
+            logger,
+            "INFO",
+            "llm_call_start",
+            run_id,
+            {
+                "path_id": path.path_id,
+                "step_count": len(path.steps),
+                "is_forced": path.is_forced,
+                "status": "pending",
+            },
         )
 
         raw_response = _call_llm(system_prompt, user_prompt, run_id)
@@ -541,31 +557,27 @@ def generate_scenarios(
             scenarios.append(scenario)
             seq += 1
 
-        logger.info(
-            json.dumps(
-                {
-                    "step": "observe_path_complete",
-                    "run_id": run_id,
-                    "payload": {
-                        "path_id": path.path_id,
-                        "scenarios_produced": len(items),
-                        "status": "ok",
-                    },
-                }
-            )
+        log_step(
+            logger,
+            "INFO",
+            "observe_path_complete",
+            run_id,
+            {
+                "path_id": path.path_id,
+                "scenarios_produced": len(items),
+                "status": "ok",
+            },
         )
 
-    logger.info(
-        json.dumps(
-            {
-                "step": "observe_end",
-                "run_id": run_id,
-                "payload": {
-                    "total_scenarios": len(scenarios),
-                    "status": "ok",
-                },
-            }
-        )
+    log_step(
+        logger,
+        "INFO",
+        "observe_end",
+        run_id,
+        {
+            "total_scenarios": len(scenarios),
+            "status": "ok",
+        },
     )
 
     return scenarios
