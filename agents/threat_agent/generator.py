@@ -55,6 +55,7 @@ import os
 import uuid
 from typing import TYPE_CHECKING
 
+from agents.threat_agent.exceptions import EmptyAttackPathError
 from agents.threat_agent.schemas import (
     AttackPath,
     EvidenceChain,
@@ -118,18 +119,6 @@ class LLMResponseError(ValueError):
     Not the same as a transport/timeout error, which is raised by
     common/llm_client.py and propagates unchanged to the caller.
     """
-
-
-try:
-    from agents.threat_agent.exceptions import EmptyAttackPathError
-except ImportError:
-
-    class EmptyAttackPathError(ValueError):
-        """Raised when generate_scenarios() receives an empty attack-path list.
-
-        An empty list means retrieval found nothing for the system model, which
-        is a hard error per build plan §5 — not a silent no-op.
-        """
 
 
 # ─── Prompt construction ──────────────────────────────────────────────────────
