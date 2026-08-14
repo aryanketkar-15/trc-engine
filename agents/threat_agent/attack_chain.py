@@ -74,9 +74,9 @@ from __future__ import annotations
 
 import math
 import uuid
+from typing import Final
 
 from common.logging import get_logger, log_step
-from typing import Final
 
 from agents.threat_agent.exceptions import (
     EmptyAttackPathError,
