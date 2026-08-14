@@ -98,12 +98,16 @@ class LLMResponseError(ValueError):
     """
 
 
-class EmptyAttackPathError(ValueError):
-    """Raised when generate_scenarios() receives an empty attack-path list.
+try:
+    from agents.threat_agent.exceptions import EmptyAttackPathError
+except ImportError:
 
-    An empty list means retrieval found nothing for the system model, which
-    is a hard error per build plan §5 — not a silent no-op.
-    """
+    class EmptyAttackPathError(ValueError):
+        """Raised when generate_scenarios() receives an empty attack-path list.
+
+        An empty list means retrieval found nothing for the system model, which
+        is a hard error per build plan §5 — not a silent no-op.
+        """
 
 
 # ─── Prompt construction ──────────────────────────────────────────────────────
@@ -264,14 +268,14 @@ def _call_llm(system_prompt: str, user_prompt: str, run_id: str) -> str:
     logger.info(
         json.dumps(
             {
+                "step": "llm_call_stub",
                 "run_id": run_id,
-                "module": "generator",
-                "step": "observe",
-                "event": "llm_call_stub",
-                "model": LLM_MODEL,
-                "temperature": LLM_TEMPERATURE,
-                "prompt_template_version": PROMPT_TEMPLATE_VERSION,
-                "status": "stub",
+                "payload": {
+                    "model": LLM_MODEL,
+                    "temperature": LLM_TEMPERATURE,
+                    "prompt_template_version": PROMPT_TEMPLATE_VERSION,
+                    "status": "stub",
+                },
             }
         )
     )
@@ -478,17 +482,17 @@ def generate_scenarios(
     logger.info(
         json.dumps(
             {
+                "step": "observe_start",
                 "run_id": run_id,
-                "module": "generator",
-                "step": "observe",
-                "event": "generation_start",
-                "path_count": len(paths),
-                "kb_snapshot_version": context.kb_snapshot_version,
-                "prompt_template_version": PROMPT_TEMPLATE_VERSION,
-                "model": LLM_MODEL,
-                "temperature": LLM_TEMPERATURE,
-                "retry": validation_failure_context is not None,
-                "status": "started",
+                "payload": {
+                    "path_count": len(paths),
+                    "kb_snapshot_version": context.kb_snapshot_version,
+                    "prompt_template_version": PROMPT_TEMPLATE_VERSION,
+                    "model": LLM_MODEL,
+                    "temperature": LLM_TEMPERATURE,
+                    "retry": validation_failure_context is not None,
+                    "status": "started",
+                },
             }
         )
     )
@@ -516,14 +520,14 @@ def generate_scenarios(
         logger.info(
             json.dumps(
                 {
+                    "step": "llm_call_start",
                     "run_id": run_id,
-                    "module": "generator",
-                    "step": "observe",
-                    "event": "llm_call_start",
-                    "path_id": path.path_id,
-                    "step_count": len(path.steps),
-                    "is_forced": path.is_forced,
-                    "status": "pending",
+                    "payload": {
+                        "path_id": path.path_id,
+                        "step_count": len(path.steps),
+                        "is_forced": path.is_forced,
+                        "status": "pending",
+                    },
                 }
             )
         )
@@ -540,13 +544,13 @@ def generate_scenarios(
         logger.info(
             json.dumps(
                 {
+                    "step": "observe_path_complete",
                     "run_id": run_id,
-                    "module": "generator",
-                    "step": "observe",
-                    "event": "path_complete",
-                    "path_id": path.path_id,
-                    "scenarios_produced": len(items),
-                    "status": "ok",
+                    "payload": {
+                        "path_id": path.path_id,
+                        "scenarios_produced": len(items),
+                        "status": "ok",
+                    },
                 }
             )
         )
@@ -554,12 +558,12 @@ def generate_scenarios(
     logger.info(
         json.dumps(
             {
+                "step": "observe_end",
                 "run_id": run_id,
-                "module": "generator",
-                "step": "observe",
-                "event": "generation_complete",
-                "total_scenarios": len(scenarios),
-                "status": "ok",
+                "payload": {
+                    "total_scenarios": len(scenarios),
+                    "status": "ok",
+                },
             }
         )
     )
@@ -576,18 +580,15 @@ def generate_from_candidates(
     *,
     validation_failure_context: list[str] | None = None,
 ) -> list[ThreatScenario]:
-    """Thin wrapper that converts a flat list of KBCandidates into single-step
-    AttackPaths and delegates to generate_scenarios().
+    """Test-only convenience wrapper that converts a flat list of KBCandidates
+    into single-step AttackPaths and delegates to generate_scenarios().
 
-    Use this when attack_chain.py is not yet available (early integration /
-    unit testing) or when the caller has raw candidates without chain analysis.
-
-    TODO (validate with Aryan + Shriraj):
-        Once attack_chain.py is merged to develop, confirm whether the
-        integration path is:
-          (A) retrieval → attack_chain → generate_scenarios()  [preferred], OR
-          (B) retrieval → generate_from_candidates()           [fallback only]
-        Remove this function if path (A) is always used in production.
+    Note (Architecture confirmation from Aryan):
+        The production pipeline is mandatory:
+            retrieval.fetch_candidates() -> attack_chain.build_paths()
+            -> generate_scenarios()
+        generate_from_candidates() is TEST-ONLY / fallback for unit testing
+        without running full chain analysis. It is NOT a production entry point.
 
     Args:
         candidates:
