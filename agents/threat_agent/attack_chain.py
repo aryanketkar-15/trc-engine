@@ -72,9 +72,10 @@ DO NOT merge to develop until stubs are replaced.
 
 from __future__ import annotations
 
-import logging
 import math
 import uuid
+
+from common.logging import get_logger, log_step
 from typing import Final
 
 from agents.threat_agent.exceptions import (
@@ -87,7 +88,7 @@ from agents.threat_agent.schemas import (
     STRIDECategory,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # § 0  —  Constants
@@ -320,10 +321,12 @@ def build_paths(
             )
         )
 
-    logger.info(
-        '{"step": "chain_start", "run_id": "%s", "candidate_count": %d}',
+    log_step(
+        logger,
+        "INFO",
+        "chain_start",
         system_input.run_id,
-        len(candidates),
+        {"candidate_count": len(candidates)},
     )
 
     # ── STUB — real implementation Week 2 ────────────────────────────────────
