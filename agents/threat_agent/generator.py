@@ -50,7 +50,6 @@ TODO (validate against retrieval.py once it lands on develop):
 from __future__ import annotations
 
 import json
-import logging
 import os
 import uuid
 from typing import TYPE_CHECKING
@@ -67,31 +66,11 @@ from agents.threat_agent.schemas import (
 )
 
 if TYPE_CHECKING:
-    pass  # future: import common.llm_client types here when Manthan's module lands
+    pass  # common.llm_client types — wire here when replacing _call_llm() stub
 
-try:
-    from common.logging import get_logger, log_step
+from common.logging import get_logger, log_step
 
-    logger = get_logger(__name__)
-except ImportError:
-    import logging
-
-    logger = logging.getLogger(__name__)
-
-    def log_step(
-        logger: logging.Logger,
-        level: str,
-        step: str,
-        run_id: str,
-        payload: dict | None = None,
-    ) -> None:
-        """Fallback log_step implementation until common.logging is on develop."""
-        record = {
-            "step": step,
-            "run_id": run_id,
-            "payload": payload or {},
-        }
-        getattr(logger, level.lower())(json.dumps(record))
+logger = get_logger(__name__)
 
 # ─── Configuration constants (all overridable via environment variables) ──────
 
