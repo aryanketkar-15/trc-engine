@@ -36,10 +36,12 @@ from agents.threat_agent.exceptions import (
     MalformedAssetInputError,
 )
 from agents.threat_agent.schemas import (
+    AssetModel,
     KBCandidate,
     KBSource,
     RetrievalPlan,
     STRIDECategory,
+    ThreatAgentInput,
 )
 from common.logging import get_logger, log_step
 
@@ -273,6 +275,163 @@ def _filter_by_sources(
     """Filter candidates to only those from the requested KB sources."""
     allowed = {KBSource(s) for s in kb_sources}
     return [c for c in candidates if c.source in allowed]
+
+
+# ─── Retrieval Plan builder (plan() step) ────────────────────────────────────
+
+
+# KB sources always included regardless of asset type
+_CORE_SOURCES: frozenset[str] = frozenset({"CAPEC", "STRIDE"})
+
+# Keywords that trigger ATT&CK inclusion
+_ATTCK_TYPE_KEYWORDS: frozenset[str] = frozenset(
+    {"api", "rest", "network", "cloud", "web", "http", "backend", "server", "endpoint"}
+)
+
+# Keywords that trigger CWE inclusion
+_CWE_TYPE_KEYWORDS: frozenset[str] = frozenset(
+    {"firmware", "embedded", "ota", "bootloader", "software", "driver", "kernel"}
+)
+
+# Interface keywords that force full KB coverage
+_WIRELESS_INTERFACE_KEYWORDS: frozenset[str] = frozenset(
+    {
+        "ble", "bluetooth", "wifi", "wi-fi", "wireless",
+        "zigbee", "zwave", "rf", "lte", "5g",
+    }
+)
+
+
+def _select_kb_sources(asset: AssetModel) -> list[str]:
+    """Derive relevant KB source set for an asset based on its type and interfaces.
+
+    Logic (deterministic, no LLM):
+    - CAPEC + STRIDE always included — they cover all attack categories.
+    - ATT&CK added for network-facing / API / cloud assets.
+    - CWE added for firmware / embedded / software assets.
+    - Wireless interfaces (BLE, WiFi, etc.) trigger ATT&CK + CWE coverage.
+    - Untrusted trust zone triggers full coverage (all 4 sources).
+
+    Args:
+        asset: The AssetModel to classify.
+
+    Returns:
+        Sorted list of KB source strings
+        (e.g. ``['ATT&CK', 'CAPEC', 'CWE', 'STRIDE']``).
+    """
+    sources: set[str] = set(_CORE_SOURCES)
+
+    asset_type_lower = asset.asset_type.lower()
+
+    if any(kw in asset_type_lower for kw in _ATTCK_TYPE_KEYWORDS):
+        sources.add("ATT&CK")
+
+    if any(kw in asset_type_lower for kw in _CWE_TYPE_KEYWORDS):
+        sources.add("CWE")
+
+    for iface in asset.interfaces:
+        iface_lower = iface.lower()
+        if any(kw in iface_lower for kw in _WIRELESS_INTERFACE_KEYWORDS):
+            sources.update({"ATT&CK", "CWE"})
+        if any(kw in iface_lower for kw in {"http", "rest", "api", "https", "grpc"}):
+            sources.add("ATT&CK")
+
+    if asset.trust_zone.lower() in {"untrusted", "external"}:
+        sources.update({"ATT&CK", "CWE"})
+
+    return sorted(sources)
+
+
+def _build_query_text(asset: AssetModel) -> str:
+    """Construct a semantic FAISS query string from an asset's properties.
+
+    Concatenates name, type, interfaces, and key attribute values to form
+    a natural-language fragment that maximises cosine similarity against
+    the KB threat pattern embeddings.
+
+    Args:
+        asset: The AssetModel to describe.
+
+    Returns:
+        Non-empty query string derived from real asset data.
+    """
+    parts: list[str] = [asset.name, asset.asset_type]
+
+    if asset.interfaces:
+        parts.extend(asset.interfaces)
+
+    # Include attribute values — these carry the richest semantic signal
+    # (e.g. 'none' for encryption, 'PIN-only' for auth, 'no-verify' for OTA)
+    if asset.attributes:
+        for key, value in asset.attributes.items():
+            parts.append(f"{key}: {value}")
+
+    parts.append(asset.trust_zone)
+
+    return " ".join(parts)
+
+
+def build_retrieval_plan(
+    agent_input: ThreatAgentInput,
+    top_k: int = 10,
+) -> RetrievalPlan:
+    """Build a structured RetrievalPlan dynamically from a ThreatAgentInput.
+
+    This is the real ``plan()`` step of the SCRP loop.  For each asset in
+    ``agent_input.assets`` it:
+      1. Constructs a semantic query string from asset type, interfaces,
+         attributes, and trust zone (via ``_build_query_text``).
+      2. Selects the appropriate KB sources via deterministic rules
+         (via ``_select_kb_sources``).
+      3. Packages every per-asset query into a ``RetrievalPlan`` ready to
+         be executed by ``fetch_candidates``.
+
+    No content is hardcoded.  Changing the asset attributes or trust zone
+    in ``agent_input`` produces a different plan at runtime.
+
+    Args:
+        agent_input: The normalised ``ThreatAgentInput`` received from the
+                     orchestrator.
+        top_k:       Maximum candidates per query (default: 10).
+
+    Returns:
+        A frozen ``RetrievalPlan`` containing one query per asset.
+
+    Raises:
+        ValueError: If ``agent_input.assets`` is empty (the schema validator
+                    catches this first, but we re-raise for defence-in-depth).
+    """
+    if not agent_input.assets:
+        raise ValueError(
+            "ThreatAgentInput.assets must contain at least one AssetModel."
+        )
+
+    queries: list[dict[str, str | list[str]]] = [
+        {
+            "asset_id": asset.asset_id,
+            "query_text": _build_query_text(asset),
+            "kb_sources": _select_kb_sources(asset),
+        }
+        for asset in agent_input.assets
+    ]
+
+    log_step(
+        logger,
+        "INFO",
+        "plan_built",
+        agent_input.run_id,
+        {
+            "asset_count": len(agent_input.assets),
+            "query_count": len(queries),
+            "top_k": top_k,
+        },
+    )
+
+    return RetrievalPlan(
+        run_id=agent_input.run_id,
+        queries=queries,
+        top_k=top_k,
+    )
 
 
 # ─── Public retrieval interface ───────────────────────────────────────────────

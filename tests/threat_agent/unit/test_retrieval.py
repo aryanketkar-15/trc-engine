@@ -62,6 +62,7 @@ from agents.threat_agent.schemas import (
     NormalizedInput,
     RetrievalPlan,
     STRIDECategory,
+    ThreatAgentInput,
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -860,3 +861,328 @@ class TestAttackChainHelpers:
             # Either the stub raises NotImplementedError or the guard raises
             # EmptyAttackPathError — both are valid until implementation lands.
             build_paths([], normalized)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# § 7  —  build_retrieval_plan() unit tests  (Chetan Risk-1 fix)
+#         Proves the plan() step is real code, not hardcoded print statements.
+#         Every test calls the live function and asserts on dynamically-derived
+#         output — no expected string constants are hardcoded in the assertions.
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+# ── Shared ThreatAgentInput fixture builders ─────────────────────────────────────
+
+
+def _make_smart_door_lock_input(run_id: str = "RUN-SDL-PLAN-001") -> ThreatAgentInput:
+    """Return the Smart Door Lock ThreatAgentInput fixture (domain 1).
+
+    3 assets: BLE Controller (untrusted), Secure Element (internal),
+    Cloud Backend (network API).
+    """
+    return ThreatAgentInput(
+        run_id=run_id,
+        use_case=(
+            "Consumer smart door lock with BLE unlock, cloud management,"
+            " OTA firmware updates."
+        ),
+        system_model=(
+            '{"trust_boundaries": ["phone-lock BLE", "lock-cloud TLS"], '
+            '"data_flows": ["unlock_command", "ota_update", "e_key_sync"]}'
+        ),
+        assets=[
+            AssetModel(
+                asset_id="ASSET-BLE-01",
+                name="BLE Controller",
+                asset_type="embedded firmware",
+                interfaces=["BLE 5.0", "GATT"],
+                trust_zone="untrusted",
+                attributes={
+                    "auth": "PIN-only",
+                    "encryption": "none",
+                    "pairing": "unauthenticated",
+                },
+            ),
+            AssetModel(
+                asset_id="ASSET-SE-01",
+                name="Secure Element",
+                asset_type="hardware security module",
+                interfaces=["I2C", "SPI"],
+                trust_zone="trusted",
+                attributes={"key_storage": "persistent", "tamper": "physical"},
+            ),
+            AssetModel(
+                asset_id="ASSET-CLOUD-01",
+                name="Cloud Backend",
+                asset_type="cloud api server",
+                interfaces=["HTTPS", "REST", "WebSocket"],
+                trust_zone="external",
+                attributes={"auth": "JWT", "rate_limiting": "none"},
+            ),
+        ],
+    )
+
+
+def _make_infusion_pump_input(run_id: str = "RUN-INF-PLAN-001") -> ThreatAgentInput:
+    """Return the Medical Infusion Pump ThreatAgentInput fixture (domain 2).
+
+    Proves the plan builder is domain-neutral.
+    """
+    return ThreatAgentInput(
+        run_id=run_id,
+        use_case=(
+            "Connected infusion pump with remote dosage control"
+            " and hospital network integration."
+        ),
+        system_model=(
+            '{"trust_boundaries": ["pump-nurse BLE", "pump-hospital VLAN"], '
+            '"data_flows": ["dosage_command", "alarm_event", "firmware_update"]}'
+        ),
+        assets=[
+            AssetModel(
+                asset_id="ASSET-DOSE-FW-01",
+                name="Dosage Control Firmware",
+                asset_type="safety-critical embedded firmware",
+                interfaces=["UART", "CAN bus"],
+                trust_zone="trusted",
+                attributes={
+                    "safety_level": "SIL-2",
+                    "update_auth": "no-verify",
+                },
+            ),
+            AssetModel(
+                asset_id="ASSET-HOSP-NET-01",
+                name="Hospital Network Interface",
+                asset_type="network endpoint",
+                interfaces=["Ethernet", "HL7 FHIR REST API"],
+                trust_zone="external",
+                attributes={"segmentation": "flat", "auth": "basic"},
+            ),
+        ],
+    )
+
+
+class TestBuildRetrievalPlan:
+    """Unit tests for build_retrieval_plan(), _build_query_text(), _select_kb_sources().
+
+    These tests prove the plan() stage is real, deterministic code that derives
+    every output field directly from asset attributes — no hardcoded strings.
+    (Addresses Chetan's Risk 1 from the CLI demo review.)
+    """
+
+    # ── build_retrieval_plan: output shape ───────────────────────────────────
+
+    def test_plan_has_one_query_per_asset(self) -> None:
+        """build_retrieval_plan() must produce exactly one query per asset."""
+        from agents.threat_agent.retrieval import build_retrieval_plan
+
+        agent_input = _make_smart_door_lock_input()
+        plan = build_retrieval_plan(agent_input)
+
+        assert len(plan.queries) == len(agent_input.assets)
+
+    def test_plan_run_id_matches_input(self) -> None:
+        """run_id in RetrievalPlan must be inherited from ThreatAgentInput."""
+        from agents.threat_agent.retrieval import build_retrieval_plan
+
+        agent_input = _make_smart_door_lock_input(run_id="RUN-ASSERT-001")
+        plan = build_retrieval_plan(agent_input)
+
+        assert plan.run_id == "RUN-ASSERT-001"
+
+    def test_plan_top_k_default(self) -> None:
+        """Default top_k must be 10."""
+        from agents.threat_agent.retrieval import build_retrieval_plan
+
+        plan = build_retrieval_plan(_make_smart_door_lock_input())
+
+        assert plan.top_k == 10
+
+    def test_plan_top_k_override(self) -> None:
+        """Caller can override top_k."""
+        from agents.threat_agent.retrieval import build_retrieval_plan
+
+        plan = build_retrieval_plan(_make_smart_door_lock_input(), top_k=5)
+
+        assert plan.top_k == 5
+
+    def test_plan_asset_ids_preserved(self) -> None:
+        """Each query's asset_id must match the source asset."""
+        from agents.threat_agent.retrieval import build_retrieval_plan
+
+        agent_input = _make_smart_door_lock_input()
+        plan = build_retrieval_plan(agent_input)
+        expected_ids = {a.asset_id for a in agent_input.assets}
+        actual_ids = {q["asset_id"] for q in plan.queries}
+
+        assert actual_ids == expected_ids
+
+    def test_plan_query_texts_are_non_empty(self) -> None:
+        """No query_text should be blank — that would produce a degenerate embedding."""
+        from agents.threat_agent.retrieval import build_retrieval_plan
+
+        plan = build_retrieval_plan(_make_smart_door_lock_input())
+
+        for query in plan.queries:
+            assert query["query_text"].strip(), (
+                f"Empty query_text for asset_id={query['asset_id']!r}"
+            )
+
+    def test_plan_query_texts_differ_per_asset(self) -> None:
+        """Different assets must produce different query strings."""
+        from agents.threat_agent.retrieval import build_retrieval_plan
+
+        plan = build_retrieval_plan(_make_smart_door_lock_input())
+        texts = [q["query_text"] for q in plan.queries]
+
+        assert len(texts) == len(set(texts)), (
+            "Duplicate query texts across distinct assets."
+        )
+
+    def test_plan_domain_neutral(self) -> None:
+        """Smart Door Lock and Infusion Pump produce structurally different plans."""
+        from agents.threat_agent.retrieval import build_retrieval_plan
+
+        sdl_plan = build_retrieval_plan(_make_smart_door_lock_input())
+        pump_plan = build_retrieval_plan(_make_infusion_pump_input())
+
+        sdl_texts = {q["query_text"] for q in sdl_plan.queries}
+        pump_texts = {q["query_text"] for q in pump_plan.queries}
+
+        assert sdl_texts != pump_texts, (
+            "Plans must diverge when asset profiles differ (domain-neutral check)."
+        )
+
+    # ── _build_query_text: content derivation ────────────────────────────────
+
+    def test_query_text_contains_asset_name(self) -> None:
+        """Asset name must appear in the derived query text."""
+        from agents.threat_agent.retrieval import _build_query_text
+
+        asset = _make_asset(name="BLE Controller", asset_type="firmware")
+        text = _build_query_text(asset)
+
+        assert "BLE Controller" in text
+
+    def test_query_text_contains_interfaces(self) -> None:
+        """Interface names must appear in query text for semantic relevance."""
+        from agents.threat_agent.retrieval import _build_query_text
+
+        asset = _make_asset(interfaces=["BLE 5.0", "GATT"])
+        text = _build_query_text(asset)
+
+        assert "BLE 5.0" in text
+        assert "GATT" in text
+
+    def test_query_text_contains_attribute_values(self) -> None:
+        """Attribute values like 'none' (encryption) must be in the query text."""
+        from agents.threat_agent.retrieval import _build_query_text
+
+        asset = _make_asset(
+            attributes={"auth": "PIN-only", "encryption": "none"}
+        )
+        text = _build_query_text(asset)
+
+        assert "PIN-only" in text
+        assert "none" in text
+
+    def test_query_text_changes_with_attribute_change(self) -> None:
+        """Changing a single attribute must produce a different query text."""
+        from agents.threat_agent.retrieval import _build_query_text
+
+        asset_weak = _make_asset(attributes={"encryption": "none"})
+        asset_strong = _make_asset(attributes={"encryption": "AES-256"})
+
+        assert _build_query_text(asset_weak) != _build_query_text(asset_strong)
+
+    # ── _select_kb_sources: deterministic rule checks ───────────────────────
+
+    def test_core_sources_always_included(self) -> None:
+        """CAPEC and STRIDE must always be in the source list."""
+        from agents.threat_agent.retrieval import _select_kb_sources
+
+        asset = _make_asset(asset_type="misc", interfaces=[], trust_zone="trusted")
+        sources = _select_kb_sources(asset)
+
+        assert "CAPEC" in sources
+        assert "STRIDE" in sources
+
+    def test_untrusted_zone_includes_attck_and_cwe(self) -> None:
+        """Untrusted trust zone must trigger full KB coverage."""
+        from agents.threat_agent.retrieval import _select_kb_sources
+
+        asset = _make_asset(asset_type="misc", interfaces=[], trust_zone="untrusted")
+        sources = _select_kb_sources(asset)
+
+        assert "ATT&CK" in sources
+        assert "CWE" in sources
+
+    def test_ble_interface_includes_attck_and_cwe(self) -> None:
+        """BLE interface must trigger ATT&CK and CWE inclusion."""
+        from agents.threat_agent.retrieval import _select_kb_sources
+
+        asset = _make_asset(
+            asset_type="controller",
+            interfaces=["BLE 5.0"],
+            trust_zone="trusted",
+        )
+        sources = _select_kb_sources(asset)
+
+        assert "ATT&CK" in sources
+        assert "CWE" in sources
+
+    def test_firmware_type_includes_cwe(self) -> None:
+        """firmware asset type must include CWE (memory safety issues)."""
+        from agents.threat_agent.retrieval import _select_kb_sources
+
+        asset = _make_asset(
+            asset_type="embedded firmware",
+            interfaces=[],
+            trust_zone="trusted",
+        )
+        sources = _select_kb_sources(asset)
+
+        assert "CWE" in sources
+
+    def test_api_server_type_includes_attck(self) -> None:
+        """cloud api server type must include ATT&CK."""
+        from agents.threat_agent.retrieval import _select_kb_sources
+
+        asset = _make_asset(
+            asset_type="cloud api server",
+            interfaces=[],
+            trust_zone="trusted",
+        )
+        sources = _select_kb_sources(asset)
+
+        assert "ATT&CK" in sources
+
+    def test_sources_are_sorted(self) -> None:
+        """Returned source list must be alphabetically sorted for determinism."""
+        from agents.threat_agent.retrieval import _select_kb_sources
+
+        asset = _make_asset(
+            asset_type="embedded firmware",
+            interfaces=["BLE 5.0", "HTTPS"],
+            trust_zone="untrusted",
+        )
+        sources = _select_kb_sources(asset)
+
+        assert sources == sorted(sources)
+
+    # ── Error path ─────────────────────────────────────────────────────────────
+
+    def test_plan_builder_raises_on_no_assets(self) -> None:
+        """build_retrieval_plan() must raise ValueError for empty asset list."""
+        import types
+
+        from agents.threat_agent.retrieval import build_retrieval_plan
+
+        # Bypass Pydantic min_length validation by passing a post-init patched input.
+        # The schema is frozen so we test the function's own defence-in-depth guard.
+        empty_input = types.SimpleNamespace(
+            run_id="RUN-EMPTY",
+            assets=[],
+        )
+        with pytest.raises(ValueError, match="at least one AssetModel"):
+            build_retrieval_plan(empty_input)  # type: ignore[arg-type]
