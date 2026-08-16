@@ -61,7 +61,7 @@ import pytest
 from agents.threat_agent.exceptions import MalformedKBEntryError
 from agents.threat_agent.schemas import KBSource, STRIDECategory
 from kb.loaders.attck_loader import ATTCKLoader
-from kb.loaders.base_loader import KBEntry, _STRIDE_STR_MAP
+from kb.loaders.base_loader import _STRIDE_STR_MAP, KBEntry
 from kb.loaders.capec_loader import CAPECLoader
 from kb.loaders.cwe_loader import CWELoader
 from kb.loaders.stride_loader import STRIDELoader
@@ -80,15 +80,15 @@ _STRIDE_SEED = _DATA_DIR / "stride_seed.json"
 
 def _write_tmp_json(data: object) -> Path:
     """Write a JSON object to a temp file and return its path."""
-    tmp = tempfile.NamedTemporaryFile(
+    with tempfile.NamedTemporaryFile(
         mode="w",
         suffix=".json",
         delete=False,
         encoding="utf-8",
-    )
-    json.dump(data, tmp)
-    tmp.flush()
-    return Path(tmp.name)
+    ) as tmp:
+        json.dump(data, tmp)
+        tmp.flush()
+        return Path(tmp.name)
 
 
 def _make_minimal_capec_entry(**overrides: object) -> dict[str, object]:

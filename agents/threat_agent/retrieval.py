@@ -147,34 +147,34 @@ _METADATA: dict[str, dict[str, Any]] | None = None  # FAISS id → KBEntry dict
 _ENCODER: Any | None = None  # SentenceTransformer
 
 
-def _import_faiss() -> Any:
+def _import_faiss() -> object:
     try:
         import faiss  # type: ignore[import-untyped]
 
         return faiss
-    except ImportError:
+    except ImportError as err:
         raise KBStoreUnreachableError(
             store_path=str(_DEFAULT_INDEX_PATH),
             cause=ImportError("faiss-cpu is not installed. Run: pip install faiss-cpu"),
-        )
+        ) from err
 
 
-def _import_encoder() -> Any:
+def _import_encoder() -> object:
     try:
         from sentence_transformers import SentenceTransformer
 
         return SentenceTransformer
-    except ImportError:
+    except ImportError as err:
         raise KBStoreUnreachableError(
             store_path=str(_DEFAULT_INDEX_PATH),
             cause=ImportError(
                 "sentence-transformers is not installed. "
                 "Run: pip install sentence-transformers"
             ),
-        )
+        ) from err
 
 
-def _get_index(index_path: Path | None = None) -> Any:
+def _get_index(index_path: Path | None = None) -> object:
     """Return the cached FAISS index, loading it on first call."""
     global _INDEX
     if _INDEX is None:
@@ -189,7 +189,7 @@ def _get_index(index_path: Path | None = None) -> Any:
             )
         try:
             faiss = _import_faiss()
-            _INDEX = faiss.read_index(str(path))
+            _INDEX = faiss.read_index(str(path))  # type: ignore[attr-defined]
         except Exception as exc:
             raise KBStoreUnreachableError(store_path=str(path), cause=exc) from exc
     return _INDEX
@@ -215,13 +215,13 @@ def _get_metadata(metadata_path: Path | None = None) -> dict[str, dict[str, Any]
     return _METADATA
 
 
-def _get_encoder(model_name: str | None = None) -> Any:
+def _get_encoder(model_name: str | None = None) -> object:
     """Return the cached SentenceTransformer, loading it on first call."""
     global _ENCODER
     if _ENCODER is None:
         name = model_name or _DEFAULT_MODEL_NAME
-        SentenceTransformer = _import_encoder()
-        _ENCODER = SentenceTransformer(name)
+        st_cls = _import_encoder()
+        _ENCODER = st_cls(name)  # type: ignore[operator]
     return _ENCODER
 
 
@@ -323,8 +323,6 @@ def fetch_candidates(
         {"query_count": len(plan.queries), "top_k": plan.top_k},
     )
 
-    all_candidates: list[KBCandidate] = []
-
     # Group queries by asset_id to detect per-asset empty-match failures
     asset_candidates: dict[str, list[KBCandidate]] = {}
 
@@ -343,18 +341,18 @@ def fetch_candidates(
             )
 
         # Embed query text and search FAISS
-        query_vec: np.ndarray = encoder.encode(
+        query_vec: np.ndarray = encoder.encode(  # type: ignore[union-attr]
             [query_text],
             normalize_embeddings=True,
         ).astype(np.float32)
 
         top_k = plan.top_k if hasattr(plan, "top_k") else 10
-        n_results = min(top_k, index.ntotal)
-        distances, ids = index.search(query_vec, n_results)
+        n_results = min(top_k, index.ntotal)  # type: ignore[union-attr]
+        distances, ids = index.search(query_vec, n_results)  # type: ignore[union-attr]
 
         # Convert FAISS results to KBCandidates
         query_candidates: list[KBCandidate] = []
-        for dist, vid in zip(distances[0], ids[0]):
+        for dist, vid in zip(distances[0], ids[0], strict=False):
             if vid == -1:  # FAISS sentinel for "no result"
                 continue
             meta = metadata.get(str(vid))
