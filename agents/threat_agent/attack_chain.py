@@ -76,8 +76,6 @@ import math
 import uuid
 from typing import Final
 
-from common.logging import get_logger, log_step
-
 from agents.threat_agent.exceptions import (
     EmptyAttackPathError,
 )
@@ -87,6 +85,7 @@ from agents.threat_agent.schemas import (
     NormalizedInput,
     STRIDECategory,
 )
+from common.logging import get_logger, log_step
 
 logger = get_logger(__name__)
 
@@ -412,18 +411,15 @@ def deduplicate_paths(paths: list[AttackPath]) -> list[AttackPath]:
 # ══════════════════════════════════════════════════════════════════════════════
 
 __all__: list[str] = [
-    # Constants (consumed by validator.py and scorer.py)
-    "MITRE_TACTIC_ORDER",
     "FORCED_CHAIN_PENALTY",
     "MIN_CHAIN_CONFIDENCE_WARNING",
-    # Public functions
+    "MITRE_TACTIC_ORDER",
+    "_build_chain_reasoning",
+    "_compute_chain_confidence",
+    "_has_lateral_movement",
+    "_stride_compatible",
+    "_tactic_position",
     "build_paths",
     "build_single_step_path",
     "deduplicate_paths",
-    # Internal helpers (exported for unit testing)
-    "_tactic_position",
-    "_compute_chain_confidence",
-    "_build_chain_reasoning",
-    "_has_lateral_movement",
-    "_stride_compatible",
 ]

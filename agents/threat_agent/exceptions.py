@@ -220,15 +220,13 @@ class UnlinkableCandidateError(AttackChainError):
 # ══════════════════════════════════════════════════════════════════════════════
 
 __all__: list[str] = [
-    "ThreatAgentError",
-    # KB / Retrieval
-    "KBStoreUnreachableError",
-    "EmptyKBMatchError",
-    "MalformedKBEntryError",
-    "KBEntryNotFoundError",
-    "MalformedAssetInputError",
-    # Attack Chain
     "AttackChainError",
     "EmptyAttackPathError",
+    "EmptyKBMatchError",
+    "KBEntryNotFoundError",
+    "KBStoreUnreachableError",
+    "MalformedAssetInputError",
+    "MalformedKBEntryError",
+    "ThreatAgentError",
     "UnlinkableCandidateError",
 ]
