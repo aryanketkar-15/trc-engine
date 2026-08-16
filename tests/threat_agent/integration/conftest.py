@@ -27,12 +27,26 @@ Usage in a test file:
 
 from __future__ import annotations
 
+# ---------------------------------------------------------------------------
+# Environment setup — MUST be before any import that triggers get_settings().
+# pydantic-settings reads env vars at Settings() construction time.
+# These placeholder values satisfy required field validation in tests.
+# Real values are NOT needed — tests that touch FAISS are skip-marked.
+# ---------------------------------------------------------------------------
+import os
+
+os.environ.setdefault("OPENAI_API_KEY", "sk-test-placeholder-for-integration-tests")
+os.environ.setdefault("FAISS_INDEX_PATH", "kb/data/threat_agent.faiss")
+os.environ.setdefault("KB_DATA_DIR", "kb/data")
+
+# ---------------------------------------------------------------------------
+
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from agents.threat_agent.exceptions import KBEntryNotFoundError
 
+from agents.threat_agent.exceptions import KBEntryNotFoundError
 from agents.threat_agent.schemas import KBCandidate, KBSource, STRIDECategory
 
 # ── Canned KB entries — one per domain fixture ────────────────────────────────

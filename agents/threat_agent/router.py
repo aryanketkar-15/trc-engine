@@ -23,9 +23,7 @@ Error-handling contract:
 
 Import paths:
     schemas    → agents.threat_agent.schemas   (frozen — do not modify)
-    exceptions → scrp.state_manager            (Shriraj's module)
-                 Update this import once feature/threat-agent-validator
-                 is merged to develop (tracked: TRC-STUB-002).
+    exceptions → scrp.state_manager            (real — PR #2 merged to develop)
 
 Ruff compliance
 ───────────────
@@ -49,10 +47,8 @@ from agents.threat_agent.schemas import (
     ValidationResult,
 )
 
-# TODO (TRC-STUB-002): update this import once feature/threat-agent-validator
-# is merged to develop.  NotApprovedError is currently defined in
-# scrp/state_manager.py on Shriraj's branch.
-# from scrp.state_manager import NotApprovedError
+# TRC-STUB-002 RESOLVED — PR #2 (feature/threat-agent-validator) merged to develop.
+from scrp.state_manager import NotApprovedError
 
 logger = logging.getLogger(__name__)
 
@@ -271,10 +267,9 @@ async def analyze(
             ),
         )
 
-    # TODO (TRC-STUB-002): replace bare Exception with NotApprovedError once
-    # Shriraj's branch is merged to develop.
-    # except NotApprovedError as exc:
-    #     raise _handle_not_approved(exc, run_id=payload.run_id) from exc
+    # TRC-STUB-002 resolved — NotApprovedError now importable from scrp.state_manager
+    except NotApprovedError as exc:
+        raise _handle_not_approved(exc, run_id=payload.run_id) from exc
 
     except ValueError as exc:
         logger.error("Domain validation failed", extra={"run_id": payload.run_id})
@@ -389,9 +384,9 @@ async def approve_run(
             scrs_entry_id=None,  # TODO: replace with real SCRS entry ID
         )
 
-    # TODO (TRC-STUB-002): uncomment once Shriraj's branch is merged.
-    # except NotApprovedError as exc:
-    #     raise _handle_not_approved(exc, run_id=run_id) from exc
+    # TRC-STUB-002 resolved — real NotApprovedError from scrp.state_manager
+    except NotApprovedError as exc:
+        raise _handle_not_approved(exc, run_id=run_id) from exc
 
     except HTTPException:
         raise
