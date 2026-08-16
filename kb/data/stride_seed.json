@@ -1,0 +1,44 @@
+[
+  {
+    "pattern_id": "STRIDE-S-001",
+    "title": "Spoofing Identity via BLE Device Impersonation",
+    "description": "An attacker clones or spoofs the BLE MAC address or advertisement data of a legitimate device to impersonate it. Devices that rely solely on MAC address for authentication (without cryptographic pairing) accept commands from the spoofed device. Common in smart locks, wearables, and BLE-enabled medical devices operating in open or Just Works pairing mode.",
+    "stride_hint": "Spoofing",
+    "mitre_tactics": ["TA0001"]
+  },
+  {
+    "pattern_id": "STRIDE-T-001",
+    "title": "Tampering with Firmware Parameters via Unprotected Storage",
+    "description": "An attacker with physical or network access modifies firmware configuration parameters stored in unprotected flash memory or exposed over an unauthenticated interface. Parameters such as dosage thresholds, access control lists, or cryptographic keys can be overwritten to alter device behaviour, disable security features, or create persistent backdoors.",
+    "stride_hint": "Tampering",
+    "mitre_tactics": ["TA0003", "TA0040"]
+  },
+  {
+    "pattern_id": "STRIDE-R-001",
+    "title": "Repudiation via Audit Log Deletion",
+    "description": "An attacker with elevated access deletes or tampers with audit log entries to conceal malicious actions. Embedded devices that store audit logs in unprotected flash or RAM, or that allow log deletion without authentication, enable an attacker to erase evidence of lock bypasses, unauthorised commands, or configuration changes.",
+    "stride_hint": "Repudiation",
+    "mitre_tactics": ["TA0005"]
+  },
+  {
+    "pattern_id": "STRIDE-I-001",
+    "title": "Information Disclosure via Cleartext Credential Transmission",
+    "description": "An IoT device transmits authentication credentials, session tokens, or sensitive operational data over an unencrypted channel. Passive eavesdroppers within radio or network range can capture these credentials for replay or offline cracking. Especially critical for medical devices transmitting patient data or smart locks broadcasting unlock codes over unencrypted BLE characteristics.",
+    "stride_hint": "InformationDisclosure",
+    "mitre_tactics": ["TA0009"]
+  },
+  {
+    "pattern_id": "STRIDE-D-001",
+    "title": "Denial of Service via BLE Advertising Flood",
+    "description": "An attacker continuously broadcasts high-frequency BLE advertisement packets in the vicinity of a target device, saturating its radio receiver and processing stack. Embedded BLE stacks with limited interrupt handling capacity can become unresponsive to legitimate commands, effectively locking out authorised users from door locks, medical device controls, or industrial actuators.",
+    "stride_hint": "DenialOfService",
+    "mitre_tactics": ["TA0040"]
+  },
+  {
+    "pattern_id": "STRIDE-E-001",
+    "title": "Elevation of Privilege via Path Traversal in Firmware Web Interface",
+    "description": "An attacker exploits a path traversal vulnerability in the embedded HTTP server of an IoT device's web management interface to read or write files outside the intended web root. This can expose cryptographic keys, password files, or firmware binaries, or allow overwriting of configuration files to gain administrative access without authentication.",
+    "stride_hint": "ElevationOfPrivilege",
+    "mitre_tactics": ["TA0004", "TA0005"]
+  }
+]
