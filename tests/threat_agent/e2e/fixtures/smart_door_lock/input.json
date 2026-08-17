@@ -1,0 +1,41 @@
+{
+  "run_id": "RUN-SDL-E2E-001",
+  "use_case": "Consumer smart door lock with BLE unlock, cloud management, and OTA firmware updates.",
+  "system_model": "{\"trust_boundaries\": [\"phone-lock BLE\", \"lock-cloud TLS\"], \"data_flows\": [\"unlock_command\", \"ota_update\", \"e_key_sync\"]}",
+  "assets": [
+    {
+      "asset_id": "ASSET-BLE-01",
+      "name": "BLE Controller",
+      "asset_type": "embedded firmware",
+      "interfaces": ["BLE 5.0", "GATT"],
+      "trust_zone": "untrusted",
+      "attributes": {
+        "auth": "PIN-only",
+        "encryption": "none",
+        "pairing": "unauthenticated"
+      }
+    },
+    {
+      "asset_id": "ASSET-SE-01",
+      "name": "Secure Element",
+      "asset_type": "hardware security module",
+      "interfaces": ["I2C", "SPI"],
+      "trust_zone": "trusted",
+      "attributes": {
+        "key_storage": "persistent",
+        "tamper": "physical"
+      }
+    },
+    {
+      "asset_id": "ASSET-CLOUD-01",
+      "name": "Cloud Backend",
+      "asset_type": "cloud api server",
+      "interfaces": ["HTTPS", "REST", "WebSocket"],
+      "trust_zone": "external",
+      "attributes": {
+        "auth": "JWT",
+        "rate_limiting": "none"
+      }
+    }
+  ]
+}
