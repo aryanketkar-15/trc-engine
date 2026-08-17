@@ -31,8 +31,8 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from agents.threat_agent.exceptions import KBEntryNotFoundError
 
+from agents.threat_agent.exceptions import KBEntryNotFoundError
 from agents.threat_agent.schemas import KBCandidate, KBSource, STRIDECategory
 
 # ── Canned KB entries — one per domain fixture ────────────────────────────────

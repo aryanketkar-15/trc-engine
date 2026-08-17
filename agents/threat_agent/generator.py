@@ -187,9 +187,10 @@ def _build_user_prompt(
         indent=2,
     )
 
+    sys_summary = getattr(context, "system_model_summary", getattr(context, "system_model", ""))
     return (
         f"USE CASE:\n{context.use_case}\n\n"
-        f"SYSTEM MODEL SUMMARY:\n{context.system_model_summary}\n\n"
+        f"SYSTEM MODEL SUMMARY:\n{sys_summary}\n\n"
         f"TARGET ASSETS:\n{assets_json}\n\n"
         f"ATTACK PATH (path_id={path.path_id}, is_forced={path.is_forced}):\n"
         f"Chain reasoning: {path.reasoning or 'not provided'}\n"
@@ -438,7 +439,7 @@ def generate_scenarios(
             Pass None (default) on the first generation attempt.
 
     Returns:
-        List of ThreatScenario objects, one per (path × step) combination.
+        List of ThreatScenario objects, one per (path x step) combination.
         Each scenario:
           - Has status=PENDING_TEST (lifecycle managed externally).
           - Carries a populated EvidenceChain.

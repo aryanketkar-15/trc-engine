@@ -283,7 +283,7 @@ async def analyze(
             detail=str(exc),
         ) from exc
 
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception(
             "Unexpected error in analyze", extra={"run_id": payload.run_id}
         )
@@ -396,7 +396,7 @@ async def approve_run(
     except HTTPException:
         raise
 
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception("Unexpected error in approve", extra={"run_id": run_id})
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

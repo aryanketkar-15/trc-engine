@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa: ARG001
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """FastAPI lifespan context manager.
 
     Startup tasks run before ``yield``; shutdown tasks run after.
@@ -72,7 +72,7 @@ _is_prod = settings.ENVIRONMENT == "production"
 app = FastAPI(
     title="TRC Engine — Threat Agent API",
     description=(
-        "Phase 1 of the TRC Engine (Threat–Risk–Compliance reasoning system).  "
+        "Phase 1 of the TRC Engine (Threat-Risk-Compliance reasoning system).  "
         "Accepts a system model and asset list, runs the SCRP threat analysis "
         "loop, and writes validated, human-approved threat scenarios to the SCRS."
     ),
