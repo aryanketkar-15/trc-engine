@@ -223,7 +223,10 @@ def _get_encoder(model_name: str | None = None) -> object:
     if _ENCODER is None:
         name = model_name or _DEFAULT_MODEL_NAME
         st_cls = _import_encoder()
-        _ENCODER = st_cls(name)  # type: ignore[operator]
+        try:
+            _ENCODER = st_cls(name, local_files_only=True)  # type: ignore[operator]
+        except Exception:
+            _ENCODER = st_cls(name)  # type: ignore[operator]
     return _ENCODER
 
 
