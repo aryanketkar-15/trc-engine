@@ -1,0 +1,29 @@
+{
+  "run_id": "RUN-INF-E2E-001",
+  "use_case": "Connected hospital infusion pump with remote dosage control and EMR integration.",
+  "system_model": "{\"trust_boundaries\": [\"pump-nurse BLE\", \"pump-hospital VLAN\"], \"data_flows\": [\"dosage_command\", \"alarm_event\", \"firmware_update\"]}",
+  "assets": [
+    {
+      "asset_id": "ASSET-DOSE-FW-01",
+      "name": "Dosage Control Firmware",
+      "asset_type": "safety-critical embedded firmware",
+      "interfaces": ["UART", "CAN bus"],
+      "trust_zone": "trusted",
+      "attributes": {
+        "safety_level": "SIL-2",
+        "update_auth": "no-verify"
+      }
+    },
+    {
+      "asset_id": "ASSET-HOSP-NET-01",
+      "name": "Hospital Network Interface",
+      "asset_type": "network endpoint",
+      "interfaces": ["Ethernet", "HL7 FHIR REST API"],
+      "trust_zone": "external",
+      "attributes": {
+        "segmentation": "flat",
+        "auth": "basic"
+      }
+    }
+  ]
+}
