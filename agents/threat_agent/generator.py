@@ -180,7 +180,7 @@ def _build_user_prompt(
                 "asset_type": a.asset_type,
                 "interfaces": a.interfaces,
                 "trust_zone": a.trust_zone,
-                "attributes": a.attributes,
+                "device_config": a.device_config,
             }
             for a in target_assets
         ],

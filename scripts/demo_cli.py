@@ -54,6 +54,8 @@ from agents.threat_agent.generator import generate_scenarios
 from agents.threat_agent.retrieval import build_retrieval_plan, fetch_candidates
 from agents.threat_agent.schemas import (
     AssetModel,
+    DFDContext,
+    SecurityAttributes,
     ThreatAgentInput,
     ThreatStatus,
 )
@@ -110,32 +112,61 @@ def load_smart_door_lock_input() -> ThreatAgentInput:
         ),
         assets=[
             AssetModel(
-                asset_id="ASSET-BLE-01",
+                asset_id="AS-1",
                 name="BLE Controller",
                 asset_type="embedded firmware",
-                interfaces=["BLE 5.0", "GATT"],
-                trust_zone="untrusted",
-                attributes={
+                location="on-device",
+                security_attributes=SecurityAttributes(
+                    confidentiality=False, integrity=True,
+                    availability=True, authenticity=True,
+                ),
+                damage_scenario=(
+                    "Unauthorised physical entry to premises via BLE replay or spoofing."
+                ),
+                dfd_context=DFDContext(
+                    interfaces=["BLE 5.0", "GATT"],
+                    trust_zone="untrusted",
+                    data_flows=["unlock_command"],
+                ),
+                device_config={
                     "auth": "PIN-only",
                     "encryption": "none",
                     "pairing": "unauthenticated",
                 },
             ),
             AssetModel(
-                asset_id="ASSET-SE-01",
+                asset_id="AS-2",
                 name="Secure Element",
                 asset_type="hardware security module",
-                interfaces=["I2C", "SPI"],
-                trust_zone="trusted",
-                attributes={"key_storage": "persistent", "tamper": "physical"},
+                location="on-device",
+                security_attributes=SecurityAttributes(
+                    confidentiality=True, integrity=True,
+                    availability=False, authenticity=True,
+                ),
+                damage_scenario="Cryptographic key exfiltration enabling permanent device compromise.",
+                dfd_context=DFDContext(
+                    interfaces=["I2C", "SPI"],
+                    trust_zone="trusted",
+                    data_flows=[],
+                ),
+                device_config={"key_storage": "persistent", "tamper": "physical"},
             ),
             AssetModel(
-                asset_id="ASSET-CLOUD-01",
+                asset_id="AS-3",
                 name="Cloud Backend",
                 asset_type="cloud api server",
-                interfaces=["HTTPS", "REST", "WebSocket"],
-                trust_zone="external",
-                attributes={"auth": "JWT", "rate_limiting": "none"},
+                location="cloud-hosted",
+                security_attributes=SecurityAttributes(
+                    confidentiality=True, integrity=True,
+                    availability=True, authenticity=True,
+                ),
+                damage_scenario="Mass compromise of all registered locks via cloud API takeover.",
+                dfd_context=DFDContext(
+                    interfaces=["HTTPS", "REST", "WebSocket"],
+                    trust_zone="external",
+                    data_flows=["ota_update", "e_key_sync"],
+                ),
+                device_config={"auth": "JWT", "rate_limiting": "none"},
             ),
         ],
     )
@@ -168,23 +199,45 @@ def load_infusion_pump_input() -> ThreatAgentInput:
         ),
         assets=[
             AssetModel(
-                asset_id="ASSET-DOSE-FW-01",
+                asset_id="AS-1",
                 name="Dosage Control Firmware",
                 asset_type="safety-critical embedded firmware",
-                interfaces=["UART", "CAN bus"],
-                trust_zone="trusted",
-                attributes={
+                location="on-device",
+                security_attributes=SecurityAttributes(
+                    confidentiality=False, integrity=True,
+                    availability=True, authenticity=True,
+                ),
+                damage_scenario=(
+                    "Incorrect drug dosage delivered to patient due to firmware tampering."
+                ),
+                dfd_context=DFDContext(
+                    interfaces=["UART", "CAN bus"],
+                    trust_zone="trusted",
+                    data_flows=["dosage_command", "firmware_update"],
+                ),
+                device_config={
                     "safety_level": "SIL-2",
                     "update_auth": "no-verify",
                 },
             ),
             AssetModel(
-                asset_id="ASSET-HOSP-NET-01",
+                asset_id="AS-2",
                 name="Hospital Network Interface",
                 asset_type="network endpoint",
-                interfaces=["Ethernet", "HL7 FHIR REST API"],
-                trust_zone="external",
-                attributes={"segmentation": "flat", "auth": "basic"},
+                location="internal VLAN",
+                security_attributes=SecurityAttributes(
+                    confidentiality=True, integrity=True,
+                    availability=True, authenticity=False,
+                ),
+                damage_scenario=(
+                    "Lateral movement through flat hospital network enabling attack on life-critical systems."
+                ),
+                dfd_context=DFDContext(
+                    interfaces=["Ethernet", "HL7 FHIR REST API"],
+                    trust_zone="external",
+                    data_flows=["alarm_event", "dosage_command"],
+                ),
+                device_config={"segmentation": "flat", "auth": "basic"},
             ),
         ],
     )
@@ -200,7 +253,7 @@ def display_assets(agent_input: ThreatAgentInput) -> None:
         table.add_column("Type", style="cyan")
         table.add_column("Interfaces", style="magenta")
         table.add_column("Trust Zone", style="green")
-        table.add_column("Attributes", style="dim")
+        table.add_column("Device Config", style="dim")
 
         for asset in agent_input.assets:
             table.add_row(
@@ -209,7 +262,7 @@ def display_assets(agent_input: ThreatAgentInput) -> None:
                 asset.asset_type,
                 ", ".join(asset.interfaces),
                 asset.trust_zone,
-                json.dumps(asset.attributes or {}),
+                json.dumps(asset.device_config or {}),
             )
         console.print(table)
     else:

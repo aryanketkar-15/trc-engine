@@ -47,6 +47,7 @@ from agents.threat_agent.generator import (
 from agents.threat_agent.schemas import (
     AssetModel,
     AttackPath,
+    DFDContext,
     KBCandidate,
     KBSource,
     NormalizedInput,
@@ -58,15 +59,17 @@ from agents.threat_agent.schemas import (
 # ─── Shared test fixtures ─────────────────────────────────────────────────────
 
 
-def _make_asset(asset_id: str = "ASSET-001") -> AssetModel:
+def _make_asset(asset_id: str = "AS-1") -> AssetModel:
     """Minimal domain-neutral AssetModel for unit tests."""
     return AssetModel(
         asset_id=asset_id,
         name="Test Asset",
         asset_type="firmware",
-        interfaces=["BLE 5.0", "UART"],
-        trust_zone="untrusted",
-        attributes={"auth_mechanism": "PIN-only", "encryption": "none"},
+        dfd_context=DFDContext(
+            interfaces=["BLE 5.0", "UART"],
+            trust_zone="untrusted",
+        ),
+        device_config={"auth_mechanism": "PIN-only", "encryption": "none"},
     )
 
 

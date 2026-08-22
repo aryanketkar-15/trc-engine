@@ -363,10 +363,10 @@ def _build_query_text(asset: AssetModel) -> str:
     if asset.interfaces:
         parts.extend(asset.interfaces)
 
-    # Include attribute values — these carry the richest semantic signal
+    # Include device_config values — these carry the richest semantic signal
     # (e.g. 'none' for encryption, 'PIN-only' for auth, 'no-verify' for OTA)
-    if asset.attributes:
-        for key, value in asset.attributes.items():
+    if asset.device_config:
+        for key, value in asset.device_config.items():
             parts.append(f"{key}: {value}")
 
     parts.append(asset.trust_zone)

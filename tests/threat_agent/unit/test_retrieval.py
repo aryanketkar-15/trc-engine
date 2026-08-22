@@ -57,6 +57,7 @@ from agents.threat_agent.exceptions import (
 )
 from agents.threat_agent.schemas import (
     AssetModel,
+    DFDContext,
     KBCandidate,
     KBSource,
     NormalizedInput,
@@ -99,7 +100,7 @@ def _make_kb_candidate(
 
 
 def _make_asset(
-    asset_id: str = "ASSET-001",
+    asset_id: str = "AS-1",
     name: str = "BLE Controller",
     asset_type: str = "firmware",
     interfaces: list[str] | None = None,
@@ -111,9 +112,11 @@ def _make_asset(
         asset_id=asset_id,
         name=name,
         asset_type=asset_type,
-        interfaces=interfaces or ["BLE 5.0"],
-        trust_zone=trust_zone,
-        attributes=attributes
+        dfd_context=DFDContext(
+            interfaces=interfaces or ["BLE 5.0"],
+            trust_zone=trust_zone,
+        ),
+        device_config=attributes
         or {
             "auth_mechanism": "PIN-only",
             "encryption": "none",
