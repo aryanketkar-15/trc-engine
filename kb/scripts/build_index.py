@@ -1,35 +1,28 @@
 """
 kb/scripts/build_index.py
 ══════════════════════════════════════════════════════════════════════════════
-TRC Engine — Phase 1  |  FAISS Index Builder  (Aryan)
+TRC Engine — Phase 1  |  pgvector Index Builder  (Aryan)
 ──────────────────────────────────────────────────────────────────────────────
 CLI script that loads all KB seed data, embeds entries with
-sentence-transformers, and writes a FAISS IndexFlatIP binary + a
-kb_metadata.json sidecar.
+sentence-transformers, and upserts them into PostgreSQL (pgvector).
 
 Usage::
 
+    # Spin up Postgres first:
+    docker compose up -d
+
+    # Then populate the KB:
     python -m kb.scripts.build_index
 
-    # Or with explicit paths (overrides config):
+    # Or with an explicit data dir / model override:
     python -m kb.scripts.build_index \\
         --data-dir kb/data \\
-        --index-path kb/data/threat_agent.faiss \\
-        --metadata-path kb/data/kb_metadata.json \\
         --model all-MiniLM-L6-v2
 
-Output files:
-    ``<FAISS_INDEX_PATH>``  — FAISS IndexFlatIP binary (cosine similarity)
-    ``<KB_DATA_DIR>/kb_metadata.json``  — FAISS ID → KBEntry dict
+Idempotent: re-running does an ON CONFLICT ... DO UPDATE so no rows are
+duplicated.  Safe to run after adding new seed entries.
 
-Index type: ``faiss.IndexFlatIP``
-    Inner-product (cosine similarity) after L2-normalisation.
-    No training required.  Exact nearest-neighbour search.
-    Sufficient for < 5,000 KB entries (Week 3: upgrade to IndexIVFFlat).
-
-Embedding model: ``all-MiniLM-L6-v2`` (384-dim, CPU-only)
-    Sentence transformer; weights downloaded on first run.
-    Model name is overridable via ``EMBEDDING_MODEL_NAME`` in settings.py.
+Embedding model: ``all-MiniLM-L6-v2`` (384-dim, CPU-only) — unchanged.
 
 Re-run this script whenever:
     1. New entries are added to a seed JSON file.
@@ -41,22 +34,10 @@ Re-run this script whenever:
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
-# ── Dependency guards with helpful error messages ─────────────────────────
-
-try:
-    import faiss  # type: ignore[import-untyped]
-except ImportError as e:
-    print(
-        "[ERROR] faiss-cpu is not installed.\n"
-        "Run: pip install faiss-cpu\n"
-        f"Original error: {e}",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+# ── Dependency guards ──────────────────────────────────────────────────────
 
 try:
     import numpy as np
@@ -70,6 +51,19 @@ except ImportError as e:
     )
     sys.exit(1)
 
+try:
+    import psycopg  # noqa: F401
+    from pgvector.psycopg import register_vector
+except ImportError as e:
+    print(
+        "[ERROR] psycopg or pgvector is not installed.\n"
+        "Run: pip install psycopg[binary,pool] pgvector\n"
+        f"Original error: {e}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+from common.db import get_db_connection
 from kb.loaders.attck_loader import ATTCKLoader
 from kb.loaders.base_loader import KBEntry
 from kb.loaders.capec_loader import CAPECLoader
@@ -90,14 +84,7 @@ _LOADER_MAP: list[tuple[object, str]] = [
 
 
 def _load_all_entries(data_dir: Path) -> list[KBEntry]:
-    """Run all loaders and return the merged entry list.
-
-    Args:
-        data_dir: Directory containing the seed JSON files.
-
-    Returns:
-        Merged, deduplicated list of ``KBEntry`` objects.
-    """
+    """Run all loaders and return the merged, deduplicated entry list."""
     all_entries: list[KBEntry] = []
     seen: set[str] = set()
 
@@ -116,10 +103,7 @@ def _load_all_entries(data_dir: Path) -> list[KBEntry]:
                 all_entries.append(entry)
                 added += 1
             else:
-                print(
-                    f"  [DEDUP] Skipping duplicate {key}",
-                    file=sys.stderr,
-                )
+                print(f"  [DEDUP] Skipping duplicate {key}", file=sys.stderr)
 
         print(
             f"  [LOAD] {loader.source}: {added} entries loaded from {filename}",  # type: ignore[union-attr]
@@ -135,26 +119,13 @@ def _embed_entries(
 ) -> np.ndarray:  # type: ignore[type-arg]
     """Embed all KB entries using the sentence transformer model.
 
-    Each entry's ``embedding_text()`` (title + description + stride_hint +
-    tactic IDs) is embedded into a 384-dim vector and L2-normalised so that
-    inner-product search equals cosine similarity.
-
-    Args:
-        entries:    List of ``KBEntry`` objects to embed.
-        model_name: Sentence transformer model name / HuggingFace model ID.
-
-    Returns:
-        float32 numpy array of shape (len(entries), embedding_dim),
-        L2-normalised.
+    Each entry's embedding_text() is encoded into a 384-dim unit vector.
+    The model and dimensionality are UNCHANGED from the FAISS implementation.
     """
     print(f"  [EMBED] Loading model '{model_name}'…", file=sys.stderr)
     model = SentenceTransformer(model_name)
-
     texts = [e.embedding_text() for e in entries]
-    print(
-        f"  [EMBED] Encoding {len(texts)} entries…",
-        file=sys.stderr,
-    )
+    print(f"  [EMBED] Encoding {len(texts)} entries…", file=sys.stderr)
     embeddings: np.ndarray = model.encode(  # type: ignore[assignment]
         texts,
         normalize_embeddings=True,
@@ -164,62 +135,79 @@ def _embed_entries(
     return embeddings.astype(np.float32)
 
 
-def _build_faiss_index(
-    embeddings: np.ndarray,  # type: ignore[type-arg]
-) -> faiss.IndexFlatIP:
-    """Build a FAISS IndexFlatIP from L2-normalised embeddings.
+def _init_schema() -> None:
+    """Create the pgvector extension and threat_patterns table if not present."""
+    print("  [DB] Initialising schema…", file=sys.stderr)
+    with get_db_connection() as conn:
+        register_vector(conn)
+        with conn.cursor() as cur:
+            cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS threat_patterns (
+                    id          SERIAL PRIMARY KEY,
+                    source      TEXT NOT NULL,           -- 'STRIDE' | 'CAPEC' | 'ATTACK' | 'CWE'
+                    pattern_id  TEXT NOT NULL,           -- e.g. 'CWE-306', 'CAPEC-94'
+                    title       TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    embedding   vector(384) NOT NULL,
+                    metadata    JSONB DEFAULT '{}',
+                    created_at  TIMESTAMPTZ DEFAULT now(),
+                    UNIQUE (source, pattern_id)
+                );
+                """
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_threat_patterns_source "
+                "ON threat_patterns (source);"
+            )
+            # NOTE: No IVFFlat/HNSW approximate vector index is added here.
+            # With ~24 rows, a sequential scan with <=> is effectively instant.
+            # Add an HNSW index once the KB grows into the thousands of entries.
+        conn.commit()
+    print("  [DB] Schema ready.", file=sys.stderr)
 
-    ``IndexFlatIP`` performs exact inner-product (cosine) search.
-    No training step required.
 
-    Args:
-        embeddings: float32 array of shape (n_entries, embedding_dim).
-
-    Returns:
-        A populated ``faiss.IndexFlatIP`` ready for ``search()``.
-    """
-    dim = embeddings.shape[1]
-    index = faiss.IndexFlatIP(dim)
-    index.add(embeddings)
-    print(
-        f"  [FAISS] Built IndexFlatIP: {index.ntotal} vectors, dim={dim}",
-        file=sys.stderr,
-    )
-    return index
-
-
-def _save_outputs(
-    index: faiss.IndexFlatIP,
+def _upsert_entries(
     entries: list[KBEntry],
-    index_path: Path,
-    metadata_path: Path,
+    embeddings: np.ndarray,  # type: ignore[type-arg]
 ) -> None:
-    """Persist the FAISS index binary and the metadata JSON sidecar.
+    """Upsert embedded KB entries into the threat_patterns table.
 
-    The metadata JSON maps FAISS integer ID (as string) → KBEntry dict.
-    FAISS assigns IDs 0, 1, 2, … in the order entries were added, so
-    metadata[str(i)] corresponds to entries[i].
-
-    Args:
-        index:         Populated FAISS index.
-        entries:       KBEntry list in the same order as index vectors.
-        index_path:    Destination path for the FAISS binary.
-        metadata_path: Destination path for the JSON metadata sidecar.
+    Uses ON CONFLICT (source, pattern_id) DO UPDATE so re-running this
+    script after adding new seed entries is fully idempotent.
     """
-    # Write FAISS binary
-    index_path.parent.mkdir(parents=True, exist_ok=True)
-    faiss.write_index(index, str(index_path))
-    print(f"  [SAVE] FAISS index written to {index_path}", file=sys.stderr)
+    import json  # noqa: PLC0415
 
-    # Write metadata sidecar
-    metadata: dict[str, object] = {
-        str(i): entry.to_metadata_dict() for i, entry in enumerate(entries)
-    }
-    metadata_path.write_text(
-        json.dumps(metadata, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
-    print(f"  [SAVE] KB metadata written to {metadata_path}", file=sys.stderr)
+    print(f"  [DB] Upserting {len(entries)} entries…", file=sys.stderr)
+    with get_db_connection() as conn:
+        register_vector(conn)
+        with conn.cursor() as cur:
+            for entry, emb in zip(entries, embeddings, strict=True):
+                meta_json = json.dumps(entry.to_metadata_dict())
+                cur.execute(
+                    """
+                    INSERT INTO threat_patterns
+                        (source, pattern_id, title, description, embedding, metadata)
+                    VALUES
+                        (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (source, pattern_id) DO UPDATE SET
+                        title       = EXCLUDED.title,
+                        description = EXCLUDED.description,
+                        embedding   = EXCLUDED.embedding,
+                        metadata    = EXCLUDED.metadata;
+                    """,
+                    (
+                        entry.source,
+                        entry.pattern_id,
+                        entry.title,
+                        entry.description,
+                        emb,
+                        meta_json,
+                    ),
+                )
+        conn.commit()
+    print(f"  [DB] Upsert complete ({len(entries)} rows).", file=sys.stderr)
 
 
 # ── CLI entry point ────────────────────────────────────────────────────────
@@ -227,7 +215,7 @@ def _save_outputs(
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build FAISS index from KB seed data.",
+        description="Build pgvector KB from seed data.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
@@ -235,18 +223,6 @@ def _parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("kb/data"),
         help="Directory containing seed JSON files.",
-    )
-    parser.add_argument(
-        "--index-path",
-        type=Path,
-        default=Path("kb/data/threat_agent.faiss"),
-        help="Output path for the FAISS binary.",
-    )
-    parser.add_argument(
-        "--metadata-path",
-        type=Path,
-        default=Path("kb/data/kb_metadata.json"),
-        help="Output path for the KB metadata JSON sidecar.",
     )
     parser.add_argument(
         "--model",
@@ -259,43 +235,30 @@ def _parse_args() -> argparse.Namespace:
 
 def build(
     data_dir: Path = Path("kb/data"),
-    index_path: Path = Path("kb/data/threat_agent.faiss"),
-    metadata_path: Path = Path("kb/data/kb_metadata.json"),
     model_name: str = "all-MiniLM-L6-v2",
 ) -> None:
-    """Programmatic entry point for build_index (usable from tests / CI).
+    """Programmatic entry point — usable from tests / CI.
 
     Args:
-        data_dir:      Directory containing seed JSON files.
-        index_path:    Output FAISS binary path.
-        metadata_path: Output metadata JSON path.
-        model_name:    Sentence transformer model name.
+        data_dir:   Directory containing seed JSON files.
+        model_name: Sentence transformer model name.
     """
-    print("[BUILD] Starting KB index build…", file=sys.stderr)
-    entries = _load_all_entries(data_dir)
+    print("[BUILD] Starting KB pgvector build…", file=sys.stderr)
 
+    _init_schema()
+
+    entries = _load_all_entries(data_dir)
     if not entries:
         print("[ERROR] No KB entries loaded. Check seed files.", file=sys.stderr)
         sys.exit(1)
 
-    print(
-        f"[BUILD] Total entries to embed: {len(entries)}",
-        file=sys.stderr,
-    )
+    print(f"[BUILD] Total entries to embed: {len(entries)}", file=sys.stderr)
     embeddings = _embed_entries(entries, model_name)
-    index = _build_faiss_index(embeddings)
-    _save_outputs(index, entries, index_path, metadata_path)
-    print(
-        f"[BUILD] Done. Index contains {index.ntotal} vectors.",
-        file=sys.stderr,
-    )
+    _upsert_entries(entries, embeddings)
+
+    print("[BUILD] Done.", file=sys.stderr)
 
 
 if __name__ == "__main__":
     args = _parse_args()
-    build(
-        data_dir=args.data_dir,
-        index_path=args.index_path,
-        metadata_path=args.metadata_path,
-        model_name=args.model,
-    )
+    build(data_dir=args.data_dir, model_name=args.model)
