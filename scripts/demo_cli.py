@@ -365,9 +365,9 @@ def run_demo() -> None:
 
     # Step 3: Execute FAISS Retrieval
     if console:
-        console.print("\n[bold cyan]Stage 2: Executing Live FAISS Vector Search...[/bold cyan]")
+        console.print("\n[bold cyan]Stage 2: Executing Live pgvector Search...[/bold cyan]")
     else:
-        print("\n--- Stage 2: Executing Live FAISS Vector Search ---")
+        print("\n--- Stage 2: Executing Live pgvector Search ---")
 
     try:
         candidates = fetch_candidates(plan)

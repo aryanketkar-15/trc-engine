@@ -3,23 +3,22 @@ agents/threat_agent/retrieval.py
 ════════════════════════════════════════════════════════════════════════════════
 TRC Engine — Phase 1: Threat Agent  |  KB Retrieval Layer  (Aryan)
 ────────────────────────────────────────────────────────────────────────────────
-Week 2 real implementation:
-  - fetch_candidates() — FAISS IndexFlatIP cosine search, per-query dedup,
-    top_k enforcement, score normalisation, and typed error guards.
-  - get_kb_entry() — direct KB metadata lookup by pattern_id + source.
+Migrated from FAISS to PostgreSQL + pgvector.
 
-Index loading is lazy and cached per process via module-level singletons
-(_INDEX, _METADATA) so the FAISS binary is mmapped only once across all
-calls in a single ThreatAgent run.
+  - fetch_candidates() — pgvector cosine search, per-query dedup,
+    top_k enforcement, score normalisation, and typed error guards.
+  - get_kb_entry()     — direct KB lookup by pattern_id + source.
+
+Function signatures are UNCHANGED from the FAISS implementation so
+generator.py, attack_chain.py and validator.py require zero edits.
 
 Pipeline position:
     plan() → RetrievalPlan → fetch_candidates() → list[KBCandidate]
-                                                        │
-                                          attack_chain.build_paths()
+                                                         │
+                                           attack_chain.build_paths()
 
 STRIDE_VECTOR_VOCABULARY (TRC-STUB-001 resolution):
     Exported for Shriraj's consistency_check in validator.py.
-    Expand after each Week 3 KB ingestion pass.
 """
 
 from __future__ import annotations
@@ -43,12 +42,12 @@ from agents.threat_agent.schemas import (
     STRIDECategory,
     ThreatAgentInput,
 )
+from common.db import get_db_connection
 from common.logging import get_logger, log_step
 
 logger = get_logger(__name__)
 
 # ─── STRIDE ↔ attack-vector vocabulary (TRC-STUB-001 resolution) ─────────────
-# Shriraj's validator loads this at startup for consistency_check().
 STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
     STRIDECategory.SPOOFING: frozenset(
         {
@@ -136,85 +135,25 @@ _STRIDE_STR_MAP: dict[str, STRIDECategory] = {
     "ElevationOfPrivilege": STRIDECategory.ELEVATION_OF_PRIVILEGE,
 }
 
-# ─── Default KB paths ────────────────────────────────────────────────────────
-
-_DEFAULT_INDEX_PATH = Path("kb/data/threat_agent.faiss")
-_DEFAULT_METADATA_PATH = Path("kb/data/kb_metadata.json")
 _DEFAULT_MODEL_NAME = "all-MiniLM-L6-v2"
 
-# ─── Module-level lazy singletons (loaded once per process) ─────────────────
-
-_INDEX: Any | None = None  # faiss.IndexFlatIP
-_METADATA: dict[str, dict[str, Any]] | None = None  # FAISS id → KBEntry dict
-_ENCODER: Any | None = None  # SentenceTransformer
-
-
-def _import_faiss() -> object:
-    try:
-        import faiss  # type: ignore[import-untyped]
-
-        return faiss
-    except ImportError as err:
-        raise KBStoreUnreachableError(
-            store_path=str(_DEFAULT_INDEX_PATH),
-            cause=ImportError("faiss-cpu is not installed. Run: pip install faiss-cpu"),
-        ) from err
+# ─── Module-level lazy singleton (loaded once per process) ───────────────────
+_ENCODER: Any | None = None
 
 
 def _import_encoder() -> object:
     try:
-        from sentence_transformers import SentenceTransformer
+        from sentence_transformers import SentenceTransformer  # noqa: PLC0415
 
         return SentenceTransformer
     except ImportError as err:
         raise KBStoreUnreachableError(
-            store_path=str(_DEFAULT_INDEX_PATH),
+            store_path="pgvector",
             cause=ImportError(
                 "sentence-transformers is not installed. "
                 "Run: pip install sentence-transformers"
             ),
         ) from err
-
-
-def _get_index(index_path: Path | None = None) -> object:
-    """Return the cached FAISS index, loading it on first call."""
-    global _INDEX
-    if _INDEX is None:
-        path = index_path or _DEFAULT_INDEX_PATH
-        if not path.exists():
-            raise KBStoreUnreachableError(
-                store_path=str(path),
-                cause=FileNotFoundError(
-                    f"FAISS index not found at {path}. "
-                    "Run: python -m kb.scripts.build_index"
-                ),
-            )
-        try:
-            faiss = _import_faiss()
-            _INDEX = faiss.read_index(str(path))  # type: ignore[attr-defined]
-        except Exception as exc:
-            raise KBStoreUnreachableError(store_path=str(path), cause=exc) from exc
-    return _INDEX
-
-
-def _get_metadata(metadata_path: Path | None = None) -> dict[str, dict[str, Any]]:
-    """Return the cached KB metadata dict, loading it on first call."""
-    global _METADATA
-    if _METADATA is None:
-        path = metadata_path or _DEFAULT_METADATA_PATH
-        if not path.exists():
-            raise KBStoreUnreachableError(
-                store_path=str(path),
-                cause=FileNotFoundError(
-                    f"KB metadata not found at {path}. "
-                    "Run: python -m kb.scripts.build_index"
-                ),
-            )
-        try:
-            _METADATA = json.loads(path.read_text(encoding="utf-8"))
-        except Exception as exc:
-            raise KBStoreUnreachableError(store_path=str(path), cause=exc) from exc
-    return _METADATA
 
 
 def _get_encoder(model_name: str | None = None) -> object:
@@ -223,10 +162,7 @@ def _get_encoder(model_name: str | None = None) -> object:
     if _ENCODER is None:
         name = model_name or _DEFAULT_MODEL_NAME
         st_cls = _import_encoder()
-        try:
-            _ENCODER = st_cls(name, local_files_only=True)  # type: ignore[operator]
-        except Exception:
-            _ENCODER = st_cls(name)  # type: ignore[operator]
+        _ENCODER = st_cls(name)  # type: ignore[operator]
     return _ENCODER
 
 
@@ -238,16 +174,7 @@ def _metadata_to_kb_candidate(
     asset_id: str,
     retrieval_score: float,
 ) -> KBCandidate:
-    """Convert a metadata dict + retrieval context into a KBCandidate.
-
-    Args:
-        meta:            Dict from kb_metadata.json for one FAISS vector ID.
-        asset_id:        The asset whose query produced this result.
-        retrieval_score: Normalised cosine similarity score [0, 1].
-
-    Returns:
-        A frozen KBCandidate Pydantic model.
-    """
+    """Convert a metadata dict + retrieval context into a KBCandidate."""
     stride_raw: str | None = meta.get("stride_hint")
     stride_hint = _STRIDE_STR_MAP.get(stride_raw) if stride_raw else None
     return KBCandidate(
@@ -262,15 +189,6 @@ def _metadata_to_kb_candidate(
     )
 
 
-def _cosine_to_score(cosine_similarity: float) -> float:
-    """Normalise a cosine similarity value to [0, 1].
-
-    FAISS IndexFlatIP with L2-normalised vectors returns cosine similarities
-    in [-1, 1].  We shift and scale to [0, 1] for the retrieval_score field.
-    """
-    return max(0.0, min(1.0, (float(cosine_similarity) + 1.0) / 2.0))
-
-
 def _filter_by_sources(
     candidates: list[KBCandidate],
     kb_sources: list[str],
@@ -281,7 +199,6 @@ def _filter_by_sources(
 
 
 # ─── Retrieval Plan builder (plan() step) ────────────────────────────────────
-
 
 # KB sources always included regardless of asset type
 _CORE_SOURCES: frozenset[str] = frozenset({"CAPEC", "STRIDE"})
@@ -299,8 +216,16 @@ _CWE_TYPE_KEYWORDS: frozenset[str] = frozenset(
 # Interface keywords that force full KB coverage
 _WIRELESS_INTERFACE_KEYWORDS: frozenset[str] = frozenset(
     {
-        "ble", "bluetooth", "wifi", "wi-fi", "wireless",
-        "zigbee", "zwave", "rf", "lte", "5g",
+        "ble",
+        "bluetooth",
+        "wifi",
+        "wi-fi",
+        "wireless",
+        "zigbee",
+        "zwave",
+        "rf",
+        "lte",
+        "5g",
     }
 )
 
@@ -308,69 +233,48 @@ _WIRELESS_INTERFACE_KEYWORDS: frozenset[str] = frozenset(
 def _select_kb_sources(asset: AssetModel) -> list[str]:
     """Derive relevant KB source set for an asset based on its type and interfaces.
 
-    Logic (deterministic, no LLM):
-    - CAPEC + STRIDE always included — they cover all attack categories.
+    Logic (deterministic, no LLM) — UNCHANGED from the FAISS implementation:
+    - CAPEC + STRIDE always included.
     - ATT&CK added for network-facing / API / cloud assets.
     - CWE added for firmware / embedded / software assets.
     - Wireless interfaces (BLE, WiFi, etc.) trigger ATT&CK + CWE coverage.
     - Untrusted trust zone triggers full coverage (all 4 sources).
 
-    Args:
-        asset: The AssetModel to classify.
-
-    Returns:
-        Sorted list of KB source strings
-        (e.g. ``['ATT&CK', 'CAPEC', 'CWE', 'STRIDE']``).
+    This logic now populates the source = ANY($2) SQL parameter instead of
+    selecting which FAISS sub-index to search.
     """
     sources: set[str] = set(_CORE_SOURCES)
-
-    asset_type_lower = asset.asset_type.lower()
+    asset_type_lower = asset.asset_type.lower() if asset.asset_type else ""
 
     if any(kw in asset_type_lower for kw in _ATTCK_TYPE_KEYWORDS):
         sources.add("ATT&CK")
-
     if any(kw in asset_type_lower for kw in _CWE_TYPE_KEYWORDS):
         sources.add("CWE")
 
-    for iface in asset.interfaces:
+    for iface in asset.dfd_context.interfaces:
         iface_lower = iface.lower()
         if any(kw in iface_lower for kw in _WIRELESS_INTERFACE_KEYWORDS):
             sources.update({"ATT&CK", "CWE"})
         if any(kw in iface_lower for kw in {"http", "rest", "api", "https", "grpc"}):
             sources.add("ATT&CK")
 
-    if asset.trust_zone.lower() in {"untrusted", "external"}:
+    if asset.dfd_context.trust_zone.lower() in {"untrusted", "external"}:
         sources.update({"ATT&CK", "CWE"})
 
     return sorted(sources)
 
 
 def _build_query_text(asset: AssetModel) -> str:
-    """Construct a semantic FAISS query string from an asset's properties.
-
-    Concatenates name, type, interfaces, and key attribute values to form
-    a natural-language fragment that maximises cosine similarity against
-    the KB threat pattern embeddings.
-
-    Args:
-        asset: The AssetModel to describe.
-
-    Returns:
-        Non-empty query string derived from real asset data.
-    """
-    parts: list[str] = [asset.name, asset.asset_type]
-
-    if asset.interfaces:
-        parts.extend(asset.interfaces)
-
-    # Include device_config values — these carry the richest semantic signal
-    # (e.g. 'none' for encryption, 'PIN-only' for auth, 'no-verify' for OTA)
+    """Construct a semantic query string from an asset's properties."""
+    parts: list[str] = [asset.name]
+    if asset.asset_type and asset.asset_type != "unspecified":
+        parts.append(asset.asset_type)
+    if asset.dfd_context.interfaces:
+        parts.extend(asset.dfd_context.interfaces)
     if asset.device_config:
         for key, value in asset.device_config.items():
             parts.append(f"{key}: {value}")
-
-    parts.append(asset.trust_zone)
-
+    parts.append(asset.dfd_context.trust_zone)
     return " ".join(parts)
 
 
@@ -378,32 +282,7 @@ def build_retrieval_plan(
     agent_input: ThreatAgentInput,
     top_k: int = 10,
 ) -> RetrievalPlan:
-    """Build a structured RetrievalPlan dynamically from a ThreatAgentInput.
-
-    This is the real ``plan()`` step of the SCRP loop.  For each asset in
-    ``agent_input.assets`` it:
-      1. Constructs a semantic query string from asset type, interfaces,
-         attributes, and trust zone (via ``_build_query_text``).
-      2. Selects the appropriate KB sources via deterministic rules
-         (via ``_select_kb_sources``).
-      3. Packages every per-asset query into a ``RetrievalPlan`` ready to
-         be executed by ``fetch_candidates``.
-
-    No content is hardcoded.  Changing the asset attributes or trust zone
-    in ``agent_input`` produces a different plan at runtime.
-
-    Args:
-        agent_input: The normalised ``ThreatAgentInput`` received from the
-                     orchestrator.
-        top_k:       Maximum candidates per query (default: 10).
-
-    Returns:
-        A frozen ``RetrievalPlan`` containing one query per asset.
-
-    Raises:
-        ValueError: If ``agent_input.assets`` is empty (the schema validator
-                    catches this first, but we re-raise for defence-in-depth).
-    """
+    """Build a structured RetrievalPlan dynamically from a ThreatAgentInput."""
     if not agent_input.assets:
         raise ValueError(
             "ThreatAgentInput.assets must contain at least one AssetModel."
@@ -443,99 +322,118 @@ def build_retrieval_plan(
 def fetch_candidates(
     plan: RetrievalPlan,
     *,
-    index_path: Path | None = None,
-    metadata_path: Path | None = None,
+    index_path: Path | None = None,     # kept for signature compat; unused
+    metadata_path: Path | None = None,  # kept for signature compat; unused
     model_name: str | None = None,
 ) -> list[KBCandidate]:
     """Retrieve ranked KB candidates for all asset queries in the plan.
 
-    Executes each query in ``plan.queries`` against the FAISS index, collects
+    Executes each query against the pgvector threat_patterns table, collects
     results, deduplicates (same pattern_id per asset_id), enforces top_k, and
     returns a flat list sorted by retrieval_score descending.
 
     Args:
-        plan:          RetrievalPlan produced by plan() in the ThreatAgent.
-        index_path:    Override for FAISS binary path (default: config value).
-        metadata_path: Override for KB metadata JSON path (default: config).
+        plan:          RetrievalPlan produced by build_retrieval_plan().
+        index_path:    Unused — kept so callers need no changes.
+        metadata_path: Unused — kept so callers need no changes.
         model_name:    Override for embedding model (default: config value).
 
     Returns:
         Flat list of KBCandidate objects, sorted by retrieval_score descending.
-        Returns ``[]`` if a single query has no matches (not an error).
 
     Raises:
-        KBStoreUnreachableError: If the FAISS index or metadata cannot be
-                                 loaded from disk.
-        EmptyKBMatchError:       If ALL queries for a given asset_id return
-                                 zero candidates — hard failure per §5.
-        MalformedAssetInputError: If a query has an empty query_text, which
-                                  would produce a degenerate embedding vector.
+        KBStoreUnreachableError: If the DB is unreachable or the query fails.
+        EmptyKBMatchError:       If ALL queries for an asset_id return zero candidates.
+        MalformedAssetInputError: If a query has an empty query_text.
     """
-    import numpy as np  # type: ignore[import-untyped]
+    import numpy as np  # noqa: PLC0415
+    from pgvector.psycopg import register_vector  # noqa: PLC0415
 
-    index = _get_index(index_path)
-    metadata = _get_metadata(metadata_path)
     encoder = _get_encoder(model_name)
+    top_k = plan.top_k if hasattr(plan, "top_k") else 10
 
     log_step(
         logger,
         "INFO",
         "fetch_start",
         plan.run_id,
-        {"query_count": len(plan.queries), "top_k": plan.top_k},
+        {"query_count": len(plan.queries), "top_k": top_k},
     )
 
-    # Group queries by asset_id to detect per-asset empty-match failures
     asset_candidates: dict[str, list[KBCandidate]] = {}
 
-    for query in plan.queries:
-        asset_id: str = query["asset_id"]  # type: ignore[index]
-        query_text: str = query["query_text"]  # type: ignore[index]
-        kb_sources: list[str] = query["kb_sources"]  # type: ignore[index]
+    try:
+        with get_db_connection() as conn:
+            register_vector(conn)
+            with conn.cursor() as cur:
+                for query in plan.queries:
+                    asset_id: str = query["asset_id"]  # type: ignore[index]
+                    query_text: str = query["query_text"]  # type: ignore[index]
+                    kb_sources: list[str] = query["kb_sources"]  # type: ignore[index]
 
-        if not query_text.strip():
-            raise MalformedAssetInputError(
-                asset_id=asset_id,
-                reason=(
-                    f"query_text is empty for asset '{asset_id}'. "
-                    "Cannot produce a FAISS embedding vector."
-                ),
-            )
+                    if not query_text.strip():
+                        raise MalformedAssetInputError(
+                            asset_id=asset_id,
+                            reason=(
+                                f"query_text is empty for asset {asset_id!r}. "
+                                "Cannot produce an embedding vector."
+                            ),
+                        )
 
-        # Embed query text and search FAISS
-        query_vec: np.ndarray = encoder.encode(  # type: ignore[union-attr]
-            [query_text],
-            normalize_embeddings=True,
-        ).astype(np.float32)
+                    # Embed query text
+                    query_vec: Any = encoder.encode(  # type: ignore[union-attr]
+                        [query_text],
+                        normalize_embeddings=True,
+                    ).astype(np.float32)[0]
 
-        top_k = plan.top_k if hasattr(plan, "top_k") else 10
-        n_results = min(top_k, index.ntotal)  # type: ignore[union-attr]
-        distances, ids = index.search(query_vec, n_results)  # type: ignore[union-attr]
+                    # pgvector <=> = cosine distance; 1-distance = cosine similarity.
+                    # source = ANY(%s) replaces the old FAISS sub-index selection logic.
+                    cur.execute(
+                        """
+                        SELECT metadata,
+                               1 - (embedding <=> %s) AS similarity
+                        FROM   threat_patterns
+                        WHERE  source = ANY(%s)
+                        ORDER  BY embedding <=> %s
+                        LIMIT  %s;
+                        """,
+                        (query_vec, kb_sources, query_vec, top_k * 2),
+                    )
 
-        # Convert FAISS results to KBCandidates
-        query_candidates: list[KBCandidate] = []
-        for dist, vid in zip(distances[0], ids[0], strict=False):
-            if vid == -1:  # FAISS sentinel for "no result"
-                continue
-            meta = metadata.get(str(vid))
-            if meta is None:
-                continue
-            candidate = _metadata_to_kb_candidate(
-                meta=meta,
-                asset_id=asset_id,
-                retrieval_score=_cosine_to_score(dist),
-            )
-            query_candidates.append(candidate)
+                    rows = cur.fetchall()
+                    query_candidates: list[KBCandidate] = []
+                    for row in rows:
+                        meta_dict = row[0]
+                        if isinstance(meta_dict, str):
+                            meta_dict = json.loads(meta_dict)
+                        similarity = float(row[1])
+                        # Normalise cosine similarity [-1, 1] → [0, 1]
+                        # (mirrors the old _cosine_to_score from the FAISS path)
+                        score = max(0.0, min(1.0, (similarity + 1.0) / 2.0))
+                        candidate = _metadata_to_kb_candidate(
+                            meta=meta_dict,
+                            asset_id=asset_id,
+                            retrieval_score=score,
+                        )
+                        query_candidates.append(candidate)
 
-        # Filter to requested KB sources only
-        if kb_sources:
-            query_candidates = _filter_by_sources(query_candidates, kb_sources)
+                    # Belt-and-suspenders source filter
+                    if kb_sources:
+                        query_candidates = _filter_by_sources(query_candidates, kb_sources)
 
-        asset_candidates.setdefault(asset_id, [])
-        asset_candidates[asset_id].extend(query_candidates)
+                    asset_candidates.setdefault(asset_id, [])
+                    asset_candidates[asset_id].extend(query_candidates)
+
+    except Exception as exc:
+        if isinstance(exc, MalformedAssetInputError):
+            raise
+        raise KBStoreUnreachableError(
+            store_path="pgvector",
+            cause=exc,
+        ) from exc
 
     # Per-asset deduplication and empty-match guard
-    seen: dict[str, set[str]] = {}  # asset_id → set of pattern_ids seen
+    seen: dict[str, set[str]] = {}
     final: list[KBCandidate] = []
 
     for asset_id, candidates in asset_candidates.items():
@@ -551,7 +449,7 @@ def fetch_candidates(
             if c.pattern_id not in seen[asset_id]:
                 seen[asset_id].add(c.pattern_id)
                 deduped.append(c)
-                if len(deduped) >= (plan.top_k if hasattr(plan, "top_k") else 10):
+                if len(deduped) >= top_k:
                     break
 
         final.extend(deduped)
@@ -575,7 +473,7 @@ def get_kb_entry(
     pattern_id: str,
     source: KBSource,
     *,
-    metadata_path_str: str | None = None,
+    metadata_path_str: str | None = None,  # kept for signature compat; unused
 ) -> KBCandidate:
     """Look up a single KB entry by canonical pattern ID and source.
 
@@ -587,29 +485,46 @@ def get_kb_entry(
     Args:
         pattern_id:        e.g. 'CAPEC-94', 'ATT&CK-T1190', 'CWE-306'.
         source:            Which KB to look up in.
-        metadata_path_str: Optional override for kb_metadata.json path.
+        metadata_path_str: Unused — kept so callers need no changes.
 
     Returns:
-        KBCandidate with retrieval_score=1.0 (direct lookup, not FAISS-ranked).
+        KBCandidate with retrieval_score=1.0 (direct lookup, not ranked).
 
     Raises:
         KBEntryNotFoundError:    If pattern_id has no match in the given source.
-        KBStoreUnreachableError: If the KB metadata store is unavailable.
+        KBStoreUnreachableError: If the DB is unavailable.
     """
-    meta_path = Path(metadata_path_str) if metadata_path_str else None
-    metadata = _get_metadata(meta_path)
-
-    for _vid, entry_dict in metadata.items():
-        if entry_dict.get("pattern_id") == pattern_id and entry_dict.get(
-            "source"
-        ) == str(source):
-            return _metadata_to_kb_candidate(
-                meta=entry_dict,
-                asset_id="LOOKUP",  # No asset context for direct lookup
-                retrieval_score=1.0,
-            )
-
-    raise KBEntryNotFoundError(
-        pattern_id=pattern_id,
-        source=str(source),
-    )
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT metadata
+                    FROM   threat_patterns
+                    WHERE  pattern_id = %s
+                      AND  source     = %s
+                    LIMIT  1;
+                    """,
+                    (pattern_id, str(source)),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    raise KBEntryNotFoundError(
+                        pattern_id=pattern_id,
+                        source=str(source),
+                    )
+                meta_dict = row[0]
+                if isinstance(meta_dict, str):
+                    meta_dict = json.loads(meta_dict)
+                return _metadata_to_kb_candidate(
+                    meta=meta_dict,
+                    asset_id="LOOKUP",
+                    retrieval_score=1.0,
+                )
+    except KBEntryNotFoundError:
+        raise
+    except Exception as exc:
+        raise KBStoreUnreachableError(
+            store_path="pgvector",
+            cause=exc,
+        ) from exc
