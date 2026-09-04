@@ -12,6 +12,8 @@ dependencies = [
     "pydantic-settings==2.3.4",
     "fastapi==0.111.1",
     "uvicorn[standard]==0.30.1",
+    "pgvector>=0.2.5",
+    "psycopg[binary,pool]>=3.1.18",
 ]
 
 [project.optional-dependencies]
@@ -31,6 +33,7 @@ include = ["agents*", "scrp*", "common*", "config*"]
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+exclude = ["docs/"]
 
 [tool.ruff.lint]
 select = [
@@ -67,10 +70,16 @@ ignore = [
 
 
 
+"scripts/**/*.py" = [
+    "E402", # sys.path and sys.stdout tweaks before imports in standalone CLI scripts
+    "T201", # print is intentional in CLI demo scripts
+]
+
 # ---------------------------------------------------------------------------
 # pytest configuration
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
+pythonpath = ["."]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]

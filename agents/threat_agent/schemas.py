@@ -1,4 +1,4 @@
-﻿"""
+"""
 agents/threat_agent/schemas.py
 ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°
 TRC Engine ÃŽâ€œÃƒâ€¡ÃƒÂ¶ Phase 1: Threat Agent  |  Data Contract (Day-1 Freeze)
@@ -728,43 +728,54 @@ class AttackPath(BaseModel):
 # ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°ÃŽâ€œÃƒÂ²Ãƒâ€°
 
 
-class AssetModel(BaseModel):
-    """A single asset entry from the system model provided by the orchestrator.
+class SecurityAttributes(BaseModel):
+    """CIA-triad security properties required for this asset per §2.4.
 
-    Kept deliberately domain-neutral ÃŽâ€œÃƒâ€¡ÃƒÂ¶ fields apply equally to a Smart Door
-    Lock BLE controller, a medical infusion pump, and a vehicle ECU.
+    Distinct from device_config (which captures *what mechanisms the asset has*).
+    These fields capture *which security properties the asset needs to maintain*,
+    and are used by the Risk Agent's impact scoring (S/F/O/P) in Phase 2.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    asset_id: Annotated[
-        str,
-        Field(min_length=1, description="Unique asset identifier in the system model."),
-    ]
+    confidentiality: Annotated[
+        bool,
+        Field(description="Asset requires confidentiality protection (C)."),
+    ] = False
 
-    name: Annotated[
-        str,
-        Field(min_length=1, description="Human-readable asset name."),
-    ]
+    integrity: Annotated[
+        bool,
+        Field(description="Asset requires integrity protection (I)."),
+    ] = False
 
-    asset_type: Annotated[
-        str,
-        Field(
-            min_length=1,
-            description=(
-                "Asset category, e.g. 'firmware', 'REST API endpoint', "
-                "'BLE peripheral', 'CAN bus node', 'cloud backend'."
-            ),
-        ),
-    ]
+    availability: Annotated[
+        bool,
+        Field(description="Asset requires availability protection (A)."),
+    ] = False
+
+    authenticity: Annotated[
+        bool,
+        Field(description="Asset requires authenticity / non-repudiation (Auth)."),
+    ] = False
+
+
+class DFDContext(BaseModel):
+    """Data-Flow-Diagram context sourced from Group 1's §2.3.1 output.
+
+    Separates DFD-level context (interfaces, trust zone, flows) from the
+    Asset Identification table (§2.4).  retrieval.py reads this to determine
+    which KB sources to query and to build the FAISS query vector.
+    """
+
+    model_config = ConfigDict(frozen=True)
 
     interfaces: Annotated[
         list[str],
         Field(
             default_factory=list,
             description=(
-                "Communication interfaces exposed by this asset, e.g. "
-                "['BLE 5.0', 'UART', 'OTA update channel']."
+                "Communication interfaces of this asset as extracted from the DFD, "
+                "e.g. ['BLE 5.0', 'UART', 'OTA update channel']."
             ),
         ),
     ]
@@ -774,24 +785,147 @@ class AssetModel(BaseModel):
         Field(
             default="untrusted",
             description=(
-                "Trust boundary zone in the DFD/UML system model, "
-                "e.g. 'trusted', 'untrusted', 'DMZ', 'internal'."
+                "Trust boundary zone from the DFD, "
+                "e.g. 'trusted', 'untrusted', 'DMZ', 'external', 'internal'."
             ),
         ),
     ]
 
-    attributes: Annotated[
+    data_flows: Annotated[
+        list[str],
+        Field(
+            default_factory=list,
+            description=(
+                "Data flow names that involve this asset as a source or destination, "
+                "e.g. ['unlock_command', 'ota_update']."
+            ),
+        ),
+    ]
+
+
+class AssetModel(BaseModel):
+    """A single asset entry aligned with §2.4 Asset Identification table.
+
+    Combines the §2.4 Asset Record fields (asset_id, name, asset_type,
+    location, security_attributes, damage_scenario) with a DFDContext block
+    sourced from §2.3.1 and Threat-Agent-specific device_config metadata.
+
+    asset_id format follows the §2.4 convention: 'AS-{n}' (e.g. 'AS-1', 'AS-2').
+    An explicit id_alias field preserves any internal identifiers for audit.
+
+    Kept deliberately domain-neutral — fields apply equally to a Smart Door
+    Lock BLE controller, a medical infusion pump, and a vehicle ECU.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    # ── §2.4 Asset Identification Table Fields ──────────────────────────────
+
+    asset_id: Annotated[
+        str,
+        Field(
+            min_length=1,
+            description=(
+                "Unique asset identifier following §2.4 convention: 'AS-{n}', "
+                "e.g. 'AS-1', 'AS-2'.  This is the join key for the Traceability "
+                "Matrix linking Asset → Threat → Risk → Requirement."
+            ),
+        ),
+    ]
+
+    name: Annotated[
+        str,
+        Field(min_length=1, description="Human-readable asset name (§2.4)."),
+    ]
+
+    asset_type: Annotated[
+        str,
+        Field(
+            default="unspecified",
+            description=(
+                "Optional internal classification (not in §2.4 baseline). "
+                "e.g. 'firmware', 'REST API endpoint', 'BLE peripheral'."
+            ),
+        ),
+    ]
+
+    location: Annotated[
+        str,
+        Field(
+            default="unspecified",
+            description=(
+                "Physical or logical location of the asset per §2.4, "
+                "e.g. 'on-device', 'cloud-hosted', 'edge-gateway', 'internal VLAN'."
+            ),
+        ),
+    ]
+
+    security_attributes: Annotated[
+        SecurityAttributes,
+        Field(
+            default_factory=SecurityAttributes,
+            description=(
+                "CIA-triad security properties required for this asset per §2.4. "
+                "Used by the Risk Agent's impact scoring (S/F/O/P) in Phase 2."
+            ),
+        ),
+    ]
+
+    damage_scenario: Annotated[
+        str,
+        Field(
+            default="",
+            description=(
+                "Human-readable worst-case damage scenario if this asset is "
+                "compromised, per §2.4.  Used by Risk Agent for impact scoring. "
+                "e.g. 'Unauthorised physical entry to premises' or "
+                "'Incorrect drug dosage causing patient harm'."
+            ),
+        ),
+    ]
+
+    # ── DFD Context (sourced from §2.3.1) ───────────────────────────────────
+
+    dfd_context: Annotated[
+        DFDContext,
+        Field(
+            default_factory=DFDContext,
+            description=(
+                "Data-Flow-Diagram context for this asset, sourced from §2.3.1. "
+                "retrieval.py reads interfaces and trust_zone from here to build "
+                "FAISS query vectors and select KB sources."
+            ),
+        ),
+    ]
+
+    # ── Threat-Agent-Specific Technical Metadata ─────────────────────────────
+
+    device_config: Annotated[
         dict[str, str],
         Field(
             default_factory=dict,
             description=(
-                "Arbitrary key-value properties relevant to threat modelling, "
+                "Threat-Agent-specific technical device configuration. "
+                "Captures *what security mechanisms the asset has* (distinct from "
+                "security_attributes which captures *what it needs to protect*). "
                 "e.g. {'auth_mechanism': 'PIN-only', 'encryption': 'none', "
                 "'firmware_version': '2.3.1'}.  These are the primary "
                 "inputs to retrieval.py's FAISS query embedding."
             ),
         ),
     ]
+
+    # ── Backwards-Compat Shims ───────────────────────────────────────────────
+
+    @property
+    def interfaces(self) -> list[str]:
+        """Convenience accessor — reads from dfd_context.interfaces."""
+        return self.dfd_context.interfaces
+
+    @property
+    def trust_zone(self) -> str:
+        """Convenience accessor — reads from dfd_context.trust_zone."""
+        return self.dfd_context.trust_zone
 
 
 class ThreatAgentInput(BaseModel):

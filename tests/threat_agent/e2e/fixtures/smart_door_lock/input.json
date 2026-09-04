@@ -1,0 +1,37 @@
+{
+  "run_id": "RUN-SDL-E2E-001",
+  "use_case": "Consumer smart door lock with BLE unlock, cloud management, and OTA firmware updates.",
+  "system_model": "{\"trust_boundaries\": [\"phone-lock BLE\", \"lock-cloud TLS\"], \"data_flows\": [\"unlock_command\", \"ota_update\", \"e_key_sync\"]}",
+  "assets": [
+    {
+      "asset_id": "AS-1",
+      "name": "BLE Controller",
+      "asset_type": "embedded firmware",
+      "location": "on-device",
+      "security_attributes": { "confidentiality": false, "integrity": true, "availability": true, "authenticity": true },
+      "damage_scenario": "Unauthorised physical entry to premises via BLE replay or spoofing attack.",
+      "dfd_context": { "interfaces": ["BLE 5.0", "GATT"], "trust_zone": "untrusted", "data_flows": ["unlock_command"] },
+      "device_config": { "auth": "PIN-only", "encryption": "none", "pairing": "unauthenticated" }
+    },
+    {
+      "asset_id": "AS-2",
+      "name": "Secure Element",
+      "asset_type": "hardware security module",
+      "location": "on-device",
+      "security_attributes": { "confidentiality": true, "integrity": true, "availability": false, "authenticity": true },
+      "damage_scenario": "Cryptographic key exfiltration enabling permanent device compromise.",
+      "dfd_context": { "interfaces": ["I2C", "SPI"], "trust_zone": "trusted", "data_flows": [] },
+      "device_config": { "key_storage": "persistent", "tamper": "physical" }
+    },
+    {
+      "asset_id": "AS-3",
+      "name": "Cloud Backend",
+      "asset_type": "cloud api server",
+      "location": "cloud-hosted",
+      "security_attributes": { "confidentiality": true, "integrity": true, "availability": true, "authenticity": true },
+      "damage_scenario": "Mass compromise of all registered locks via cloud API takeover.",
+      "dfd_context": { "interfaces": ["HTTPS", "REST", "WebSocket"], "trust_zone": "external", "data_flows": ["ota_update", "e_key_sync"] },
+      "device_config": { "auth": "JWT", "rate_limiting": "none" }
+    }
+  ]
+}

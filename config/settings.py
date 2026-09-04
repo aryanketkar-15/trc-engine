@@ -1,4 +1,4 @@
-﻿"""config/settings.py
+"""config/settings.py
 ══════════════════════════════════════════════════════════════════════════════
 TRC Engine — Phase 1  |  Application Configuration (Day-1 + Day-2)
 ──────────────────────────────────────────────────────────────────────────────
@@ -22,8 +22,9 @@ Environment variable reference
                             Defaults to "INFO".
     MAX_RETRY_COUNT       — Optional.  Max LLM retry attempts (capped at 3
                             by the ValidationResult schema).  Defaults to 3.
-    FAISS_INDEX_PATH      — Required.  Filesystem path to the built FAISS index.
-    EMBEDDING_MODEL_NAME  — Optional.  Sentence-transformers model for FAISS
+    DATABASE_URL          — Optional.  PostgreSQL connection string for pgvector.
+                            Defaults to postgresql://trc_user:trc_password@localhost:5432/trc_engine.
+    EMBEDDING_MODEL_NAME  — Optional.  Sentence-transformers model for pgvector
                             embeddings.  Defaults to "all-MiniLM-L6-v2".
     KB_SNAPSHOT_VERSION   — Optional.  Version tag of the KB snapshot in use.
                             Defaults to "v1.0".
@@ -90,6 +91,18 @@ class Settings(BaseSettings):
         ),
     ]
 
+    DATABASE_URL: Annotated[
+        str,
+        Field(
+            default="postgresql://trc_user:trc_password@localhost:5432/trc_engine",
+            description="PostgreSQL connection string.",
+        ),
+    ]
+
+    POSTGRES_DB: str = "trc_engine"
+    POSTGRES_USER: str = "trc_user"
+    POSTGRES_PASSWORD: Annotated[SecretStr, Field(default=SecretStr("trc_password"))]
+
     # ── Runtime environment ───────────────────────────────────────────────────
 
     ENVIRONMENT: Annotated[
@@ -136,19 +149,10 @@ class Settings(BaseSettings):
         ),
     ]
 
-    # ── KB / Retrieval (blocks Aryan's KB loaders — added Day 2) ─────────────
-
-    FAISS_INDEX_PATH: Annotated[
-        Path,
-        Field(
-            description=(
-                "Filesystem path to the built FAISS index directory.  "
-                "Required — retrieval.py will raise KBStoreUnreachableError "
-                "at startup if this path does not exist or is not readable.  "
-                "Example: kb/data/faiss_index"
-            ),
-        ),
-    ]
+    # FAISS_INDEX_PATH is kept here so .env files from before the pgvector migration
+    # are still accepted (extra="ignore" in model_config silently drops unknown keys,
+    # but this keeps the docstring for any teammate who has an old .env).
+    # retrieval.py no longer reads this value.
 
     EMBEDDING_MODEL_NAME: Annotated[
         str,
@@ -157,8 +161,8 @@ class Settings(BaseSettings):
             min_length=1,
             description=(
                 "Sentence-transformers model name used to embed asset attributes "
-                "into FAISS query vectors.  Must match the model used when the "
-                "FAISS index was built — a mismatch produces silently wrong "
+                "into pgvector query vectors.  Must match the model used when "
+                "build_index.py was last run — a mismatch produces silently wrong "
                 "retrieval scores.  Defaults to 'all-MiniLM-L6-v2'."
             ),
         ),

@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: trc-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-trc_engine}
+      POSTGRES_USER: ${POSTGRES_USER:-trc_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trc_password}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trc_user} -d ${POSTGRES_DB:-trc_engine}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
