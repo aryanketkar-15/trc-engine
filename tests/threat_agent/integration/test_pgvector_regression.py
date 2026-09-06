@@ -56,11 +56,16 @@ def _wait_for_postgres(dsn: str, retries: int = 20, delay: float = 1.0) -> None:
 # ── Integration test ───────────────────────────────────────────────────────
 
 
+from config.settings import get_settings
+
+
 class TestPgvectorRegression:
     """Regression test: build_index.py → fetch_candidates() produces the same
     top match and similarity score as the old FAISS implementation."""
 
-    DSN = "postgresql://trc_user:trc_password@localhost:5432/trc_engine"
+    @property
+    def DSN(self) -> str:
+        return os.environ.get("DATABASE_URL") or get_settings().DATABASE_URL
 
     def test_build_index_and_retrieve_smart_door_lock(self) -> None:
         """Run build_index then query for BLE Controller.
@@ -97,12 +102,13 @@ class TestPgvectorRegression:
                     name="BLE Controller",
                     asset_type="embedded firmware",
                     dfd_context=DFDContext(
-                        interfaces=["BLE 5.0"],
+                        interfaces=["BLE 5.0", "GATT"],
                         trust_zone="untrusted",
                     ),
                     device_config={
-                        "auth_mechanism": "PIN-only",
+                        "auth": "PIN-only",
                         "encryption": "none",
+                        "pairing": "unauthenticated",
                     },
                 )
             ],

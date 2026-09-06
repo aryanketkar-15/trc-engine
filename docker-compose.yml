@@ -3,7 +3,7 @@ services:
     image: pgvector/pgvector:pg16
     container_name: trc-postgres
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-trc_engine}
       POSTGRES_USER: ${POSTGRES_USER:-trc_user}

@@ -139,9 +139,11 @@ def _init_schema() -> None:
     """Create the pgvector extension and threat_patterns table if not present."""
     print("  [DB] Initialising schema…", file=sys.stderr)
     with get_db_connection() as conn:
-        register_vector(conn)
         with conn.cursor() as cur:
             cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+        conn.commit()
+        register_vector(conn)
+        with conn.cursor() as cur:
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS threat_patterns (
