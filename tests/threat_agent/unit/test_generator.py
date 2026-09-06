@@ -508,6 +508,74 @@ class TestLiveLLMWiringAndFallback(unittest.TestCase):
         assert validation_result.passed is True
         assert len(validation_result.failed_checks) == 0
 
+    def test_outbound_prompt_redacts_planted_pii_before_llm_call(self):
+        """Verify that PII planted in use_case, asset name, device_config, and
+        damage_scenario is masked before the payload reaches chat_completion."""
+        planted_email = "lead.dev@enterprise-iot.org"
+        planted_phone = "+1-555-867-5309"
+        planted_ssn = "444-55-6666"
+        planted_ip = "192.168.99.10"
+
+        asset = AssetModel(
+            asset_id="AS-1",
+            name=f"Controller Node (poc: {planted_email})",
+            asset_type="embedded firmware",
+            damage_scenario=f"Unauthorized unlock by insider SSN {planted_ssn}.",
+            dfd_context=DFDContext(interfaces=["BLE 5.0"], trust_zone="untrusted"),
+            device_config={
+                "support_contact": planted_phone,
+                "remote_syslog": planted_ip,
+            },
+        )
+        candidate = _make_kb_candidate(asset_id="AS-1")
+        path = _make_attack_path(candidate=candidate, target_asset_ids=["AS-1"])
+        context = NormalizedInput(
+            run_id="RUN-PII-TEST-001",
+            use_case=f"Smart Lock deployment with emergency contact phone {planted_phone}.",
+            assets=[asset],
+            kb_snapshot_version="v1.0",
+            system_model_summary=f"Admin gateway reachable at {planted_ip}.",
+        )
+
+        captured_calls: list[dict] = []
+        logged_events: list[tuple[str, dict]] = []
+
+        def mock_chat_completion(**kwargs):
+            captured_calls.append(kwargs)
+            return json.dumps([_make_valid_llm_item(asset_id="AS-1")])
+
+        def capture_log_step(logger, level, event, run_id, payload):
+            logged_events.append((event, payload))
+
+        with (
+            patch(
+                "agents.threat_agent.generator.chat_completion",
+                side_effect=mock_chat_completion,
+            ),
+            patch("agents.threat_agent.generator.log_step", side_effect=capture_log_step),
+        ):
+            generate_scenarios([path], context)
+
+        assert len(captured_calls) == 1
+        user_prompt = captured_calls[0]["user_prompt"]
+
+        # Assert planted PII NEVER appears in the prompt dispatched to LLM
+        assert planted_email not in user_prompt
+        assert planted_phone not in user_prompt
+        assert planted_ssn not in user_prompt
+        assert planted_ip not in user_prompt
+
+        # Assert redaction tokens appear in their place
+        assert "[REDACTED_EMAIL]" in user_prompt
+        assert "[REDACTED_PHONE]" in user_prompt
+        assert "[REDACTED_GOV_ID]" in user_prompt
+        assert "[REDACTED_IP]" in user_prompt
+
+        # Assert pii_redacted_in_prompt audit event was recorded with count
+        redacted_events = [payload for event, payload in logged_events if event == "pii_redacted_in_prompt"]
+        assert len(redacted_events) > 0
+        assert redacted_events[0]["redaction_count"] >= 4
+
 
 if __name__ == "__main__":
     unittest.main()
