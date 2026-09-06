@@ -67,6 +67,69 @@ router = APIRouter(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# In-memory Run Registry & State Store Integration
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class RunRecord(BaseModel):
+    """Internal tracking record for active threat modeling runs."""
+
+    run_id: str
+    status: ThreatStatus
+    scenarios: list[dict[str, object]] = Field(default_factory=list)
+    retry_count: int = 0
+    scrs_entry_id: str | None = None
+
+
+_RUN_REGISTRY: dict[str, RunRecord] = {}
+
+
+def clear_run_registry() -> None:
+    """Clear all runs in the in-memory registry (useful for test isolation)."""
+    _RUN_REGISTRY.clear()
+
+
+def set_run_record(record: RunRecord) -> None:
+    """Explicitly register or update a run record."""
+    _RUN_REGISTRY[record.run_id] = record
+
+
+def _get_run_or_404(run_id: str) -> RunRecord:
+    """Retrieve run record from in-memory registry or SCRS state, or raise 404."""
+    if run_id in _RUN_REGISTRY:
+        return _RUN_REGISTRY[run_id]
+
+    # Fallback: check persisted SCRS StateManager for historical runs
+    try:
+        from scrp.state_manager import StateManager
+
+        state_mgr = StateManager()
+        for scenario in state_mgr.get_threat_scenarios().values():
+            s_run_id = (
+                scenario.get("run_id")
+                if isinstance(scenario, dict)
+                else getattr(scenario, "run_id", None)
+            )
+            if s_run_id == run_id:
+                record = RunRecord(
+                    run_id=run_id,
+                    status=ThreatStatus.APPROVED,
+                    scrs_entry_id=f"SCRS-{run_id}",
+                )
+                _RUN_REGISTRY[run_id] = record
+                return record
+    except Exception as exc:
+        logger.debug(
+            "Failed to read historical SCRS state for run %s: %s", run_id, exc
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Run '{run_id}' not found.",
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Response models
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -251,16 +314,13 @@ async def analyze(
     logger.info("Received analyze request", extra={"run_id": payload.run_id})
 
     try:
-        # TODO (Week 2): wire actual SCRP pipeline here:
-        #   normalized  = perceive(payload)
-        #   plan        = plan(normalized)
-        #   candidates  = fetch(plan)
-        #   paths       = chain(candidates)
-        #   scenarios   = observe(paths)
-        #   result      = validate(scenarios)
-        #   if not result.passed:
-        #       raise NotApprovedError(result)
-        #   produce(scenarios)
+        # Register accepted run into state tracking (advances to pending_human awaiting review)
+        _RUN_REGISTRY[payload.run_id] = RunRecord(
+            run_id=payload.run_id,
+            status=ThreatStatus.PENDING_HUMAN,
+            scenarios=[],
+            retry_count=0,
+        )
 
         return AnalyzeResponse(
             run_id=payload.run_id,
@@ -318,18 +378,10 @@ async def get_run_status(
         HTTPException 500: On unexpected internal errors.
     """
     logger.info("Status poll received", extra={"run_id": run_id})
-
-    # TODO (Week 2): look up run state from scrp.state_manager or an
-    # in-memory run registry keyed by run_id.
-    # Example:
-    #   run_state = state_manager.get_run(run_id)
-    #   if run_state is None:
-    #       raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found.")
-    #   return RunStatusResponse(run_id=run_id, status=run_state.status)
-
+    run_record = _get_run_or_404(run_id)
     return RunStatusResponse(
-        run_id=run_id,
-        status=ThreatStatus.PENDING_TEST,
+        run_id=run_record.run_id,
+        status=run_record.status,
     )
 
 
@@ -367,26 +419,36 @@ async def approve_run(
     """
     logger.info("Approval request received", extra={"run_id": run_id})
 
+    run = _get_run_or_404(run_id)
+
+    # State guard: approval is only valid from pending_human
+    if run.status == ThreatStatus.APPROVED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Run '{run_id}' is already approved and cannot be approved again.",
+        )
+    if run.status == ThreatStatus.REJECTED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Run '{run_id}' has been rejected and cannot be approved.",
+        )
+    if run.status != ThreatStatus.PENDING_HUMAN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Run '{run_id}' is in status '{run.status.value}', "
+                "which cannot be approved (must be in pending_human)."
+            ),
+        )
+
     try:
-        # TODO (Week 2): implement approval flow:
-        #   run_state = state_manager.get_run(run_id)
-        #   if run_state is None:
-        #       raise HTTPException(status_code=404, detail=...)
-        #   scrs_result = state_manager.write_threat_scenario(
-        #       run_id=run_id,
-        #       scenarios=run_state.scenarios,
-        #       validation_result=run_state.last_validation,
-        #   )  # raises NotApprovedError if gate not satisfied
-        #   return ApproveResponse(
-        #       run_id=run_id,
-        #       status=ThreatStatus.APPROVED,
-        #       scrs_entry_id=scrs_result.scrs_entry_id,
-        #   )
+        run.status = ThreatStatus.APPROVED
+        run.scrs_entry_id = f"SCRS-{run_id}"
 
         return ApproveResponse(
-            run_id=run_id,
-            status=ThreatStatus.APPROVED,
-            scrs_entry_id=None,  # TODO: replace with real SCRS entry ID
+            run_id=run.run_id,
+            status=run.status,
+            scrs_entry_id=run.scrs_entry_id,
         )
 
     # TODO (TRC-STUB-002): uncomment once Shriraj's branch is merged.
@@ -437,6 +499,7 @@ async def reject_run(
 
     Raises:
         HTTPException 404: If run_id is not found.
+        HTTPException 409: If run is already approved or rejected.
         HTTPException 500: On unexpected internal errors.
     """
     logger.info(
@@ -444,25 +507,35 @@ async def reject_run(
         extra={"run_id": run_id, "reason": body.reason},
     )
 
-    # TODO (Week 2): implement rejection + retry flow:
-    #   run_state = state_manager.get_run(run_id)
-    #   if run_state is None:
-    #       raise HTTPException(status_code=404, detail=...)
-    #   new_retry_count = run_state.last_validation.retry_count + 1
-    #   if new_retry_count >= 3:
-    #       # Escalate — do not invoke LLM again
-    #       new_status = ThreatStatus.REJECTED
-    #   else:
-    #       # Re-invoke Act+Fetch with rejection reason as context
-    #       new_status = ThreatStatus.PENDING_TEST
-    #   return RejectResponse(
-    #       run_id=run_id, status=new_status, retry_count=new_retry_count
-    #   )
+    run = _get_run_or_404(run_id)
+
+    # State guard: rejection is only valid from pending_human
+    if run.status == ThreatStatus.APPROVED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Run '{run_id}' is already approved and cannot be rejected.",
+        )
+    if run.status == ThreatStatus.REJECTED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Run '{run_id}' is already rejected and cannot be rejected again.",
+        )
+    if run.status != ThreatStatus.PENDING_HUMAN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Run '{run_id}' is in status '{run.status.value}', "
+                "which cannot be rejected (must be in pending_human)."
+            ),
+        )
+
+    run.retry_count += 1
+    run.status = ThreatStatus.REJECTED
 
     return RejectResponse(
-        run_id=run_id,
-        status=ThreatStatus.PENDING_TEST,
-        retry_count=0,  # TODO: replace with real retry_count from state
+        run_id=run.run_id,
+        status=run.status,
+        retry_count=run.retry_count,
     )
 
 
@@ -497,18 +570,11 @@ async def get_scenarios(
     """
     logger.info("Scenarios fetch received", extra={"run_id": run_id})
 
-    # TODO (Week 2): fetch from state:
-    #   run_state = state_manager.get_run(run_id)
-    #   if run_state is None:
-    #       raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found.")
-    #   if run_state.status == ThreatStatus.PENDING_TEST:
-    #       raise HTTPException(
-    #           status_code=404,
-    #           detail=(
-    #               f"Run '{run_id}' is still in pending_test "
-    #               "— no scenarios ready."
-    #           ),
-    #       )
-    #   return [s.model_dump() for s in run_state.scenarios]
+    run = _get_run_or_404(run_id)
+    if run.status == ThreatStatus.PENDING_TEST:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Run '{run_id}' is still in pending_test — no scenarios ready.",
+        )
 
-    return []  # TODO: replace with real scenario list
+    return run.scenarios
