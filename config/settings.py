@@ -193,12 +193,34 @@ class Settings(BaseSettings):
         ),
     ]
 
-    # TODO (Week 2): add further settings as new modules are wired up:
-    #   OPENAI_MODEL: str = "gpt-4o"
-    #   OPENAI_TEMPERATURE: float = Field(default=0.1, ge=0.0, le=1.0)
-    #   OPENAI_REQUEST_TIMEOUT_SECONDS: int = Field(default=30, ge=5, le=120)
-    #   OPENAI_MAX_TOKENS_PER_RUN: int = 8000
-    #   SCRS_STATE_FILE: Path = Path("scrp/SCRS_state.json")
+    # ── LLM Generation & Inference ────────────────────────────────────────────
+
+    USE_LIVE_LLM: Annotated[
+        bool,
+        Field(
+            default=True,
+            description=(
+                "Whether generator.py calls the live LLM API by default (True) "
+                "or uses deterministic fallback (False) for predictable offline demos."
+            ),
+        ),
+    ]
+
+    OPENAI_MODEL: Annotated[
+        str,
+        Field(
+            default="gpt-4o-mini",
+            description="OpenAI model identifier for threat scenario generation.",
+        ),
+    ]
+
+    OPENAI_BASE_URL: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="Optional custom base URL for OpenAI client (e.g. OpenRouter).",
+        ),
+    ]
 
 
 @lru_cache(maxsize=1)

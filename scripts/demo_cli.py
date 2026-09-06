@@ -439,26 +439,27 @@ def run_demo() -> None:
         sys.exit(1)
 
     # Step 5: Threat Scenario Assembly
-    disclosure_msg = (
-        "[bold yellow][DISCLOSURE] Stage 4: Scenario Generation uses a deterministic fixture "
-        "response today for reproducibility; live OpenAI API wiring lands in Week 3.[/bold yellow]"
-    )
+    use_live_llm = getattr(get_settings(), "USE_LIVE_LLM", True)
+    if os.environ.get("USE_LIVE_LLM", "").lower() in ("false", "0", "no"):
+        use_live_llm = False
+
+    if not use_live_llm:
+        disclosure_msg = (
+            "[bold yellow][DISCLOSURE] Stage 4: Scenario Generation running in deterministic "
+            "mode (USE_LIVE_LLM=false) for presentation stability.[/bold yellow]"
+        )
+        if console:
+            console.print(f"\n{disclosure_msg}")
+        else:
+            print("\n[DISCLOSURE] Scenario generation running in deterministic mode.")
+
     if console:
-        console.print(f"\n{disclosure_msg}")
         console.print("[bold cyan]Stage 4: Assembling Threat Scenarios...[/bold cyan]")
     else:
-        print("\n[DISCLOSURE] Scenario generation uses a deterministic fixture response today.")
         print("--- Stage 4: Assembling Threat Scenarios ---")
 
     try:
-        try:
-            scenarios = generate_scenarios(paths, agent_input)
-        except NotImplementedError:
-            with patch(
-                "agents.threat_agent.generator._call_llm",
-                side_effect=_mock_llm_fallback,
-            ):
-                scenarios = generate_scenarios(paths, agent_input)
+        scenarios = generate_scenarios(paths, agent_input)
         if console:
             console.print(
                 f"[bold green][+] Generated {len(scenarios)} ThreatScenarios.[/bold green]"

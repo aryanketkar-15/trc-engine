@@ -402,22 +402,111 @@ class TestGenerateFromCandidates(unittest.TestCase):
 # ─── TODO placeholder stubs ───────────────────────────────────────────────────
 
 
-class TestGeneratorTODO(unittest.TestCase):
-    """Placeholder tests that will be filled in as dependencies land."""
+from common.llm_client import LLMAPIError, LLMTimeoutError
+from agents.threat_agent.validator import Validator
 
-    @pytest.mark.skip(reason="TODO: needs common.llm_client types (Manthan's module)")
-    def test_llm_timeout_raises_typed_exception(self):
-        """generate_scenarios() must propagate LLMTimeoutError from llm_client."""
 
-    @pytest.mark.skip(reason="TODO: infusion-pump e2e fixture (Week 3)")
-    def test_infusion_pump_fixture_produces_valid_scenarios(self):
-        """generate_scenarios() must produce valid ThreatScenarios on the
-        infusion pump domain fixture, not just Smart Door Lock."""
+class TestLiveLLMWiringAndFallback(unittest.TestCase):
+    """Verify live LLM wiring, graceful fallback on failure, and audit logging."""
 
-    @pytest.mark.skip(reason="TODO: self_consistency sampling via scorer.py (Week 2)")
-    def test_self_consistency_sampling_calls_generate_n_times(self):
-        """scorer.py's self_consistency component calls generate_scenarios N=3
-        times; each must return the same stride_category + kb_reference pair."""
+    def test_successful_llm_call_produces_valid_structured_scenario(self):
+        candidate = _make_kb_candidate()
+        path = _make_attack_path(candidate=candidate)
+        context = _make_context()
+        llm_item = _make_valid_llm_item()
+
+        with patch(
+            "agents.threat_agent.generator.chat_completion",
+            return_value=json.dumps([llm_item]),
+        ) as mock_chat:
+            results = generate_scenarios([path], context)
+
+        mock_chat.assert_called_once()
+        assert len(results) == 1
+        scenario = results[0]
+        assert scenario.kb_reference == "CAPEC-94"
+        assert scenario.stride_category == STRIDECategory.SPOOFING
+        assert scenario.status == ThreatStatus.PENDING_TEST
+        assert len(scenario.evidence_chain.applicability_reason) >= 20
+
+    def test_timeout_triggers_graceful_fallback(self):
+        candidate = _make_kb_candidate()
+        path = _make_attack_path(candidate=candidate)
+        context = _make_context()
+
+        with patch(
+            "agents.threat_agent.generator.chat_completion",
+            side_effect=LLMTimeoutError(timeout_seconds=30.0, model="gpt-4o-mini"),
+        ):
+            results = generate_scenarios([path], context)
+
+        # Must degrade gracefully and return valid scenarios without crashing
+        assert len(results) == 1
+        scenario = results[0]
+        assert scenario.asset_id == candidate.asset_id
+        assert scenario.kb_reference == candidate.pattern_id
+        assert scenario.status == ThreatStatus.PENDING_TEST
+        assert len(scenario.evidence_chain.applicability_reason) >= 20
+
+    def test_api_error_triggers_fallback_and_logs_audit_event(self):
+        candidate = _make_kb_candidate()
+        path = _make_attack_path(candidate=candidate)
+        context = _make_context()
+
+        logged_events: list[str] = []
+
+        def capture_log_step(logger, level, event, run_id, payload):
+            logged_events.append(event)
+
+        with (
+            patch(
+                "agents.threat_agent.generator.chat_completion",
+                side_effect=LLMAPIError("429 rate limit exceeded", status_code=429),
+            ),
+            patch("agents.threat_agent.generator.log_step", side_effect=capture_log_step),
+        ):
+            results = generate_scenarios([path], context)
+
+        assert len(results) == 1
+        assert "llm_fallback_engaged" in logged_events
+
+    def test_use_live_llm_false_flag_uses_deterministic_mode(self):
+        candidate = _make_kb_candidate()
+        path = _make_attack_path(candidate=candidate)
+        context = _make_context()
+
+        logged_events: list[str] = []
+
+        def capture_log_step(logger, level, event, run_id, payload):
+            logged_events.append(event)
+
+        with (
+            patch.dict("os.environ", {"USE_LIVE_LLM": "false"}),
+            patch(
+                "agents.threat_agent.generator.chat_completion",
+                side_effect=RuntimeError("Should not be called when USE_LIVE_LLM=false"),
+            ),
+            patch("agents.threat_agent.generator.log_step", side_effect=capture_log_step),
+        ):
+            results = generate_scenarios([path], context)
+
+        assert len(results) == 1
+        assert "llm_deterministic_mode" in logged_events
+        assert results[0].status == ThreatStatus.PENDING_TEST
+
+    def test_fallback_scenarios_pass_validator_invariants(self):
+        """Fallback scenarios must be well-formed enough to satisfy Protocol Invariant Validator."""
+        candidate = _make_kb_candidate()
+        path = _make_attack_path(candidate=candidate)
+        context = _make_context()
+
+        with patch.dict("os.environ", {"USE_LIVE_LLM": "false"}):
+            scenarios = generate_scenarios([path], context)
+
+        validator = Validator()
+        validation_result = validator.validate(scenarios[0])
+        assert validation_result.passed is True
+        assert len(validation_result.failed_checks) == 0
 
 
 if __name__ == "__main__":
