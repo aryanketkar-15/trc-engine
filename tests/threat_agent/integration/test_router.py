@@ -29,6 +29,10 @@ from agents.threat_agent.router import (
 from agents.threat_agent.router import (
     router as threat_agent_router,
 )
+from agents.threat_agent.run_store import (
+    get_in_memory_run_store,
+    get_run_store,
+)
 from agents.threat_agent.schemas import ThreatStatus
 from main import app as main_app
 
@@ -44,10 +48,12 @@ _FIXTURE_PATH = (
 
 @pytest.fixture(autouse=True)
 def _isolate_registry():
-    """Ensure in-memory run registry is cleared before and after each test."""
+    """Ensure in-memory run registry is cleared and wired before/after each test."""
     clear_run_registry()
+    main_app.dependency_overrides[get_run_store] = get_in_memory_run_store
     yield
     clear_run_registry()
+    main_app.dependency_overrides.pop(get_run_store, None)
 
 
 @pytest.fixture(scope="module")
