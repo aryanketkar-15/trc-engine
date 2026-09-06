@@ -70,6 +70,7 @@ if TYPE_CHECKING:
 
 from common.llm_client import LLMClientError, chat_completion
 from common.logging import get_logger, log_step
+from common.pii_redaction import redact_pii_with_count, redact_structure
 from config.settings import get_settings
 
 logger = get_logger(__name__)
@@ -140,20 +141,35 @@ def _build_system_prompt() -> str:
 def _build_user_prompt(
     path: AttackPath,
     context: NormalizedInput,
+    run_id: str = "",
 ) -> str:
     """Render the per-path user-role prompt from an AttackPath and system context.
 
-    This prompt is logged verbatim (Section 2.7 reproducibility) so it must
-    contain no secrets and no PII (middleware.py guarantees PII is redacted
-    before context reaches this module).
+    Applies PII redaction to free-text fields (use_case, system_model_summary,
+    reasoning, asset name, damage_scenario, device_config values) before prompt
+    assembly so no unredacted user secrets or PII reach the LLM.
 
     Args:
         path:    The AttackPath to generate scenarios for.
-        context: The NormalizedInput produced by perceive() — PII-free.
+        context: The NormalizedInput produced by perceive().
+        run_id:  ThreatAgent run identifier for structured audit logging.
 
     Returns:
         Rendered prompt string passed to the LLM as the ``user`` message.
     """
+    total_redactions = 0
+
+    use_case_clean, c_uc = redact_pii_with_count(context.use_case)
+    total_redactions += c_uc
+
+    raw_summary = getattr(context, "system_model_summary", getattr(context, "system_model", ""))
+    sys_summary_clean, c_sm = redact_pii_with_count(raw_summary)
+    total_redactions += c_sm
+
+    raw_reasoning = path.reasoning or "not provided"
+    reasoning_clean, c_re = redact_pii_with_count(raw_reasoning)
+    total_redactions += c_re
+
     # Build a compact JSON representation of each step for the prompt.
     steps_json = json.dumps(
         [
@@ -171,31 +187,53 @@ def _build_user_prompt(
         indent=2,
     )
 
-    # Gather the assets targeted by this path so the LLM knows which ones
-    # to reference in attack_vector and applicability_reason.
+    # Gather target assets, redacting free-text fields (name, damage_scenario, device_config)
     target_assets = [a for a in context.assets if a.asset_id in path.target_asset_ids]
-    assets_json = json.dumps(
-        [
-            {
-                "asset_id": a.asset_id,
-                "name": a.name,
-                "asset_type": a.asset_type,
-                "interfaces": a.interfaces,
-                "trust_zone": a.trust_zone,
-                "device_config": a.device_config,
-            }
-            for a in target_assets
-        ],
-        indent=2,
-    )
+    sanitized_assets = []
+    for a in target_assets:
+        clean_name, c_name = redact_pii_with_count(a.name)
+        clean_cfg, c_cfg = redact_structure(a.device_config or {})
+        clean_dmg, c_dmg = redact_pii_with_count(getattr(a, "damage_scenario", ""))
+        total_redactions += (c_name + c_cfg + c_dmg)
 
-    sys_summary = getattr(context, "system_model_summary", getattr(context, "system_model", ""))
+        asset_dict: dict[str, Any] = {
+            "asset_id": a.asset_id,
+            "name": clean_name,
+            "asset_type": a.asset_type,
+            "interfaces": a.interfaces,
+            "trust_zone": a.trust_zone,
+            "device_config": clean_cfg,
+        }
+        if clean_dmg:
+            asset_dict["damage_scenario"] = clean_dmg
+        sanitized_assets.append(asset_dict)
+
+    assets_json = json.dumps(sanitized_assets, indent=2)
+
+    if total_redactions > 0:
+        log_step(
+            logger,
+            "INFO",
+            "pii_redacted_in_prompt",
+            run_id or context.run_id,
+            {
+                "path_id": path.path_id,
+                "redaction_count": total_redactions,
+            },
+        )
+        logger.info(
+            "[run=%s, path=%s] PII redacted from prompt (%d item(s) masked).",
+            run_id or context.run_id,
+            path.path_id,
+            total_redactions,
+        )
+
     return (
-        f"USE CASE:\n{context.use_case}\n\n"
-        f"SYSTEM MODEL SUMMARY:\n{sys_summary}\n\n"
+        f"USE CASE:\n{use_case_clean}\n\n"
+        f"SYSTEM MODEL SUMMARY:\n{sys_summary_clean}\n\n"
         f"TARGET ASSETS:\n{assets_json}\n\n"
         f"ATTACK PATH (path_id={path.path_id}, is_forced={path.is_forced}):\n"
-        f"Chain reasoning: {path.reasoning or 'not provided'}\n"
+        f"Chain reasoning: {reasoning_clean}\n\n"
         f"Steps:\n{steps_json}\n\n"
         "TASK:\n"
         "For EACH step in the attack path, produce one JSON object with these "
@@ -571,7 +609,7 @@ def generate_scenarios(
     seq = 0  # global scenario sequence across all paths
 
     for path in paths:
-        user_prompt = retry_preamble + _build_user_prompt(path, context)
+        user_prompt = retry_preamble + _build_user_prompt(path, context, run_id=run_id)
 
         log_step(
             logger,
