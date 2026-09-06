@@ -157,10 +157,14 @@ def chat_completion(
     """
     resolved_model = model or _DEFAULT_MODEL
     settings = get_settings()
-    # SecretStr.get_secret_value() — only call site; never stored in a var
-    # that could be logged or serialised.
+    api_key_val = settings.OPENAI_API_KEY.get_secret_value()
+    base_url = getattr(settings, "OPENAI_BASE_URL", None)
+    if not base_url and api_key_val.startswith("sk-or-"):
+        base_url = "https://openrouter.ai/api/v1"
+
     client = openai.OpenAI(
-        api_key=settings.OPENAI_API_KEY.get_secret_value(),
+        api_key=api_key_val,
+        base_url=base_url,
         timeout=timeout_seconds,
     )
 

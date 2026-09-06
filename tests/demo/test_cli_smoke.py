@@ -117,15 +117,12 @@ def test_demo_cli_pipeline_smoke(
         paths = [build_single_step_path(c) for c in candidates]
     assert len(paths) > 0
 
-    # 5. Stage 4: Scenario Generation (Deterministic Fixture)
-    try:
+    # 5. Stage 4: Scenario Generation (mocked for fast unit testing)
+    with patch(
+        "agents.threat_agent.generator._call_llm",
+        side_effect=_mock_llm_fallback,
+    ):
         scenarios = generate_scenarios(paths, agent_input)
-    except NotImplementedError:
-        with patch(
-            "agents.threat_agent.generator._call_llm",
-            side_effect=_mock_llm_fallback,
-        ):
-            scenarios = generate_scenarios(paths, agent_input)
     assert len(scenarios) > 0
 
     # 6. Stage 5: Validation

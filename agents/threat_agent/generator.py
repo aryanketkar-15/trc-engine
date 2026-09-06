@@ -68,7 +68,9 @@ from agents.threat_agent.schemas import (
 if TYPE_CHECKING:
     pass  # common.llm_client types — wire here when replacing _call_llm() stub
 
+from common.llm_client import LLMClientError, chat_completion
 from common.logging import get_logger, log_step
+from config.settings import get_settings
 
 logger = get_logger(__name__)
 
@@ -217,15 +219,89 @@ def _build_user_prompt(
     )
 
 
-# ─── LLM call stub ────────────────────────────────────────────────────────────
+# ─── LLM invocation & Deterministic Fallback ──────────────────────────────────
+
+
+_STRIDE_KEYWORD_FALLBACK: dict[STRIDECategory, str] = {
+    STRIDECategory.SPOOFING: "replay",
+    STRIDECategory.TAMPERING: "injection",
+    STRIDECategory.REPUDIATION: "audit bypass",
+    STRIDECategory.INFORMATION_DISCLOSURE: "unencrypted transmission",
+    STRIDECategory.DENIAL_OF_SERVICE: "resource exhaustion",
+    STRIDECategory.ELEVATION_OF_PRIVILEGE: "access control bypass",
+}
+
+
+def _deterministic_fallback_for_path(
+    path: AttackPath,
+    context: NormalizedInput,
+) -> list[dict]:
+    """Produce deterministic, schema-compliant fallback scenarios for an AttackPath.
+
+    Used when:
+      1. Live LLM calls are disabled via settings or USE_LIVE_LLM=false.
+      2. Live LLM call fails after retries (network timeout, rate limit, API error).
+
+    Guarantees Protocol Invariant Validator invariants:
+      - Valid STRIDE category
+      - Non-empty citation
+      - attack_vector contains valid vocabulary keyword from STRIDE_VECTOR_VOCABULARY
+      - applicability_reason >= 20 characters, non-generic, references asset properties
+    """
+    asset_map = {a.asset_id: a for a in context.assets}
+    items: list[dict] = []
+
+    for step in path.steps:
+        target_asset_id = (
+            step.asset_id
+            if step.asset_id in asset_map
+            else (path.target_asset_ids[0] if path.target_asset_ids else context.assets[0].asset_id)
+        )
+        asset = asset_map.get(target_asset_id)
+        asset_name = asset.name if asset else target_asset_id
+
+        # Derive STRIDECategory
+        stride_cat = step.stride_hint or STRIDECategory.TAMPERING
+        if not isinstance(stride_cat, STRIDECategory):
+            stride_cat = STRIDECategory(stride_cat)
+
+        kw = _STRIDE_KEYWORD_FALLBACK.get(stride_cat, "tampering")
+
+        interfaces = ", ".join(asset.interfaces) if asset and asset.interfaces else "standard"
+        exposure = (
+            f"{interfaces} interface ({asset.trust_zone} trust zone)"
+            if asset
+            else "Exposed attack surface"
+        )
+
+        applicability_reason = (
+            f"The asset '{asset_name}' exposes {interfaces} interfaces in {asset.trust_zone if asset else 'untrusted'} "
+            f"zone, allowing an adversary to execute {step.pattern_id} via {kw}."
+        )
+        if len(applicability_reason) < 20:
+            applicability_reason = f"Vulnerability {step.pattern_id} applies directly to {asset_name} via {kw} vector."
+
+        items.append(
+            {
+                "asset_id": target_asset_id,
+                "stride_category": stride_cat.value,
+                "attack_vector": f"Exploitation of {step.pattern_id} ({step.title}) via {kw} targeting {asset_name}",
+                "kb_reference": step.pattern_id,
+                "exposure": exposure,
+                "matched_pattern": step.pattern_id,
+                "applicability_reason": applicability_reason,
+                "citation": f"{step.pattern_id}: {step.title} ({step.source})",
+            }
+        )
+
+    return items
 
 
 def _call_llm(system_prompt: str, user_prompt: str, run_id: str) -> str:
-    """Invoke the LLM and return the raw response string.
+    """Invoke the LLM and return the raw response string via common.llm_client.
 
-    This is a STUB.  The real implementation delegates to
-    ``common.llm_client.chat_completion()`` (Manthan's module), which
-    provides timeout, exponential-backoff retry, and per-run cost ceiling.
+    Delegates to common.llm_client.chat_completion(), which provides timeout,
+    exponential-backoff retry, and cost ceilings.
 
     Args:
         system_prompt: The system-role message for the LLM.
@@ -240,38 +316,15 @@ def _call_llm(system_prompt: str, user_prompt: str, run_id: str) -> str:
         common.llm_client.LLMAPIError: On rate-limit / API errors
             (exponential backoff exhausted).
         LLMResponseError: If the response cannot be decoded as UTF-8 text.
-
-    TODO (Manthan):
-        Replace this stub body with:
-            from common.llm_client import chat_completion
-            return chat_completion(
-                model=LLM_MODEL,
-                temperature=LLM_TEMPERATURE,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user",   "content": user_prompt},
-                ],
-                run_id=run_id,
-            )
     """
-    # STUB — logs the call and raises NotImplementedError so integration
-    # tests that mock this function work without a live API key.
-    log_step(
-        logger,
-        "INFO",
-        "llm_call_stub",
-        run_id,
-        {
-            "model": LLM_MODEL,
-            "temperature": LLM_TEMPERATURE,
-            "prompt_template_version": PROMPT_TEMPLATE_VERSION,
-            "status": "stub",
-        },
-    )
-    raise NotImplementedError(
-        "_call_llm() is a stub.  "
-        "Replace with common.llm_client.chat_completion() call "
-        "once Manthan's LLM client module is available on develop."
+    settings = get_settings()
+    model = getattr(settings, "OPENAI_MODEL", None) or LLM_MODEL
+    return chat_completion(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        model=model,
+        prompt_version=PROMPT_TEMPLATE_VERSION,
+        run_id=run_id,
     )
 
 
@@ -294,6 +347,8 @@ _REQUIRED_RESPONSE_KEYS = frozenset(
 def _parse_llm_response(raw: str, path: AttackPath, run_id: str) -> list[dict]:  # type: ignore[type-arg]
     """Parse the LLM's raw JSON response into a list of scenario dicts.
 
+    Strips Markdown code fences if the model wraps JSON in ```json ... ```.
+
     Args:
         raw:    Raw string returned by _call_llm().
         path:   The AttackPath the response corresponds to (for error context).
@@ -307,8 +362,17 @@ def _parse_llm_response(raw: str, path: AttackPath, run_id: str) -> list[dict]: 
         LLMResponseError: On JSON decode failure, wrong top-level type,
                           or missing required keys in any item.
     """
+    clean_raw = raw.strip()
+    if clean_raw.startswith("```"):
+        lines = clean_raw.splitlines()
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].startswith("```"):
+            lines = lines[:-1]
+        clean_raw = "\n".join(lines).strip()
+
     try:
-        data = json.loads(raw)
+        data = json.loads(clean_raw)
     except json.JSONDecodeError as exc:
         raise LLMResponseError(
             f"[run={run_id}, path={path.path_id}] "
@@ -498,6 +562,11 @@ def generate_scenarios(
             f"{failure_lines}\n\n"
         )
 
+    settings = get_settings()
+    use_live = getattr(settings, "USE_LIVE_LLM", True)
+    if os.environ.get("USE_LIVE_LLM", "").lower() in ("false", "0", "no"):
+        use_live = False
+
     scenarios: list[ThreatScenario] = []
     seq = 0  # global scenario sequence across all paths
 
@@ -514,12 +583,44 @@ def generate_scenarios(
                 "step_count": len(path.steps),
                 "is_forced": path.is_forced,
                 "status": "pending",
+                "use_live": use_live,
             },
         )
 
-        raw_response = _call_llm(system_prompt, user_prompt, run_id)
-
-        items = _parse_llm_response(raw_response, path, run_id)
+        items: list[dict] = []
+        if use_live:
+            try:
+                raw_response = _call_llm(system_prompt, user_prompt, run_id)
+                items = _parse_llm_response(raw_response, path, run_id)
+            except LLMClientError as exc:
+                log_step(
+                    logger,
+                    "WARNING",
+                    "llm_fallback_engaged",
+                    run_id,
+                    {
+                        "path_id": path.path_id,
+                        "error_type": type(exc).__name__,
+                        "reason": str(exc),
+                    },
+                )
+                logger.warning(
+                    "[run=%s, path=%s] Live LLM call failed (%s: %s). Engaging deterministic fallback.",
+                    run_id,
+                    path.path_id,
+                    type(exc).__name__,
+                    exc,
+                )
+                items = _deterministic_fallback_for_path(path, context)
+        else:
+            log_step(
+                logger,
+                "INFO",
+                "llm_deterministic_mode",
+                run_id,
+                {"path_id": path.path_id, "reason": "USE_LIVE_LLM=false"},
+            )
+            items = _deterministic_fallback_for_path(path, context)
 
         for item in items:
             scenario = _make_scenario(item, path, run_id, seq)
@@ -535,6 +636,7 @@ def generate_scenarios(
                 "path_id": path.path_id,
                 "scenarios_produced": len(items),
                 "status": "ok",
+                "mode": "live" if use_live and not items == [] else "fallback",
             },
         )
 
