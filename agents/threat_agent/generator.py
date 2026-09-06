@@ -52,7 +52,7 @@ from __future__ import annotations
 import json
 import os
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from agents.threat_agent.exceptions import EmptyAttackPathError
 from agents.threat_agent.schemas import (
@@ -64,6 +64,7 @@ from agents.threat_agent.schemas import (
     ThreatScenario,
     ThreatStatus,
 )
+from agents.threat_agent.scorer import compute_confidence_score
 
 if TYPE_CHECKING:
     pass  # common.llm_client types — wire here when replacing _call_llm() stub
@@ -312,18 +313,25 @@ def _deterministic_fallback_for_path(
             else "Exposed attack surface"
         )
 
+        zone = asset.trust_zone if asset else "untrusted"
         applicability_reason = (
-            f"The asset '{asset_name}' exposes {interfaces} interfaces in {asset.trust_zone if asset else 'untrusted'} "
+            f"The asset '{asset_name}' exposes {interfaces} interfaces in {zone} "
             f"zone, allowing an adversary to execute {step.pattern_id} via {kw}."
         )
         if len(applicability_reason) < 20:
-            applicability_reason = f"Vulnerability {step.pattern_id} applies directly to {asset_name} via {kw} vector."
+            applicability_reason = (
+                f"Vulnerability {step.pattern_id} applies directly to {asset_name} "
+                f"via {kw} vector."
+            )
 
         items.append(
             {
                 "asset_id": target_asset_id,
                 "stride_category": stride_cat.value,
-                "attack_vector": f"Exploitation of {step.pattern_id} ({step.title}) via {kw} targeting {asset_name}",
+                "attack_vector": (
+                    f"Exploitation of {step.pattern_id} ({step.title}) via {kw} "
+                    f"targeting {asset_name}"
+                ),
                 "kb_reference": step.pattern_id,
                 "exposure": exposure,
                 "matched_pattern": step.pattern_id,
@@ -480,15 +488,10 @@ def _make_scenario(
         citation=item["citation"],
     )
 
-    # Preliminary confidence_score: set to the mean retrieval_score of path
-    # steps as a reasonable initial estimate.  scorer.py overwrites this with
-    # the full Section 2.6 formula (retrieval_strength + self_consistency +
-    # evidence_completeness).
-    preliminary_score: float = (
-        sum(s.retrieval_score for s in path.steps) / len(path.steps)
-        if path.steps
-        else 0.0
-    )
+    # Preliminary confidence_score: computed by scorer.py (mean retrieval_score
+    # of path steps). scorer.py will later refine this with the full Section 2.6
+    # multi-signal formula (retrieval_strength + self_consistency + evidence_completeness).
+    preliminary_score: float = compute_confidence_score(path)
 
     return ThreatScenario(
         tid=tid,
@@ -643,7 +646,8 @@ def generate_scenarios(
                     },
                 )
                 logger.warning(
-                    "[run=%s, path=%s] Live LLM call failed (%s: %s). Engaging deterministic fallback.",
+                    "[run=%s, path=%s] Live LLM call failed (%s: %s). "
+                    "Engaging deterministic fallback.",
                     run_id,
                     path.path_id,
                     type(exc).__name__,
