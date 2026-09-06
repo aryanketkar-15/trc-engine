@@ -22,9 +22,9 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
-from unittest.mock import patch
 
 # Ensure the project root is in sys.path so we can import 'agents', 'config', etc.
 _project_root = Path(__file__).resolve().parent.parent
@@ -59,8 +59,10 @@ from agents.threat_agent.schemas import (
     ThreatAgentInput,
     ThreatStatus,
 )
+from agents.threat_agent.scorer import LOW_CONFIDENCE_THRESHOLD
 from agents.threat_agent.validator import Validator
 from common.logging import get_logger, log_step
+from config.settings import get_settings
 from scrp.state_manager import StateManager
 
 logger = get_logger("demo_cli")
@@ -143,7 +145,9 @@ def load_smart_door_lock_input() -> ThreatAgentInput:
                     confidentiality=True, integrity=True,
                     availability=False, authenticity=True,
                 ),
-                damage_scenario="Cryptographic key exfiltration enabling permanent device compromise.",
+                damage_scenario=(
+                    "Cryptographic key exfiltration enabling permanent device compromise."
+                ),
                 dfd_context=DFDContext(
                     interfaces=["I2C", "SPI"],
                     trust_zone="trusted",
@@ -230,7 +234,8 @@ def load_infusion_pump_input() -> ThreatAgentInput:
                     availability=True, authenticity=False,
                 ),
                 damage_scenario=(
-                    "Lateral movement through flat hospital network enabling attack on life-critical systems."
+                    "Lateral movement through flat hospital network enabling attack "
+                    "on life-critical systems."
                 ),
                 dfd_context=DFDContext(
                     interfaces=["Ethernet", "HL7 FHIR REST API"],
@@ -520,15 +525,38 @@ def run_demo() -> None:
         sys.exit(1)
 
     # Step 7: Human-in-the-Loop Approval & SCRS Persistence
+    conf = target_scenario.confidence_score
+    is_low_conf = conf < LOW_CONFIDENCE_THRESHOLD
+
     if console:
         console.print("\n[bold cyan]Stage 6: Human-in-the-Loop Approval Gate[/bold cyan]")
+        if is_low_conf:
+            console.print(
+                f"  [bold red]⚠ LOW CONFIDENCE: {conf:.4f} "
+                f"(below threshold {LOW_CONFIDENCE_THRESHOLD})[/bold red]"
+            )
+        else:
+            console.print(f"  Confidence Score: [bold green]{conf:.4f}[/bold green]")
+
+        prompt_text = (
+            f"Approve ThreatScenario [bold yellow]{target_scenario.tid}[/bold yellow] "
+            f"(Confidence: {conf:.4f}) for SCRS?"
+        )
         approve = Prompt.ask(
-            f"Approve ThreatScenario [bold yellow]{target_scenario.tid}[/bold yellow] for SCRS?",
+            prompt_text,
             choices=["y", "n"],
             default="y",
         )
     else:
-        prompt_msg = f"\nApprove ThreatScenario {target_scenario.tid} for SCRS? [y/n] (default y): "
+        warn_text = (
+            f" [⚠ LOW CONFIDENCE: {conf:.4f}]"
+            if is_low_conf
+            else f" [Confidence: {conf:.4f}]"
+        )
+        prompt_msg = (
+            f"\nApprove ThreatScenario {target_scenario.tid}{warn_text} "
+            f"for SCRS? [y/n] (default y): "
+        )
         approve = input(prompt_msg).strip() or "y"
 
     if approve.lower() == "y":
