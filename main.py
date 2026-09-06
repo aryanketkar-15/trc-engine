@@ -23,6 +23,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from agents.threat_agent.router import router as threat_agent_router
+from agents.threat_agent.run_store import (
+    get_postgres_run_store,
+    get_run_store,
+    init_postgres_run_store_schema,
+)
 from config.settings import get_settings
 
 settings = get_settings()
@@ -59,6 +64,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         "TRC Engine starting up",
         extra={"environment": settings.ENVIRONMENT, "log_level": settings.LOG_LEVEL},
     )
+
+    try:
+        init_postgres_run_store_schema()
+    except Exception as exc:
+        logger.warning(
+            "Could not initialize postgres run store schema on startup: %s", exc
+        )
+
     yield
     logger.info("TRC Engine shutting down")
 
@@ -84,6 +97,9 @@ app = FastAPI(
     redoc_url=None if _is_prod else "/redoc",
     openapi_url=None if _is_prod else "/openapi.json",
 )
+
+# Wire production storage dependencies
+app.dependency_overrides[get_run_store] = get_postgres_run_store
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Routers

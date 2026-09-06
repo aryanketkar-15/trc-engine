@@ -40,9 +40,17 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Body, HTTPException, Path, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
 from pydantic import BaseModel, Field
 
+from agents.threat_agent.run_store import (
+    InvalidStateTransitionError,
+    RunNotFoundError,
+    RunRecord,
+    RunRegistryStore,
+    get_in_memory_run_store,
+    get_run_store,
+)
 from agents.threat_agent.schemas import (
     ThreatAgentInput,
     ThreatStatus,
@@ -67,37 +75,29 @@ router = APIRouter(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# In-memory Run Registry & State Store Integration
+# Run Registry & State Store Integration
 # ──────────────────────────────────────────────────────────────────────────────
 
-
-class RunRecord(BaseModel):
-    """Internal tracking record for active threat modeling runs."""
-
-    run_id: str
-    status: ThreatStatus
-    scenarios: list[dict[str, object]] = Field(default_factory=list)
-    retry_count: int = 0
-    scrs_entry_id: str | None = None
-
-
-_RUN_REGISTRY: dict[str, RunRecord] = {}
+# Backward compatibility alias for legacy tests
+_RUN_REGISTRY = get_in_memory_run_store()._runs
 
 
 def clear_run_registry() -> None:
     """Clear all runs in the in-memory registry (useful for test isolation)."""
-    _RUN_REGISTRY.clear()
+    get_in_memory_run_store().clear()
 
 
 def set_run_record(record: RunRecord) -> None:
     """Explicitly register or update a run record."""
-    _RUN_REGISTRY[record.run_id] = record
+    get_in_memory_run_store().set_run(record)
 
 
-def _get_run_or_404(run_id: str) -> RunRecord:
-    """Retrieve run record from in-memory registry or SCRS state, or raise 404."""
-    if run_id in _RUN_REGISTRY:
-        return _RUN_REGISTRY[run_id]
+def _get_run_or_404(run_id: str, store: RunRegistryStore | None = None) -> RunRecord:
+    """Retrieve run record from the store or SCRS state fallback, or raise 404."""
+    active_store = store if store is not None else get_run_store()
+    record = active_store.get_run(run_id)
+    if record is not None:
+        return record
 
     # Fallback: check persisted SCRS StateManager for historical runs
     try:
@@ -116,7 +116,7 @@ def _get_run_or_404(run_id: str) -> RunRecord:
                     status=ThreatStatus.APPROVED,
                     scrs_entry_id=f"SCRS-{run_id}",
                 )
-                _RUN_REGISTRY[run_id] = record
+                active_store.set_run(record)
                 return record
     except Exception as exc:
         logger.debug(
@@ -126,6 +126,41 @@ def _get_run_or_404(run_id: str) -> RunRecord:
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail=f"Run '{run_id}' not found.",
+    )
+
+
+def _raise_invalid_transition(
+    exc: InvalidStateTransitionError,
+    action: str,  # "approve" | "reject"
+) -> None:
+    """Map InvalidStateTransitionError to HTTP 409 with exact expected details."""
+    if action == "approve":
+        if exc.current_status == ThreatStatus.APPROVED:
+            detail = (
+                f"Run '{exc.run_id}' is already approved and cannot be approved again."
+            )
+        elif exc.current_status == ThreatStatus.REJECTED:
+            detail = f"Run '{exc.run_id}' has been rejected and cannot be approved."
+        else:
+            detail = (
+                f"Run '{exc.run_id}' is in status '{exc.current_status.value}', "
+                "which cannot be approved (must be in pending_human)."
+            )
+    else:  # reject
+        if exc.current_status == ThreatStatus.APPROVED:
+            detail = f"Run '{exc.run_id}' is already approved and cannot be rejected."
+        elif exc.current_status == ThreatStatus.REJECTED:
+            detail = (
+                f"Run '{exc.run_id}' is already rejected and cannot be rejected again."
+            )
+        else:
+            detail = (
+                f"Run '{exc.run_id}' is in status '{exc.current_status.value}', "
+                "which cannot be rejected (must be in pending_human)."
+            )
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=detail,
     )
 
 
@@ -296,11 +331,16 @@ async def analyze(
         ThreatAgentInput,
         Body(description="System model and asset list for threat modelling."),
     ],
+    store: Annotated[
+        RunRegistryStore,
+        Depends(get_run_store),
+    ],
 ) -> AnalyzeResponse:
     """Submit a ThreatAgentInput and start the SCRP threat analysis loop.
 
     Args:
         payload: Validated ThreatAgentInput from the request body.
+        store: RunRegistryStore storage provider (injected).
 
     Returns:
         AnalyzeResponse with run_id and initial status=pending_test.
@@ -315,7 +355,7 @@ async def analyze(
 
     try:
         # Register accepted run into state tracking (advances to pending_human awaiting review)
-        _RUN_REGISTRY[payload.run_id] = RunRecord(
+        store.create_run(
             run_id=payload.run_id,
             status=ThreatStatus.PENDING_HUMAN,
             scenarios=[],
@@ -364,11 +404,16 @@ async def get_run_status(
         str,
         Path(description="The run_id returned by POST /analyze."),
     ],
+    store: Annotated[
+        RunRegistryStore,
+        Depends(get_run_store),
+    ],
 ) -> RunStatusResponse:
     """Return the current ThreatStatus for a given run.
 
     Args:
         run_id: The unique run identifier from the analyze response.
+        store: RunRegistryStore storage provider (injected).
 
     Returns:
         RunStatusResponse with the current lifecycle state.
@@ -378,7 +423,7 @@ async def get_run_status(
         HTTPException 500: On unexpected internal errors.
     """
     logger.info("Status poll received", extra={"run_id": run_id})
-    run_record = _get_run_or_404(run_id)
+    run_record = _get_run_or_404(run_id, store)
     return RunStatusResponse(
         run_id=run_record.run_id,
         status=run_record.status,
@@ -402,11 +447,16 @@ async def approve_run(
         str,
         Path(description="The run_id to approve."),
     ],
+    store: Annotated[
+        RunRegistryStore,
+        Depends(get_run_store),
+    ],
 ) -> ApproveResponse:
     """Approve a threat analysis run and write its scenarios to the SCRS.
 
     Args:
         run_id: The unique run identifier to approve.
+        store: RunRegistryStore storage provider (injected).
 
     Returns:
         ApproveResponse with status=approved and the SCRS entry ID.
@@ -415,41 +465,34 @@ async def approve_run(
         HTTPException 422: If NotApprovedError is raised by state_manager
             (e.g. validation did not pass — gate not satisfied).
         HTTPException 404: If run_id is not found.
+        HTTPException 409: If run is not in pending_human or already approved/rejected.
         HTTPException 500: On unexpected internal errors.
     """
     logger.info("Approval request received", extra={"run_id": run_id})
 
-    run = _get_run_or_404(run_id)
-
-    # State guard: approval is only valid from pending_human
-    if run.status == ThreatStatus.APPROVED:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Run '{run_id}' is already approved and cannot be approved again.",
-        )
-    if run.status == ThreatStatus.REJECTED:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Run '{run_id}' has been rejected and cannot be approved.",
-        )
-    if run.status != ThreatStatus.PENDING_HUMAN:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Run '{run_id}' is in status '{run.status.value}', "
-                "which cannot be approved (must be in pending_human)."
-            ),
-        )
+    _get_run_or_404(run_id, store)
 
     try:
-        run.status = ThreatStatus.APPROVED
-        run.scrs_entry_id = f"SCRS-{run_id}"
+        run = store.transition_run(
+            run_id=run_id,
+            expected_status=ThreatStatus.PENDING_HUMAN,
+            new_status=ThreatStatus.APPROVED,
+            scrs_entry_id=f"SCRS-{run_id}",
+        )
 
         return ApproveResponse(
             run_id=run.run_id,
             status=run.status,
             scrs_entry_id=run.scrs_entry_id,
         )
+
+    except RunNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Run '{run_id}' not found.",
+        ) from exc
+    except InvalidStateTransitionError as exc:
+        _raise_invalid_transition(exc, action="approve")
 
     # TODO (TRC-STUB-002): uncomment once Shriraj's branch is merged.
     # except NotApprovedError as exc:
@@ -487,19 +530,24 @@ async def reject_run(
         RejectRequest,
         Body(description="Rejection reason from the human reviewer."),
     ],
+    store: Annotated[
+        RunRegistryStore,
+        Depends(get_run_store),
+    ],
 ) -> RejectResponse:
     """Reject a threat analysis run and trigger retry or escalation.
 
     Args:
         run_id: The unique run identifier to reject.
         body: RejectRequest containing the human reviewer's reason.
+        store: RunRegistryStore storage provider (injected).
 
     Returns:
         RejectResponse with updated status and retry_count.
 
     Raises:
         HTTPException 404: If run_id is not found.
-        HTTPException 409: If run is already approved or rejected.
+        HTTPException 409: If run is not in pending_human or already approved/rejected.
         HTTPException 500: On unexpected internal errors.
     """
     logger.info(
@@ -507,36 +555,28 @@ async def reject_run(
         extra={"run_id": run_id, "reason": body.reason},
     )
 
-    run = _get_run_or_404(run_id)
+    _get_run_or_404(run_id, store)
 
-    # State guard: rejection is only valid from pending_human
-    if run.status == ThreatStatus.APPROVED:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Run '{run_id}' is already approved and cannot be rejected.",
-        )
-    if run.status == ThreatStatus.REJECTED:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Run '{run_id}' is already rejected and cannot be rejected again.",
-        )
-    if run.status != ThreatStatus.PENDING_HUMAN:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Run '{run_id}' is in status '{run.status.value}', "
-                "which cannot be rejected (must be in pending_human)."
-            ),
+    try:
+        run = store.transition_run(
+            run_id=run_id,
+            expected_status=ThreatStatus.PENDING_HUMAN,
+            new_status=ThreatStatus.REJECTED,
+            increment_retry=True,
         )
 
-    run.retry_count += 1
-    run.status = ThreatStatus.REJECTED
-
-    return RejectResponse(
-        run_id=run.run_id,
-        status=run.status,
-        retry_count=run.retry_count,
-    )
+        return RejectResponse(
+            run_id=run.run_id,
+            status=run.status,
+            retry_count=run.retry_count,
+        )
+    except RunNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Run '{run_id}' not found.",
+        ) from exc
+    except InvalidStateTransitionError as exc:
+        _raise_invalid_transition(exc, action="reject")
 
 
 @router.get(
@@ -555,11 +595,16 @@ async def get_scenarios(
         str,
         Path(description="The run_id to retrieve scenarios for."),
     ],
+    store: Annotated[
+        RunRegistryStore,
+        Depends(get_run_store),
+    ],
 ) -> list[dict[str, object]]:
     """Retrieve the threat scenario list for a given run.
 
     Args:
         run_id: The unique run identifier.
+        store: RunRegistryStore storage provider (injected).
 
     Returns:
         List of serialised ThreatScenario dicts (pending human review).
@@ -570,7 +615,7 @@ async def get_scenarios(
     """
     logger.info("Scenarios fetch received", extra={"run_id": run_id})
 
-    run = _get_run_or_404(run_id)
+    run = _get_run_or_404(run_id, store)
     if run.status == ThreatStatus.PENDING_TEST:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
