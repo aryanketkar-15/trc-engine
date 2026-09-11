@@ -69,6 +69,7 @@ def client() -> TestClient:
     test_app = FastAPI()
     test_app.include_router(threat_agent_router)
     test_app.include_router(threat_agent_router, prefix="/api/v1")
+    test_app.dependency_overrides[get_run_store] = get_in_memory_run_store
     return TestClient(test_app)
 
 
