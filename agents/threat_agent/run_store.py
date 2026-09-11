@@ -431,7 +431,11 @@ _GLOBAL_IN_MEMORY_STORE = InMemoryRunRegistryStore()
 
 
 def get_in_memory_run_store() -> InMemoryRunRegistryStore:
-    """Return the global in-memory run store instance."""
+    """Return the global in-memory run store instance.
+
+    Used by tests via FastAPI's dependency_overrides to swap in a fast,
+    Docker-free store without touching the default production store.
+    """
     return _GLOBAL_IN_MEMORY_STORE
 
 
@@ -443,8 +447,11 @@ def get_postgres_run_store() -> PostgresRunRegistryStore:
 def get_run_store() -> RunRegistryStore:
     """Default FastAPI dependency provider for RunRegistryStore.
 
-    Returns the in-memory store by default to ensure all isolated tests and
-    scaffolding work immediately without Docker.
-    Production wiring in main.py overrides this with get_postgres_run_store.
+    Returns the PostgreSQL-backed store by default — this is the safe,
+    durable production behavior and requires no special wiring to obtain.
+
+    Tests that need speed (no Docker) should use FastAPI's dependency_overrides
+    to substitute get_in_memory_run_store, which is the idiomatic use of that
+    mechanism.  Production code never needs to call dependency_overrides.
     """
-    return get_in_memory_run_store()
+    return get_postgres_run_store()

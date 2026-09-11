@@ -78,17 +78,14 @@ router = APIRouter(
 # Run Registry & State Store Integration
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Backward compatibility alias for legacy tests
-_RUN_REGISTRY = get_in_memory_run_store()._runs
-
 
 def clear_run_registry() -> None:
-    """Clear all runs in the in-memory registry (useful for test isolation)."""
+    """Clear all runs in the in-memory registry (used for test isolation)."""
     get_in_memory_run_store().clear()
 
 
 def set_run_record(record: RunRecord) -> None:
-    """Explicitly register or update a run record."""
+    """Explicitly register or update a run record in the in-memory store."""
     get_in_memory_run_store().set_run(record)
 
 
