@@ -75,6 +75,13 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "payload manipulation",
             "code injection",
             "buffer overflow",
+            # Synonyms for generator natural language output
+            "inject",
+            "malicious",
+            "malware",
+            "modify",
+            "corrupt",
+            "overwrite",
         }
     ),
     STRIDECategory.REPUDIATION: frozenset(
@@ -120,6 +127,14 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "sudo",
             "kernel exploit",
             "role escalation",
+            # Synonyms for generator natural language output
+            "unauthorized access",
+            "bypass",
+            "unlock",
+            "unauthenticated",
+            "authentication bypass",
+            "unauth",
+            "gain access",
         }
     ),
 }

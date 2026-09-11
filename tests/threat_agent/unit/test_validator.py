@@ -51,14 +51,16 @@ from scrp.state_manager import NotApprovedError, StateManager
 
 _TEST_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
     STRIDECategory.SPOOFING: frozenset({"replay", "impersonation", "ble replay", "phishing"}),
-    STRIDECategory.TAMPERING: frozenset({"injection", "sql injection", "firmware manipulation"}),
+    STRIDECategory.TAMPERING: frozenset(
+        {"injection", "sql injection", "firmware manipulation", "inject", "malicious", "malware"}
+    ),
     STRIDECategory.REPUDIATION: frozenset({"log deletion", "audit bypass", "log tampering"}),
     STRIDECategory.INFORMATION_DISCLOSURE: frozenset(
         {"eavesdrop", "sniffing", "data exfiltration"}
     ),
     STRIDECategory.DENIAL_OF_SERVICE: frozenset({"flood", "resource exhaustion", "dos"}),
     STRIDECategory.ELEVATION_OF_PRIVILEGE: frozenset(
-        {"privilege escalation", "access control bypass"}
+        {"privilege escalation", "access control bypass", "bypass", "unlock", "unauthenticated"}
     ),
 }
 
