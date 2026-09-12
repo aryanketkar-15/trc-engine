@@ -345,6 +345,18 @@ class ThreatScenario(BaseModel):
         ),
     ]
 
+    validation_status: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description=(
+                "Validation outcome for this scenario: 'passed' when all invariant "
+                "checks pass, or 'escalated_after_retries' when retry attempts were "
+                "exhausted and human review was required."
+            ),
+        ),
+    ] = None
+
     @field_validator("confidence_score", mode="before")
     @classmethod
     def _clamp_confidence(cls, v: float) -> float:

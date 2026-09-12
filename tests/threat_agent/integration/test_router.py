@@ -16,6 +16,7 @@ Covers the full HTTP interaction lifecycle:
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,7 @@ from fastapi.testclient import TestClient
 
 from agents.threat_agent.router import (
     clear_run_registry,
+    get_orchestrator,
 )
 from agents.threat_agent.router import (
     router as threat_agent_router,
@@ -46,14 +48,21 @@ _FIXTURE_PATH = (
 )
 
 
+def _mock_orchestrator() -> Callable[[Any], tuple[list[Any], int, str]]:
+    """Fast stub orchestrator provider for router HTTP integration tests."""
+    return lambda _payload: ([], 0, "passed")
+
+
 @pytest.fixture(autouse=True)
 def _isolate_registry():
     """Ensure in-memory run registry is cleared and wired before/after each test."""
     clear_run_registry()
     main_app.dependency_overrides[get_run_store] = get_in_memory_run_store
+    main_app.dependency_overrides[get_orchestrator] = _mock_orchestrator
     yield
     clear_run_registry()
     main_app.dependency_overrides.pop(get_run_store, None)
+    main_app.dependency_overrides.pop(get_orchestrator, None)
 
 
 @pytest.fixture(scope="module")
@@ -70,6 +79,7 @@ def client() -> TestClient:
     test_app.include_router(threat_agent_router)
     test_app.include_router(threat_agent_router, prefix="/api/v1")
     test_app.dependency_overrides[get_run_store] = get_in_memory_run_store
+    test_app.dependency_overrides[get_orchestrator] = _mock_orchestrator
     return TestClient(test_app)
 
 
