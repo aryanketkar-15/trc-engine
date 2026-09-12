@@ -53,6 +53,7 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
         {
             "replay",
             "impersonation",
+            "impersonat",
             "credential theft",
             "identity forgery",
             "session hijack",
@@ -61,6 +62,12 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "phishing",
             "arp spoofing",
             "dns spoofing",
+            "spoof",
+            "spoofing",
+            "fake",
+            "forged",
+            "forgery",
+            "masquerade",
         }
     ),
     STRIDECategory.TAMPERING: frozenset(
@@ -82,6 +89,18 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "modify",
             "corrupt",
             "overwrite",
+            "tamper",
+            "tampering",
+            "firmware",
+            "update",
+            "firmware update",
+            "software update",
+            "update mechanism",
+            "unsecured",
+            "unverified",
+            "alter",
+            "manipulat",
+            "integrity",
         }
     ),
     STRIDECategory.REPUDIATION: frozenset(
@@ -92,6 +111,12 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "evidence removal",
             "non-repudiation bypass",
             "transaction denial",
+            "repudiat",
+            "deny",
+            "denial of action",
+            "delete log",
+            "clear log",
+            "cover track",
         }
     ),
     STRIDECategory.INFORMATION_DISCLOSURE: frozenset(
@@ -104,6 +129,12 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "information leak",
             "memory disclosure",
             "cleartext",
+            "leak",
+            "disclos",
+            "expose",
+            "exposure",
+            "plaintext",
+            "intercept",
         }
     ),
     STRIDECategory.DENIAL_OF_SERVICE: frozenset(
@@ -116,6 +147,13 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "ddos",
             "availability",
             "starvation",
+            "denial of service",
+            "disrupt",
+            "shutdown",
+            "freeze",
+            "hang",
+            "starve",
+            "reboot",
         }
     ),
     STRIDECategory.ELEVATION_OF_PRIVILEGE: frozenset(
@@ -135,6 +173,9 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "authentication bypass",
             "unauth",
             "gain access",
+            "escalat",
+            "privilege",
+            "unauthorized",
         }
     ),
 }
@@ -158,7 +199,7 @@ _ENCODER: Any | None = None
 
 def _import_encoder() -> object:
     try:
-        from sentence_transformers import SentenceTransformer  # noqa: PLC0415
+        from sentence_transformers import SentenceTransformer
 
         return SentenceTransformer
     except ImportError as err:
@@ -361,8 +402,8 @@ def fetch_candidates(
         EmptyKBMatchError:       If ALL queries for an asset_id return zero candidates.
         MalformedAssetInputError: If a query has an empty query_text.
     """
-    import numpy as np  # noqa: PLC0415
-    from pgvector.psycopg import register_vector  # noqa: PLC0415
+    import numpy as np
+    from pgvector.psycopg import register_vector
 
     encoder = _get_encoder(model_name)
     top_k = plan.top_k if hasattr(plan, "top_k") else 10
