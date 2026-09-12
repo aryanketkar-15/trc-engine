@@ -1,6 +1,6 @@
 # Threat Agent — Internal Technical Documentation
 **TRC Engine | Phase 1 Implementation Reference**  
-*Document Version: 1.0 — Current as of develop commit `fcaba51`*
+*Document Version: 1.0 — Current as of develop commit `d5206a6`*
 
 ---
 
@@ -8,24 +8,25 @@
 
 The **Threat Agent** is the foundational reasoning engine of Phase 1 of the TRC (Threat-Risk-Compliance) Engine. Its objective is to ingest a structured system model (hardware/software assets, network interfaces, trust boundaries, and communication flows), identify realistic threat vectors using authoritative vulnerability databases, synthesize end-to-end multi-step attack scenarios, validate those scenarios against formal protocol invariants, and present them for human approval before persisting approved scenarios to the **Shared Cybersecurity Reasoning State (SCRS)**.
 
-### Architectural Framing vs. Actual Implementation Drift
-The design of the Threat Agent was originally specified as a 5-to-7 stage loop:
-$$\text{Perceive} \longrightarrow \text{Reason \& Plan} \longrightarrow \text{Act / Fetch} \longrightarrow \text{Observe / Synthesize} \longrightarrow \text{Validate} \longrightarrow \text{Produce}$$
+### Architecture & Pipeline Stages
+The design of the Threat Agent is executed as a closed-loop reasoning and validation cycle:
+$$\text{Perceive} \longrightarrow \text{Reason \& Plan} \longrightarrow \text{Act / Fetch} \longrightarrow \text{Observe / Synthesize} \longrightarrow \text{Validate} \overset{\text{Auto-Retry (up to 3)}}{\longleftarrow\!\!\longrightarrow} \text{Human Gate} \longrightarrow \text{Produce}$$
 
-A technical review of the current implementation reveals the exact operational reality:
+The pipeline stages are orchestrated end-to-end:
 
 1. **Perceive** (`agents/threat_agent/router.py`, `agents/threat_agent/schemas.py`): Validates raw JSON payloads against `ThreatAgentInput` using strict Pydantic schemas, normalizing asset interfaces, security attributes, and device configurations.
 2. **Reason & Plan** (`agents/threat_agent/retrieval.py`): Deterministically derives target KB sources and builds an optimized semantic search query string for each asset based on trust zone and interface classification.
 3. **Act / Fetch** (`agents/threat_agent/retrieval.py`): Executes pgvector cosine-distance queries against the PostgreSQL `threat_patterns` table, retrieving top-$k$ candidates.
 4. **Attack Chaining** (`agents/threat_agent/attack_chain.py`): Synthesizes graph paths (`AttackPath`) connecting candidate threats from ingress points across trust zones to sensitive target assets.
 5. **Observe / Synthesize** (`agents/threat_agent/generator.py`): Prompts an LLM (or deterministic fallback) with redacted asset and path context to generate structured `ThreatScenario` instances. Scored via `agents/threat_agent/scorer.py`.
-6. **Validate** (`agents/threat_agent/validator.py`): Runs four independent, side-effect-free invariant checks (`citation_presence`, `schema_completeness`, `consistency_check`, `evidence_completeness`).
-7. **Produce & Human Gate** (`agents/threat_agent/router.py`, `scrp/state_manager.py`): Transitions verified runs to `approved` upon explicit human review and persists scenarios to the SCRS state store.
+6. **Validate & Automated Self-Correction Loop** (`agents/threat_agent/orchestrator.py`, `agents/threat_agent/validator.py`): Runs four independent invariant checks. If any scenario fails, `generate_and_validate_with_retry()` in `orchestrator.py` automatically re-invokes **both** evidence retrieval and generation with the failure context prepended, capped at 3 attempts, before human review.
+7. **Produce & Human Gate** (`agents/threat_agent/router.py`, `scrp/state_manager.py`): Human reviewer inspects verified scenarios (with escalation flags visible if retries were exhausted), approves or rejects, and approved runs persist scenarios to the Shared Cybersecurity Reasoning State (SCRS).
 
-#### Implementation Drift on Retries
-In the original concept, a validator failure was expected to automatically loop back and re-invoke *Act/Fetch* and *Reason & Plan*. In the current code:
-* `agents/threat_agent/validator.py` implements `retry_with_context()`, which builds a structured context dict (`retry_context`) containing the exact failure reasons and increments a counter (capped at 3).
-* However, automated background re-execution is **not** orchestrated asynchronously by the router. In the CLI demo (`scripts/demo_cli.py`), failed checks are displayed directly to the terminal analyst, and the human decides whether to approve or reject. In the FastAPI router (`agents/threat_agent/router.py`), a rejection registers the failure and increments `retry_count`, but does not automatically trigger an asynchronous re-fetch loop.
+#### Automated Invariant Validation & Retry Loop
+The automated retry loop is implemented in `agents/threat_agent/orchestrator.py` via `generate_and_validate_with_retry()`:
+* **Pre-human Invariant Gate**: Every scenario must pass the automated Protocol Invariant Validator before a human reviewer ever sees it.
+* **Closed-Loop Self-Correction**: If validation fails on attempt 1, `validator.retry_with_context()` captures the failure details and emits the `validator_retry_triggered` audit event. The orchestrator re-executes both retrieval/chaining and generation, passing `validation_failure_context` directly to the LLM prompt so the model corrects the exact identified defects.
+* **Capped Escalation**: The self-correction loop attempts up to 3 generation + validation iterations. If scenarios pass within 3 attempts, `validation_status` is marked `"passed"` and `validator_pass` is emitted. If still failing after 3 attempts, retries terminate, `validator_retries_exhausted` is emitted, and the run enters `pending_human` flagged with `validation_status: "escalated_after_retries"` so analysts immediately see that automated reasoning struggled.
 
 ---
 
@@ -105,6 +106,24 @@ Querying all four KBs for every asset produces noisy, irrelevant candidates (e.g
 * **Similarity Metric**: Cosine distance using pgvector's `<=>` operator:
   $$\text{Cosine Similarity} = 1.0 - (\vec{u} \Leftrightarrow \vec{v})$$
   Because vectors are $L_2$-normalized, cosine distance is strictly in $[0.0, 2.0]$, and similarity evaluates cleanly to $[0.0, 1.0]$.
+
+### Graceful Fallback & Audit Trail (`retrieval_fallback_engaged`)
+If PostgreSQL or the `pgvector` store is unreachable during pipeline orchestration (e.g. running offline unit tests without Docker or during infrastructure network outages), `_execute_retrieval_and_chaining()` in `agents/threat_agent/orchestrator.py` catches `KBStoreUnreachableError`.
+
+To guarantee that a degraded run **never looks identical to a normal run in the audit trail**:
+1. It immediately records a structured audit event:
+   ```json
+   {
+     "step": "retrieval_fallback_engaged",
+     "run_id": "RUN-SDL-001",
+     "payload": {
+       "error_type": "KBStoreUnreachableError",
+       "reason": "Connection refused",
+       "query_count": 2
+     }
+   }
+   ```
+2. It synthesizes structured fallback candidate stubs mapped to each asset query so pipeline execution can continue deterministically without unhandled crashes.
 
 ---
 
@@ -214,9 +233,16 @@ Located in `agents/threat_agent/validator.py`, the validator gates scenarios bef
 ### Retry & Escalation Behavior
 When validation fails:
 1. All failures are collected into a `ValidationResult(passed=False, failed_checks=[...])`.
-2. `validator.retry_with_context()` increments `retry_count`.
-3. If `retry_count <= 3`, it generates structured prompt context detailing each `FailedCheck.detail` string so the generator can correct specific defects.
-4. If `retry_count > 3`, it terminates retries and returns `("escalate_to_human", context_dict)`, marking the run for manual triage.
+2. Automated retry orchestration is executed by `generate_and_validate_with_retry()` in `agents/threat_agent/orchestrator.py`:
+   - **Attempts 1–2**: `validator.retry_with_context()` extracts failure reasons, the orchestrator logs the `validator_retry_triggered` audit event, and automatically re-invokes **both** evidence retrieval and scenario generation with `validation_failure_context` injected into the prompt.
+   - **Successful attempt**: When all scenarios satisfy invariants within 3 attempts, `validation_status` is marked `"passed"`, each scenario receives `validation_status = "passed"`, and the orchestrator emits the `validator_pass` audit event.
+   - **Exhausted retries (3 failed attempts)**: If validation still fails on attempt 3, retries terminate. The orchestrator emits the `validator_retries_exhausted` audit event with the full list of failed checks, sets `validation_status = "escalated_after_retries"` on the run record and on each scenario, and routes the run to `pending_human`. Human reviewers can immediately see that automated reasoning struggled and inspect the flagged failure details.
+
+### Metric Disambiguation: Validator Retries vs. Human Rejections
+The engine strictly disambiguates automated self-correction cycles from human decisions:
+* **`validator_retry_count`**: Integer ($0 \le n \le 3$) recording the number of automated retry loops executed during the pre-human generation and validation phase.
+* **`human_rejection_count`**: Integer recording how many times a human security analyst called `POST /reject` to send the run back for revision.
+* **`retry_count`**: Maintained as an explicit alias to `human_rejection_count` across API responses and database models for full backward compatibility.
 
 ---
 
@@ -259,10 +285,10 @@ The lifecycle states defined in `ThreatStatus(StrEnum)` are:
 | Method & Path | Purpose | Request Body | Response (Success) | Error Codes |
 | :--- | :--- | :--- | :--- | :--- |
 | `POST /api/v1/threat-agent/analyze` | Initiates threat analysis run. | `ThreatAgentInput` | `202 Accepted` (`AnalyzeResponse` with `run_id`, `status: pending_test`) | `422` (Schema error), `500` |
-| `GET /api/v1/threat-agent/{run_id}/status` | Polls current run status. | None | `200 OK` (`RunStatusResponse` with `run_id`, `status`) | `404` (Unknown run), `500` |
+| `GET /api/v1/threat-agent/{run_id}/status` | Polls current run status. | None | `200 OK` (`RunStatusResponse` with `run_id`, `status`, `validator_retry_count`, `human_rejection_count`, `validation_status`) | `404` (Unknown run), `500` |
 | `GET /api/v1/threat-agent/{run_id}/scenarios` | Retrieves generated scenarios. | None | `200 OK` (`ScenariosResponse` with `run_id`, `scenarios: list`) | `404` (Unknown run), `500` |
 | `POST /api/v1/threat-agent/{run_id}/approve` | Approves run; commits to SCRS. | None | `200 OK` (`ApproveResponse` with `status: approved`, `scrs_entry_id`) | `404`, `409` (Conflict), `500` |
-| `POST /api/v1/threat-agent/{run_id}/reject` | Rejects run with documented reason. | `RejectRequest` (`reason: str`) | `200 OK` (`RejectResponse` with `status: rejected`, `retry_count`) | `404`, `409` (Conflict), `422`, `500` |
+| `POST /api/v1/threat-agent/{run_id}/reject` | Rejects run with documented reason. | `RejectRequest` (`reason: str`) | `200 OK` (`RejectResponse` with `status: rejected`, `retry_count`, `human_rejection_count`) | `404`, `409` (Conflict), `422`, `500` |
 
 ### Error Contract: 404 vs. 409 Invariants
 * **HTTP 404 (Not Found)**: Returned whenever operations reference a `run_id` that does not exist in the database or historical state store.
@@ -272,18 +298,22 @@ The lifecycle states defined in `ThreatStatus(StrEnum)` are:
   3. **Cross-Terminal Transitions**: Calling `/approve` on a `rejected` run, or `/reject` on an `approved` run.
 
 ### Persistent Storage & SQL-Level Atomicity
-* **Default Store (`PostgresRunRegistryStore`)**: The production app in `main.py` defaults directly to `PostgresRunRegistryStore` with zero dependency overrides. Active runs and scenario trees are persisted in the `threat_agent_runs` table:
+* **Default Store (`PostgresRunRegistryStore`)**: The production app in `main.py` defaults directly to `PostgresRunRegistryStore` with zero dependency overrides. Active runs, retry counters, validation statuses, and scenario trees are persisted in the `threat_agent_runs` table:
   ```sql
   CREATE TABLE IF NOT EXISTS threat_agent_runs (
-      run_id          TEXT PRIMARY KEY,
-      status          TEXT NOT NULL,
-      scenarios       JSONB NOT NULL DEFAULT '[]'::jsonb,
-      retry_count     INTEGER NOT NULL DEFAULT 0,
-      scrs_entry_id   TEXT,
-      created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+      run_id                TEXT PRIMARY KEY,
+      status                TEXT NOT NULL,
+      scenarios             JSONB NOT NULL DEFAULT '[]'::jsonb,
+      retry_count           INTEGER NOT NULL DEFAULT 0,
+      validator_retry_count INTEGER NOT NULL DEFAULT 0,
+      human_rejection_count INTEGER NOT NULL DEFAULT 0,
+      validation_status     TEXT,
+      scrs_entry_id         TEXT,
+      created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at            TIMESTAMPTZ NOT NULL DEFAULT now()
   );
   ```
+  Schema migrations are applied idempotently on engine startup via `ALTER TABLE threat_agent_runs ADD COLUMN IF NOT EXISTS ...` to support zero-downtime rolling upgrades.
 * **Process-Restart Durability**: Because scenarios are stored as `JSONB`, all generated scenarios and metadata survive application crashes and server restarts.
 * **SQL-Level Atomicity**: State transitions avoid application-level check-then-set race conditions by executing as a single atomic query:
   ```sql
@@ -321,6 +351,7 @@ Every approved `ThreatScenario` guaranteed by the Protocol Invariant Validator c
 | `kb_reference` | `str` | Valid ID (e.g., `"CWE-306"`, `"CAPEC-186"`). | Cross-references external vulnerability databases for CVSS/scoring. |
 | `evidence_chain` | `EvidenceChain` | Object containing `exposure`, `matched_pattern`, `applicability_reason`, `citation`. | Feeds into risk justification and audit reporting. |
 | `confidence_score`| `float` | Guaranteed float clamped to $[0.0, 1.0]$. | Weighting factor for likelihood calculation. |
+| `validation_status` | `str \| None` | `"passed"` when all invariants passed on first or retry attempt; `"escalated_after_retries"` when 3 automated retry attempts were exhausted before human review. | Risk Agent **must** treat `"escalated_after_retries"` scenarios with the same or greater scrutiny as low-confidence ones — both signals indicate the system itself was not fully confident about the scenario's quality or correctness without additional context. |
 | `status` | `ThreatStatus` | Guaranteed to be `ThreatStatus.APPROVED`. | Gatekeeper check. |
 | `created_at` | `datetime` | UTC timestamp. | Audit trail timestamp. |
 | `run_id` | `str` | Associated run identifier. | Traceability across reasoning loops. |
@@ -329,8 +360,10 @@ Every approved `ThreatScenario` guaranteed by the Protocol Invariant Validator c
 Because the Threat Agent deliberately does not filter out low-confidence threats (leaving that judgment to the human reviewer), the Risk Agent should define its own policy:
 * **High Confidence ($\ge 0.70$)**: Standard automated likelihood scoring based on KB metrics.
 * **Low Confidence ($< 0.70$)**: The Risk Agent may apply a discount factor to threat likelihood or flag the resulting risk scenario for mandatory senior risk officer review.
+* **Escalated Scenarios (`validation_status == "escalated_after_retries"`)**: The Threat Agent's automated validator loop exhausted all 3 retry attempts before the scenario reached the human reviewer. The Risk Agent should treat these scenarios with the same or greater scrutiny as low-confidence ones (`confidence_score < 0.70`), since both signals — low retrieval confidence and validator-exhausted escalation — indicate the system itself was uncertain about the scenario's quality and correctness.
 
 ---
+
 
 ## 10. Known Limitations
 
