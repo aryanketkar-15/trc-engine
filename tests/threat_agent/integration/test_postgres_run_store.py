@@ -31,7 +31,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from agents.threat_agent.router import router as threat_agent_router
+from agents.threat_agent.router import (
+    get_orchestrator,
+)
+from agents.threat_agent.router import (
+    router as threat_agent_router,
+)
 from agents.threat_agent.run_store import (
     InMemoryRunRegistryStore,
     InvalidStateTransitionError,
@@ -77,11 +82,50 @@ def pg_client(pg_store: PostgresRunRegistryStore) -> TestClient:
     test_app = FastAPI()
     test_app.include_router(threat_agent_router)
     test_app.dependency_overrides[get_run_store] = lambda: pg_store
+    test_app.dependency_overrides[get_orchestrator] = lambda: (lambda _p: ([], 0, "passed"))
     return TestClient(test_app)
 
 
 class TestPostgresRunStoreDirect:
     """Direct tests against PostgresRunRegistryStore methods."""
+
+    def test_postgres_store_validator_and_rejection_counts(
+        self, pg_store: PostgresRunRegistryStore
+    ) -> None:
+        """Verify validator_retry_count, human_rejection_count, and validation_status."""
+        run_id = "RUN-PG-COUNTS-001"
+        created = pg_store.create_run(
+            run_id=run_id,
+            status=ThreatStatus.PENDING_HUMAN,
+            validator_retry_count=2,
+            human_rejection_count=0,
+            validation_status="passed",
+        )
+        assert created.validator_retry_count == 2
+        assert created.human_rejection_count == 0
+        assert created.retry_count == 0
+        assert created.validation_status == "passed"
+
+        # Simulate rejection
+        rejected = pg_store.transition_run(
+            run_id=run_id,
+            expected_status=ThreatStatus.PENDING_HUMAN,
+            new_status=ThreatStatus.REJECTED,
+            increment_retry=True,
+        )
+        assert rejected.status == ThreatStatus.REJECTED
+        assert rejected.human_rejection_count == 1
+        assert rejected.retry_count == 1
+        assert rejected.validator_retry_count == 2
+        assert rejected.validation_status == "passed"
+
+        # Re-fetch across fresh store instance
+        fresh_store = PostgresRunRegistryStore()
+        fetched = fresh_store.get_run(run_id)
+        assert fetched is not None
+        assert fetched.human_rejection_count == 1
+        assert fetched.validator_retry_count == 2
+        assert fetched.validation_status == "passed"
 
     def test_postgres_store_crud_and_fields(
         self, pg_store: PostgresRunRegistryStore

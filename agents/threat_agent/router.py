@@ -38,11 +38,13 @@ Ruff compliance
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
 from pydantic import BaseModel, Field
 
+from agents.threat_agent.orchestrator import generate_and_validate_with_retry
 from agents.threat_agent.run_store import (
     InvalidStateTransitionError,
     RunNotFoundError,
@@ -53,6 +55,7 @@ from agents.threat_agent.run_store import (
 )
 from agents.threat_agent.schemas import (
     ThreatAgentInput,
+    ThreatScenario,
     ThreatStatus,
     ValidationResult,
 )
@@ -87,6 +90,14 @@ def clear_run_registry() -> None:
 def set_run_record(record: RunRecord) -> None:
     """Explicitly register or update a run record in the in-memory store."""
     get_in_memory_run_store().set_run(record)
+
+
+def get_orchestrator() -> Callable[..., tuple[list[ThreatScenario], int, str]]:
+    """Return the orchestrator function for generation and automated validation.
+
+    Can be overridden in tests via FastAPI dependency_overrides.
+    """
+    return generate_and_validate_with_retry
 
 
 def _get_run_or_404(run_id: str, store: RunRegistryStore | None = None) -> RunRecord:
@@ -193,6 +204,21 @@ class RunStatusResponse(BaseModel):
 
     run_id: Annotated[str, Field(description="Run identifier.")]
     status: Annotated[ThreatStatus, Field(description="Current lifecycle state.")]
+    validator_retry_count: Annotated[
+        int,
+        Field(default=0, description="Automated validator retry attempts consumed."),
+    ] = 0
+    human_rejection_count: Annotated[
+        int,
+        Field(default=0, description="Human rejections received."),
+    ] = 0
+    validation_status: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="Validation status: 'passed' or 'escalated_after_retries'.",
+        ),
+    ] = None
 
 
 class ApproveResponse(BaseModel):
@@ -248,6 +274,13 @@ class RejectResponse(BaseModel):
             description="Retry attempts consumed so far (capped at 3 per schema).",
         ),
     ]
+    human_rejection_count: Annotated[
+        int | None,
+        Field(
+            default=None,
+            description="Human rejections received.",
+        ),
+    ] = None
 
 
 class NotApprovedErrorDetail(BaseModel):
@@ -332,12 +365,17 @@ async def analyze(
         RunRegistryStore,
         Depends(get_run_store),
     ],
+    orchestrator: Annotated[
+        Callable[..., tuple[list[ThreatScenario], int, str]],
+        Depends(get_orchestrator),
+    ],
 ) -> AnalyzeResponse:
     """Submit a ThreatAgentInput and start the SCRP threat analysis loop.
 
     Args:
         payload: Validated ThreatAgentInput from the request body.
         store: RunRegistryStore storage provider (injected).
+        orchestrator: Automated generation and validation orchestrator (injected).
 
     Returns:
         AnalyzeResponse with run_id and initial status=pending_test.
@@ -351,12 +389,22 @@ async def analyze(
     logger.info("Received analyze request", extra={"run_id": payload.run_id})
 
     try:
+        # Execute automated retrieval, generation, and validation retry loop
+        scenarios, validator_retries, validation_status = orchestrator(payload)
+        scenarios_dicts = [
+            s.model_dump() if hasattr(s, "model_dump") else s
+            for s in scenarios
+        ]
+
         # Register accepted run into state tracking (advances to pending_human awaiting review)
         store.create_run(
             run_id=payload.run_id,
             status=ThreatStatus.PENDING_HUMAN,
-            scenarios=[],
+            scenarios=scenarios_dicts,
             retry_count=0,
+            validator_retry_count=validator_retries,
+            human_rejection_count=0,
+            validation_status=validation_status,
         )
 
         return AnalyzeResponse(
@@ -424,6 +472,9 @@ async def get_run_status(
     return RunStatusResponse(
         run_id=run_record.run_id,
         status=run_record.status,
+        validator_retry_count=run_record.validator_retry_count,
+        human_rejection_count=run_record.human_rejection_count,
+        validation_status=run_record.validation_status,
     )
 
 
@@ -566,6 +617,7 @@ async def reject_run(
             run_id=run.run_id,
             status=run.status,
             retry_count=run.retry_count,
+            human_rejection_count=run.human_rejection_count,
         )
     except RunNotFoundError as exc:
         raise HTTPException(

@@ -47,7 +47,10 @@ class RunRecord(BaseModel):
     run_id: str
     status: ThreatStatus
     scenarios: list[dict[str, object]] = Field(default_factory=list)
-    retry_count: int = 0
+    retry_count: int = 0  # Preserved as human_rejection_count alias for backward-compatibility
+    validator_retry_count: int = 0
+    human_rejection_count: int = 0
+    validation_status: str | None = None
     scrs_entry_id: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -91,11 +94,17 @@ def _row_to_run_record(row: dict[str, Any]) -> RunRecord:
     else:
         scenarios_list = []
 
+    retry_cnt = row.get("retry_count", 0)
+    human_rej_cnt = row.get("human_rejection_count", retry_cnt)
+
     return RunRecord(
         run_id=row["run_id"],
         status=ThreatStatus(row["status"]),
         scenarios=scenarios_list,
-        retry_count=row.get("retry_count", 0),
+        retry_count=human_rej_cnt,
+        validator_retry_count=row.get("validator_retry_count", 0),
+        human_rejection_count=human_rej_cnt,
+        validation_status=row.get("validation_status"),
         scrs_entry_id=row.get("scrs_entry_id"),
         created_at=row.get("created_at"),
         updated_at=row.get("updated_at"),
@@ -117,6 +126,9 @@ class RunRegistryStore(ABC):
         status: ThreatStatus = ThreatStatus.PENDING_HUMAN,
         scenarios: list[dict[str, object]] | None = None,
         retry_count: int = 0,
+        validator_retry_count: int = 0,
+        human_rejection_count: int = 0,
+        validation_status: str | None = None,
         scrs_entry_id: str | None = None,
     ) -> RunRecord:
         """Create or register a run record (idempotent upsert)."""
@@ -173,13 +185,20 @@ class InMemoryRunRegistryStore(RunRegistryStore):
         status: ThreatStatus = ThreatStatus.PENDING_HUMAN,
         scenarios: list[dict[str, object]] | None = None,
         retry_count: int = 0,
+        validator_retry_count: int = 0,
+        human_rejection_count: int = 0,
+        validation_status: str | None = None,
         scrs_entry_id: str | None = None,
     ) -> RunRecord:
+        effective_rejections = human_rejection_count or retry_count
         record = RunRecord(
             run_id=run_id,
             status=status,
             scenarios=scenarios or [],
-            retry_count=retry_count,
+            retry_count=effective_rejections,
+            validator_retry_count=validator_retry_count,
+            human_rejection_count=effective_rejections,
+            validation_status=validation_status,
             scrs_entry_id=scrs_entry_id,
             created_at=datetime.now(),
             updated_at=datetime.now(),
@@ -224,7 +243,8 @@ class InMemoryRunRegistryStore(RunRegistryStore):
             if scrs_entry_id is not None:
                 record.scrs_entry_id = scrs_entry_id
             if increment_retry:
-                record.retry_count += 1
+                record.human_rejection_count += 1
+                record.retry_count = record.human_rejection_count
             record.updated_at = datetime.now()
             return record.model_copy()
 
@@ -249,10 +269,19 @@ def init_postgres_run_store_schema() -> None:
                     status          TEXT NOT NULL,
                     scenarios       JSONB NOT NULL DEFAULT '[]'::jsonb,
                     retry_count     INTEGER NOT NULL DEFAULT 0,
+                    validator_retry_count INTEGER NOT NULL DEFAULT 0,
+                    human_rejection_count INTEGER NOT NULL DEFAULT 0,
+                    validation_status TEXT,
                     scrs_entry_id   TEXT,
                     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
                     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
                 );
+                ALTER TABLE threat_agent_runs
+                    ADD COLUMN IF NOT EXISTS validator_retry_count INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE threat_agent_runs
+                    ADD COLUMN IF NOT EXISTS human_rejection_count INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE threat_agent_runs
+                    ADD COLUMN IF NOT EXISTS validation_status TEXT;
                 """
             )
             cur.execute(
@@ -275,24 +304,33 @@ class PostgresRunRegistryStore(RunRegistryStore):
         status: ThreatStatus = ThreatStatus.PENDING_HUMAN,
         scenarios: list[dict[str, object]] | None = None,
         retry_count: int = 0,
+        validator_retry_count: int = 0,
+        human_rejection_count: int = 0,
+        validation_status: str | None = None,
         scrs_entry_id: str | None = None,
     ) -> RunRecord:
         scenarios_payload = scenarios or []
+        effective_rejections = human_rejection_count or retry_count
         with get_db_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cur:
                 cur.execute(
                     """
                     INSERT INTO threat_agent_runs (
                         run_id, status, scenarios, retry_count,
-                        scrs_entry_id, created_at, updated_at
+                        validator_retry_count, human_rejection_count,
+                        validation_status, scrs_entry_id, created_at, updated_at
                     ) VALUES (
                         %(run_id)s, %(status)s, %(scenarios)s, %(retry_count)s,
-                        %(scrs_entry_id)s, now(), now()
+                        %(validator_retry_count)s, %(human_rejection_count)s,
+                        %(validation_status)s, %(scrs_entry_id)s, now(), now()
                     )
                     ON CONFLICT (run_id) DO UPDATE SET
                         status = EXCLUDED.status,
                         scenarios = EXCLUDED.scenarios,
                         retry_count = EXCLUDED.retry_count,
+                        validator_retry_count = EXCLUDED.validator_retry_count,
+                        human_rejection_count = EXCLUDED.human_rejection_count,
+                        validation_status = EXCLUDED.validation_status,
                         scrs_entry_id = EXCLUDED.scrs_entry_id,
                         updated_at = now()
                     RETURNING *;
@@ -301,7 +339,10 @@ class PostgresRunRegistryStore(RunRegistryStore):
                         "run_id": run_id,
                         "status": status.value,
                         "scenarios": Jsonb(scenarios_payload),
-                        "retry_count": retry_count,
+                        "retry_count": effective_rejections,
+                        "validator_retry_count": validator_retry_count,
+                        "human_rejection_count": effective_rejections,
+                        "validation_status": validation_status,
                         "scrs_entry_id": scrs_entry_id,
                     },
                 )
@@ -330,16 +371,22 @@ class PostgresRunRegistryStore(RunRegistryStore):
                     """
                     INSERT INTO threat_agent_runs (
                         run_id, status, scenarios, retry_count,
-                        scrs_entry_id, created_at, updated_at
+                        validator_retry_count, human_rejection_count,
+                        validation_status, scrs_entry_id, created_at, updated_at
                     ) VALUES (
                         %(run_id)s, %(status)s, %(scenarios)s, %(retry_count)s,
-                        %(scrs_entry_id)s, COALESCE(%(created_at)s, now()),
+                        %(validator_retry_count)s, %(human_rejection_count)s,
+                        %(validation_status)s, %(scrs_entry_id)s,
+                        COALESCE(%(created_at)s, now()),
                         COALESCE(%(updated_at)s, now())
                     )
                     ON CONFLICT (run_id) DO UPDATE SET
                         status = EXCLUDED.status,
                         scenarios = EXCLUDED.scenarios,
                         retry_count = EXCLUDED.retry_count,
+                        validator_retry_count = EXCLUDED.validator_retry_count,
+                        human_rejection_count = EXCLUDED.human_rejection_count,
+                        validation_status = EXCLUDED.validation_status,
                         scrs_entry_id = EXCLUDED.scrs_entry_id,
                         updated_at = now();
                     """,
@@ -348,6 +395,9 @@ class PostgresRunRegistryStore(RunRegistryStore):
                         "status": record.status.value,
                         "scenarios": Jsonb(record.scenarios),
                         "retry_count": record.retry_count,
+                        "validator_retry_count": record.validator_retry_count,
+                        "human_rejection_count": record.human_rejection_count,
+                        "validation_status": record.validation_status,
                         "scrs_entry_id": record.scrs_entry_id,
                         "created_at": record.created_at,
                         "updated_at": record.updated_at,
@@ -371,6 +421,7 @@ class PostgresRunRegistryStore(RunRegistryStore):
                         UPDATE threat_agent_runs
                         SET status = %(new_status)s,
                             retry_count = retry_count + 1,
+                            human_rejection_count = human_rejection_count + 1,
                             updated_at = now()
                         WHERE run_id = %(run_id)s AND status = %(expected_status)s
                         RETURNING *;
