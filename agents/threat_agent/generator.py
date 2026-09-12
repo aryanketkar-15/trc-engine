@@ -758,11 +758,3 @@ def generate_from_candidates(
         context,
         validation_failure_context=validation_failure_context,
     )
-
-def __getattr__(name: str) -> object:
-    """Lazy module export to avoid circular imports during module loading."""
-    if name == "generate_and_validate_with_retry":
-        from agents.threat_agent.orchestrator import generate_and_validate_with_retry
-
-        return generate_and_validate_with_retry
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

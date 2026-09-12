@@ -59,6 +59,17 @@ def _execute_retrieval_and_chaining(
     try:
         candidates = fetch_candidates(plan)
     except KBStoreUnreachableError as exc:
+        log_step(
+            logger,
+            "WARNING",
+            "retrieval_fallback_engaged",
+            agent_input.run_id,
+            {
+                "error_type": type(exc).__name__,
+                "reason": str(exc),
+                "query_count": len(plan.queries),
+            },
+        )
         logger.warning(
             "Vector store unreachable during orchestration — using fallback candidates",
             extra={"run_id": agent_input.run_id, "error": str(exc)},

@@ -321,18 +321,29 @@ class TestOrchestratorFallback:
     ) -> None:
         from agents.threat_agent.exceptions import KBStoreUnreachableError
 
-        with patch(
-            "agents.threat_agent.orchestrator.fetch_candidates",
-            side_effect=KBStoreUnreachableError(
-                "postgresql://trc:trc@localhost:5433/trc_knowledge_base",
-                cause=ConnectionRefusedError("Connection refused (offline unit test)"),
+        with (
+            patch(
+                "agents.threat_agent.orchestrator.fetch_candidates",
+                side_effect=KBStoreUnreachableError(
+                    "postgresql://trc:trc@localhost:5433/trc_knowledge_base",
+                    cause=ConnectionRefusedError("Connection refused (offline unit test)"),
+                ),
             ),
+            patch("agents.threat_agent.orchestrator.log_step") as mock_log,
         ):
             paths = _execute_retrieval_and_chaining(valid_input)
             assert len(paths) > 0
             for path in paths:
                 assert len(path.steps) > 0
                 assert path.steps[0].pattern_id == "CWE-306"
+
+            fallback_logs = [
+                call
+                for call in mock_log.call_args_list
+                if call.args[2] == "retrieval_fallback_engaged"
+            ]
+            assert len(fallback_logs) == 1
+            assert fallback_logs[0].args[4]["error_type"] == "KBStoreUnreachableError"
 
 
 # ── 5. Router Status & Metric Observability ───────────────────────────────────
