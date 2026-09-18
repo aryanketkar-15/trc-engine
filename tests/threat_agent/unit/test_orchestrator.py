@@ -368,7 +368,7 @@ class TestRouterValidationMetrics:
         test_app.dependency_overrides[get_orchestrator] = _mock_retried_orchestrator
 
         clear_run_registry()
-        client = TestClient(test_app)
+        client = TestClient(test_app, headers={"X-API-Key": "trc-dev-secret-key"})
 
         # 1. Analyze
         payload_dict = json.loads(valid_input.model_dump_json())

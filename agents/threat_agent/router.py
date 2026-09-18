@@ -38,10 +38,11 @@ Ruff compliance
 from __future__ import annotations
 
 import logging
+import secrets
 from collections.abc import Callable
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Path, status
 from pydantic import BaseModel, Field
 
 from agents.threat_agent.orchestrator import generate_and_validate_with_retry
@@ -59,6 +60,7 @@ from agents.threat_agent.schemas import (
     ThreatStatus,
     ValidationResult,
 )
+from config.settings import get_settings
 
 # TODO (TRC-STUB-002): update this import once feature/threat-agent-validator
 # is merged to develop.  NotApprovedError is currently defined in
@@ -98,6 +100,34 @@ def get_orchestrator() -> Callable[..., tuple[list[ThreatScenario], int, str]]:
     Can be overridden in tests via FastAPI dependency_overrides.
     """
     return generate_and_validate_with_retry
+
+
+def verify_api_key(
+    x_api_key: Annotated[
+        str | None,
+        Header(
+            alias="X-API-Key",
+            description="Shared secret API key for state-changing endpoints.",
+        ),
+    ] = None,
+) -> str:
+    """Validate incoming X-API-Key header against configured secret.
+
+    Enforced on state-changing endpoints (/analyze, /approve, /reject).
+    Read-only endpoints (/status, /scenarios) remain open.
+
+    Raises:
+        HTTPException 401: If header is missing or does not match configured key.
+    """
+    settings = get_settings()
+    expected_key = settings.THREAT_AGENT_API_KEY.get_secret_value()
+    if not x_api_key or not secrets.compare_digest(x_api_key, expected_key):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid API key.",
+            headers={"WWW-Authenticate": "ApiKey"},
+        )
+    return x_api_key
 
 
 def _get_run_or_404(run_id: str, store: RunRegistryStore | None = None) -> RunRecord:
@@ -355,6 +385,7 @@ def _handle_not_approved(
         "SCRP loop.  Returns immediately with a run_id; the caller polls "
         "GET /threat-agent/{run_id}/status for progress."
     ),
+    dependencies=[Depends(verify_api_key)],
 )
 async def analyze(
     payload: Annotated[
@@ -489,6 +520,7 @@ async def get_run_status(
         "NotApprovedError if the ValidationResult is not in a passing state.  "
         "On success, transitions the run to 'approved' and writes to SCRS."
     ),
+    dependencies=[Depends(verify_api_key)],
 )
 async def approve_run(
     run_id: Annotated[
@@ -568,6 +600,7 @@ async def approve_run(
         "with the rejection reason injected as context.  At retry_count == 3, "
         "escalates to status=rejected (human-flagged failure)."
     ),
+    dependencies=[Depends(verify_api_key)],
 )
 async def reject_run(
     run_id: Annotated[

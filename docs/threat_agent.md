@@ -282,13 +282,20 @@ The lifecycle states defined in `ThreatStatus(StrEnum)` are:
 
 ### Endpoints Specification
 
-| Method & Path | Purpose | Request Body | Response (Success) | Error Codes |
-| :--- | :--- | :--- | :--- | :--- |
-| `POST /api/v1/threat-agent/analyze` | Initiates threat analysis run. | `ThreatAgentInput` | `202 Accepted` (`AnalyzeResponse` with `run_id`, `status: pending_test`) | `422` (Schema error), `500` |
-| `GET /api/v1/threat-agent/{run_id}/status` | Polls current run status. | None | `200 OK` (`RunStatusResponse` with `run_id`, `status`, `validator_retry_count`, `human_rejection_count`, `validation_status`) | `404` (Unknown run), `500` |
-| `GET /api/v1/threat-agent/{run_id}/scenarios` | Retrieves generated scenarios. | None | `200 OK` (`ScenariosResponse` with `run_id`, `scenarios: list`) | `404` (Unknown run), `500` |
-| `POST /api/v1/threat-agent/{run_id}/approve` | Approves run; commits to SCRS. | None | `200 OK` (`ApproveResponse` with `status: approved`, `scrs_entry_id`) | `404`, `409` (Conflict), `500` |
-| `POST /api/v1/threat-agent/{run_id}/reject` | Rejects run with documented reason. | `RejectRequest` (`reason: str`) | `200 OK` (`RejectResponse` with `status: rejected`, `retry_count`, `human_rejection_count`) | `404`, `409` (Conflict), `422`, `500` |
+| Method & Path | Purpose | Request Body | Headers | Response (Success) | Error Codes |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `POST /api/v1/threat-agent/analyze` | Initiates threat analysis run. | `ThreatAgentInput` | `X-API-Key` (Required) | `202 Accepted` (`AnalyzeResponse` with `run_id`, `status: pending_test`) | `401` (Unauthorized), `422` (Schema error), `500` |
+| `GET /api/v1/threat-agent/{run_id}/status` | Polls current run status. | None | None (Open) | `200 OK` (`RunStatusResponse` with `run_id`, `status`, `validator_retry_count`, `human_rejection_count`, `validation_status`) | `404` (Unknown run), `500` |
+| `GET /api/v1/threat-agent/{run_id}/scenarios` | Retrieves generated scenarios. | None | None (Open) | `200 OK` (`ScenariosResponse` with `run_id`, `scenarios: list`) | `404` (Unknown run), `500` |
+| `POST /api/v1/threat-agent/{run_id}/approve` | Approves run; commits to SCRS. | None | `X-API-Key` (Required) | `200 OK` (`ApproveResponse` with `status: approved`, `scrs_entry_id`) | `401` (Unauthorized), `404`, `409` (Conflict), `500` |
+| `POST /api/v1/threat-agent/{run_id}/reject` | Rejects run with documented reason. | `RejectRequest` (`reason: str`) | `X-API-Key` (Required) | `200 OK` (`RejectResponse` with `status: rejected`, `retry_count`, `human_rejection_count`) | `401` (Unauthorized), `404`, `409` (Conflict), `422`, `500` |
+
+### Authentication & Protected Endpoints
+
+* **Authentication Scheme**: Shared secret API key passed via the `X-API-Key` HTTP header. Sourced from the application configuration (`THREAT_AGENT_API_KEY` typed as `SecretStr` in `config/settings.py` / `.env`).
+* **Protected Endpoints (`POST /analyze`, `POST /{run_id}/approve`, `POST /{run_id}/reject`)**: State-changing and model-invoking operations enforce authentication via FastAPI dependency `verify_api_key`. Constant-time comparison (`secrets.compare_digest`) prevents timing attacks.
+* **Open Endpoints (`GET /{run_id}/status`, `GET /{run_id}/scenarios`)**: Read-only polling endpoints remain unauthenticated. This allows frontend polling loops, status monitoring dashboards, and telemetry scrapers to query run progression without exposing or distributing privileged administrative API keys.
+* **Failure Response**: Any unauthenticated or invalidly authenticated request to a protected endpoint immediately yields `401 Unauthorized` with `{"detail": "Missing or invalid API key."}` and `WWW-Authenticate: ApiKey`.
 
 ### Error Contract: 404 vs. 409 Invariants
 * **HTTP 404 (Not Found)**: Returned whenever operations reference a `run_id` that does not exist in the database or historical state store.
@@ -381,11 +388,11 @@ The codebase maintains strict separation between fast unit tests and containeriz
 
 ### Test Split Overview
 * **Fast Test Suite (Zero Docker required)**:
-  * Runs all unit tests, PII scrubbing tests, validator rules, confidence scorer tests, and router lifecycle tests (using `InMemoryRunRegistryStore`).
-  * Execution time: **~18 to 24 seconds** (220 tests passing).
+  * Runs all unit tests, PII scrubbing tests, validator rules, confidence scorer tests, API authentication guards, and router lifecycle tests (using `InMemoryRunRegistryStore`).
+  * Execution time: **~35 to 40 seconds** (232 tests passing).
 * **Live Integration Suite (`TRC_INTEGRATION_TESTS=1`)**:
   * Executes live pgvector similarity searches against PostgreSQL, tests table migrations, and runs multi-threaded concurrent race-condition tests against `threat_agent_runs`.
-  * Execution time: **~85 seconds** (228 tests passing).
+  * Execution time: **~75 seconds** (241 tests passing).
 
 ### Local Execution Commands
 
