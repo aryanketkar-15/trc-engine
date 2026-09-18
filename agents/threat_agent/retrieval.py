@@ -68,6 +68,8 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "forged",
             "forgery",
             "masquerade",
+            "fabricat",
+            "fabricated",
         }
     ),
     STRIDECategory.TAMPERING: frozenset(

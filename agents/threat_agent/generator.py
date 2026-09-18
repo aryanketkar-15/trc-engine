@@ -418,7 +418,7 @@ def _parse_llm_response(raw: str, path: AttackPath, run_id: str) -> list[dict]: 
         clean_raw = "\n".join(lines).strip()
 
     try:
-        data = json.loads(clean_raw)
+        data = json.loads(clean_raw, strict=False)
     except json.JSONDecodeError as exc:
         raise LLMResponseError(
             f"[run={run_id}, path={path.path_id}] "
