@@ -72,9 +72,23 @@ def valid_payload() -> dict[str, Any]:
         return json.load(f)
 
 
+TEST_API_KEY = "trc-dev-secret-key"
+
+
 @pytest.fixture(scope="module")
 def client() -> TestClient:
     """TestClient configured with router mounted at both root and /api/v1."""
+    test_app = FastAPI()
+    test_app.include_router(threat_agent_router)
+    test_app.include_router(threat_agent_router, prefix="/api/v1")
+    test_app.dependency_overrides[get_run_store] = get_in_memory_run_store
+    test_app.dependency_overrides[get_orchestrator] = _mock_orchestrator
+    return TestClient(test_app, headers={"X-API-Key": TEST_API_KEY})
+
+
+@pytest.fixture(scope="module")
+def unauth_client() -> TestClient:
+    """TestClient without authentication headers for testing 401 unauthorized paths."""
     test_app = FastAPI()
     test_app.include_router(threat_agent_router)
     test_app.include_router(threat_agent_router, prefix="/api/v1")
@@ -86,7 +100,7 @@ def client() -> TestClient:
 @pytest.fixture(scope="module")
 def main_client() -> TestClient:
     """TestClient against production main.app."""
-    return TestClient(main_app)
+    return TestClient(main_app, headers={"X-API-Key": TEST_API_KEY})
 
 
 # ── 1. Happy Path End-to-End Flow ──────────────────────────────────────────────
@@ -414,3 +428,90 @@ class TestMainAppPrefixRouting:
     ) -> None:
         response = main_client.get("/api/v1/threat-agent/RUN-NONEXISTENT-404/status")
         assert response.status_code == 404
+
+
+# ── 7. Authentication Guards on State-Changing Endpoints ──────────────────────
+
+
+class TestAuthentication:
+    """Verifies that state-changing endpoints enforce X-API-Key authentication."""
+
+    def test_analyze_missing_api_key_returns_401(
+        self, unauth_client: TestClient, valid_payload: dict[str, Any]
+    ) -> None:
+        """POST /threat-agent/analyze without X-API-Key header returns 401."""
+        response = unauth_client.post("/threat-agent/analyze", json=valid_payload)
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Missing or invalid API key."
+
+    def test_analyze_wrong_api_key_returns_401(
+        self, client: TestClient, valid_payload: dict[str, Any]
+    ) -> None:
+        """POST /threat-agent/analyze with incorrect key returns 401."""
+        response = client.post(
+            "/threat-agent/analyze",
+            json=valid_payload,
+            headers={"X-API-Key": "wrong-secret-key"},
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Missing or invalid API key."
+
+    def test_approve_missing_api_key_returns_401(
+        self, unauth_client: TestClient
+    ) -> None:
+        """POST /threat-agent/{run_id}/approve without X-API-Key header returns 401."""
+        response = unauth_client.post("/threat-agent/RUN-AUTH-001/approve")
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Missing or invalid API key."
+
+    def test_approve_wrong_api_key_returns_401(self, client: TestClient) -> None:
+        """POST /threat-agent/{run_id}/approve with incorrect key returns 401."""
+        response = client.post(
+            "/threat-agent/RUN-AUTH-001/approve",
+            headers={"X-API-Key": "wrong-secret-key"},
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Missing or invalid API key."
+
+    def test_reject_missing_api_key_returns_401(
+        self, unauth_client: TestClient
+    ) -> None:
+        """POST /threat-agent/{run_id}/reject without X-API-Key header returns 401."""
+        response = unauth_client.post(
+            "/threat-agent/RUN-AUTH-001/reject",
+            json={"reason": "Testing rejection auth guard"},
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Missing or invalid API key."
+
+    def test_reject_wrong_api_key_returns_401(self, client: TestClient) -> None:
+        """POST /threat-agent/{run_id}/reject with incorrect key returns 401."""
+        response = client.post(
+            "/threat-agent/RUN-AUTH-001/reject",
+            json={"reason": "Testing rejection auth guard"},
+            headers={"X-API-Key": "wrong-secret-key"},
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Missing or invalid API key."
+
+    def test_read_only_endpoints_remain_open_without_api_key(
+        self,
+        unauth_client: TestClient,
+        client: TestClient,
+        valid_payload: dict[str, Any],
+    ) -> None:
+        """GET /status and GET /scenarios remain accessible without X-API-Key."""
+        run_id = "RUN-AUTH-OPEN-001"
+        create_res = client.post(
+            "/threat-agent/analyze",
+            json=dict(valid_payload, run_id=run_id),
+        )
+        assert create_res.status_code == 202
+
+        status_res = unauth_client.get(f"/threat-agent/{run_id}/status")
+        assert status_res.status_code == 200
+        assert status_res.json()["run_id"] == run_id
+
+        scenarios_res = unauth_client.get(f"/threat-agent/{run_id}/scenarios")
+        assert scenarios_res.status_code == 200
+        assert isinstance(scenarios_res.json(), list)

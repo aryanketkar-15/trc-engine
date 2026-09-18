@@ -83,7 +83,7 @@ def pg_client(pg_store: PostgresRunRegistryStore) -> TestClient:
     test_app.include_router(threat_agent_router)
     test_app.dependency_overrides[get_run_store] = lambda: pg_store
     test_app.dependency_overrides[get_orchestrator] = lambda: (lambda _p: ([], 0, "passed"))
-    return TestClient(test_app)
+    return TestClient(test_app, headers={"X-API-Key": "trc-dev-secret-key"})
 
 
 class TestPostgresRunStoreDirect:
@@ -306,7 +306,7 @@ class TestInMemoryStoreConcurrency:
         test_app = FastAPI()
         test_app.include_router(threat_agent_router)
         test_app.dependency_overrides[get_run_store] = lambda: store
-        client = TestClient(test_app)
+        client = TestClient(test_app, headers={"X-API-Key": "trc-dev-secret-key"})
 
         def _call_approve() -> int:
             return client.post(f"/threat-agent/{run_id}/approve").status_code

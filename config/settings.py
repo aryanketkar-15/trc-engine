@@ -16,6 +16,9 @@ Usage
 Environment variable reference
 ───────────────────────────────
     OPENAI_API_KEY        — Required.  OpenAI API key (secret).
+    THREAT_AGENT_API_KEY  — Optional.  API key for state-changing endpoints
+                            (/analyze, /approve, /reject). Passed via X-API-Key.
+                            Defaults to "trc-dev-secret-key".
     ENVIRONMENT           — Optional.  "development" | "staging" | "production".
                             Defaults to "development".
     LOG_LEVEL             — Optional.  Python logging level string.
@@ -87,6 +90,17 @@ class Settings(BaseSettings):
                 "OpenAI API key.  Required — the application will not start "
                 "if this variable is missing or empty.  Never log or print "
                 "this value; use .get_secret_value() only at the call site."
+            ),
+        ),
+    ]
+
+    THREAT_AGENT_API_KEY: Annotated[
+        SecretStr,
+        Field(
+            default=SecretStr("trc-dev-secret-key"),
+            description=(
+                "Shared API key required for state-changing endpoints "
+                "(/analyze, /approve, /reject). Passed via X-API-Key header."
             ),
         ),
     ]
