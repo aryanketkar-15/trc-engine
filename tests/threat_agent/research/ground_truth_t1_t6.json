@@ -1,0 +1,64 @@
+[
+  {
+    "threat_id": "T1",
+    "title": "BLE replay",
+    "asset_id": "AS-1",
+    "stride_category": [
+      "Spoofing",
+      "Tampering"
+    ],
+    "kb_reference": "CAPEC-94",
+    "attack_vector": "Adversary in the Middle or BLE replay attack capturing pairing tokens or unlock commands to spoof legitimate user."
+  },
+  {
+    "threat_id": "T2",
+    "title": "cloud account takeover",
+    "asset_id": "AS-2",
+    "stride_category": [
+      "ElevationOfPrivilege"
+    ],
+    "kb_reference": "ATT&CK-T1078",
+    "attack_vector": "Cloud account takeover exploiting valid credentials or phishing to gain administrative control and issue unauthorized commands."
+  },
+  {
+    "threat_id": "T3",
+    "title": "malicious OTA firmware",
+    "asset_id": "AS-3",
+    "stride_category": [
+      "Tampering"
+    ],
+    "kb_reference": "CAPEC-186",
+    "attack_vector": "Malicious OTA firmware delivery replacing authentic device firmware via unauthenticated or unverified update mechanism."
+  },
+  {
+    "threat_id": "T4",
+    "title": "eavesdropping/MitM",
+    "asset_id": "AS-5",
+    "stride_category": [
+      "InformationDisclosure"
+    ],
+    "kb_reference": "CAPEC-117",
+    "attack_vector": "Eavesdropping and adversary-in-the-middle sniffing communication traffic on unencrypted channels to disclose sensitive information."
+  },
+  {
+    "threat_id": "T5",
+    "title": "DoS on cloud",
+    "asset_id": "AS-1",
+    "stride_category": [
+      "DenialOfService"
+    ],
+    "kb_reference": "CAPEC-125",
+    "attack_vector": "Denial of Service via resource exhaustion flooding cloud or lock communication channels to prevent normal lock operations."
+  },
+  {
+    "threat_id": "T6",
+    "title": "key extraction via side-channel",
+    "asset_id": "AS-6",
+    "stride_category": [
+      "Tampering",
+      "InformationDisclosure"
+    ],
+    "kb_reference": "CAPEC-189",
+    "attack_vector": "Cryptographic key extraction via physical or electromagnetic side-channel analysis."
+  }
+]
