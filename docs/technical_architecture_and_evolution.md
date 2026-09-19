@@ -326,10 +326,10 @@ The Threat Agent operates according to the **SCRP** (Sense/Perceive → Plan →
 
 ### Current Test Suite Health
 * **Fast Test Suite (`pytest tests/ -q`)**:
-  - **Status**: **232 passed, 9 skipped** (~35 seconds).
+  - **Status**: **234 passed, 20 skipped** (~28 to 42 seconds).
   - **Scope**: All unit tests, PII masking, validator rules, confidence calculations, mock generator fallback, and in-memory router lifecycle tests. Zero Docker dependencies required.
 * **Live Integration Suite (`$env:TRC_INTEGRATION_TESTS="1"; pytest tests/ -q`)**:
-  - **Status**: **252 passed, 0 skipped** (~75 seconds).
+  - **Status**: **254 passed, 0 skipped** (~75 to 90 seconds).
   - **Scope**: Live pgvector similarity search, PostgreSQL run store persistence, thread concurrency race conditions, and full Infusion Pump E2E execution.
 * **Linter (`ruff check`)**:
   - **Status**: `All checks passed!` across `agents/`, `config/`, `scripts/`, and `tests/`.

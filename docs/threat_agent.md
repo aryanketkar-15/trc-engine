@@ -1,6 +1,6 @@
 # Threat Agent — Internal Technical Documentation
 **TRC Engine | Phase 1 Implementation Reference**  
-*Document Version: 1.0 — Current as of develop commit `d5206a6`*
+*Document Version: 1.1 — Current as of main commit `2cf8d89`*
 
 ---
 
@@ -135,6 +135,7 @@ Threat scenario synthesis is performed by `agents/threat_agent/generator.py` usi
 The original project synopsis cited direct OpenAI integration (`gpt-4o`). The implementation has deliberately deviated to use **OpenRouter** (`https://openrouter.ai/api/v1`) via the OpenAI-compatible SDK client:
 * **Rationale**: Sourcing LLM completions through OpenRouter decouples the engine from a single vendor, allowing flexible model routing (e.g., DeepSeek, Claude 3.5 Haiku, Llama 3) based on cost, reasoning capability, and availability, without requiring application code changes.
 * **Implementation**: If `settings.OPENAI_API_KEY` starts with `sk-or-`, `common/llm_client.py` automatically redirects the base URL to `https://openrouter.ai/api/v1`.
+* **Configured Default Model**: Sourced via the `TRC_LLM_MODEL` environment variable or `settings.OPENAI_MODEL`, defaulting to `gpt-4o-mini` (`agents/threat_agent/generator.py:83`). The low-level fallback constant `_DEFAULT_MODEL = "gpt-4o"` in `common/llm_client.py:106` applies only when the client is invoked without an explicit model parameter.
 
 ### `USE_LIVE_LLM` Operating Modes
 Controlled via `config/settings.py` or the `USE_LIVE_LLM` environment variable:
@@ -389,10 +390,10 @@ The codebase maintains strict separation between fast unit tests and containeriz
 ### Test Split Overview
 * **Fast Test Suite (Zero Docker required)**:
   * Runs all unit tests, PII scrubbing tests, validator rules, confidence scorer tests, API authentication guards, and router lifecycle tests (using `InMemoryRunRegistryStore`).
-  * Execution time: **~35 to 40 seconds** (232 tests passing).
+  * Execution time: **~28 to 42 seconds** (234 passed, 20 skipped).
 * **Live Integration Suite (`TRC_INTEGRATION_TESTS=1`)**:
   * Executes live pgvector similarity searches against PostgreSQL, tests table migrations, and runs multi-threaded concurrent race-condition tests against `threat_agent_runs`.
-  * Execution time: **~75 seconds** (241 tests passing).
+  * Execution time: **~75 to 90 seconds** (254 passed).
 
 ### Local Execution Commands
 
