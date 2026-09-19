@@ -50,15 +50,18 @@ select = [
     "RUF", # ruff-specific rules
 ]
 ignore = [
-    "ANN101", # Missing type annotation for `self`
-    "ANN102", # Missing type annotation for `cls`
+    "ANN101", # Missing type annotation for `self` in method
+    "ANN102", # Missing type annotation for `cls` in classmethod
     "S101",   # Use of `assert` — allowed in tests
+    "UP038",  # Use `X | Y` in `isinstance` call instead of `(X, Y)`
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
-    "ANN",  # type hints in tests are optional
-    "S101", # assert is fine in pytest
+    "ANN",   # type hints in tests are optional
+    "S101",  # assert is fine in pytest
+    "E501",  # long assertion/log-filtering lines in tests are fine
+    "RUF100", # some noqa directives reference rules not in select; keep for documentation
 ]
 # schemas.py uses Unicode box-drawing chars and arrow symbols in section banners.
 # These are intentional decorative formatting — suppress the ambiguous-Unicode rules.
@@ -69,11 +72,25 @@ ignore = [
     "W291",   # trailing whitespace from multi-byte Unicode arrow sequences
 ]
 
-
-
 "scripts/**/*.py" = [
     "E402", # sys.path and sys.stdout tweaks before imports in standalone CLI scripts
     "T201", # print is intentional in CLI demo scripts
+]
+# pgvector regression test: config import is gated behind pytestmark skipif, so it
+# necessarily lives after the skip marker. DSN is an intentional uppercase property
+# name matching the psycopg DSN convention. subprocess.run("python") is unavoidable
+# when testing the build_index CLI script.
+"tests/threat_agent/integration/test_pgvector_regression.py" = [
+    "E402", # config import after pytestmark
+    "N802", # DSN is an intentional uppercase property name (psycopg convention)
+    "S603", # subprocess call with check
+    "S607", # subprocess.run with partial path is intentional for build_index invocation
+]
+# test_generator.py: late imports used to avoid circular imports in parametrised
+# test sections that are conditionally skipped; import order reflects skip-gate pattern.
+"tests/threat_agent/unit/test_generator.py" = [
+    "E402", # late imports in conditionally-skipped sections
+    "I001", # import order secondary to skip-gate pattern
 ]
 
 # ---------------------------------------------------------------------------

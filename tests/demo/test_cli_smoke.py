@@ -77,9 +77,6 @@ def test_demo_cli_pipeline_smoke(
     assert len(plan.queries) == len(agent_input.assets)
 
     # 3. Stage 2: pgvector Retrieval (mocked — no live DB needed)
-    smoke_candidates = [
-        _make_smoke_candidate(asset_id=q["asset_id"]) for q in plan.queries
-    ]
     with (
         patch("agents.threat_agent.retrieval.get_db_connection") as mock_db,
         patch("pgvector.psycopg.register_vector"),
