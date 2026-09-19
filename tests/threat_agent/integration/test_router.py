@@ -515,3 +515,50 @@ class TestAuthentication:
         scenarios_res = unauth_client.get(f"/threat-agent/{run_id}/scenarios")
         assert scenarios_res.status_code == 200
         assert isinstance(scenarios_res.json(), list)
+
+    def test_valid_api_key_allows_analyze(
+        self, unauth_client: TestClient, valid_payload: dict[str, Any]
+    ) -> None:
+        """POST /threat-agent/analyze with valid X-API-Key returns 202 Accepted."""
+        response = unauth_client.post(
+            "/threat-agent/analyze",
+            json=valid_payload,
+            headers={"X-API-Key": TEST_API_KEY},
+        )
+        assert response.status_code == 202
+        assert response.json()["run_id"] == valid_payload["run_id"]
+
+    def test_valid_api_key_allows_approve_and_reject(
+        self, unauth_client: TestClient, valid_payload: dict[str, Any]
+    ) -> None:
+        """POST /approve and /reject succeed when valid X-API-Key is provided."""
+        # 1. Setup run for approve
+        run_id_app = "RUN-AUTH-POS-APP-001"
+        res_an = unauth_client.post(
+            "/threat-agent/analyze",
+            json=dict(valid_payload, run_id=run_id_app),
+            headers={"X-API-Key": TEST_API_KEY},
+        )
+        assert res_an.status_code == 202
+
+        res_approve = unauth_client.post(
+            f"/threat-agent/{run_id_app}/approve",
+            headers={"X-API-Key": TEST_API_KEY},
+        )
+        assert res_approve.status_code == 200
+        assert res_approve.json()["status"] == ThreatStatus.APPROVED.value
+
+        # 2. Setup second run for reject
+        run_id_rej = "RUN-AUTH-POS-REJ-001"
+        unauth_client.post(
+            "/threat-agent/analyze",
+            json=dict(valid_payload, run_id=run_id_rej),
+            headers={"X-API-Key": TEST_API_KEY},
+        )
+        res_reject = unauth_client.post(
+            f"/threat-agent/{run_id_rej}/reject",
+            json={"reason": "Valid key rejection test"},
+            headers={"X-API-Key": TEST_API_KEY},
+        )
+        assert res_reject.status_code == 200
+        assert res_reject.json()["status"] == ThreatStatus.REJECTED.value

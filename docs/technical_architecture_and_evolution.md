@@ -163,12 +163,14 @@ The Threat Agent operates according to the **SCRP** (Sense/Perceive → Plan →
 
 ### Stage 4: Outbound PII Redaction Middleware
 * **Commits**: `0b50730` -> `c9f1a69`
-* **Why**: Security compliance. Engineering inputs often contain developer names, email addresses, corporate IPv4 addresses, and internal network hostnames. These must never be transmitted to external LLM providers.
+* **Why**: Security compliance. Engineering inputs often contain contact emails, corporate IPv4 addresses, phone numbers, and SSNs/Gov IDs. These must never be transmitted to external LLM providers.
 * **Technical Changes**:
-  - Created `agents/threat_agent/pii.py` with compiled regex sanitizers:
+  - Created `common/pii_redaction.py` with compiled regex sanitizers:
     - Email addresses (`[\w.+-]+@[\w-]+\.[\w.-]+`) -> `[REDACTED_EMAIL]`
+    - Phone numbers & 10-12 digit numeric strings -> `[REDACTED_PHONE]`
+    - Government IDs / SSN (`\b\d{3}-\d{2}-\d{4}\b`) -> `[REDACTED_GOV_ID]`
     - IPv4 addresses (`\b\d{1,3}(\.\d{1,3}){3}\b`) -> `[REDACTED_IP]`
-    - Developer names / identities -> `[REDACTED_NAME]`
+  - Note on Name Redaction: Person/developer names are deliberately *not* matched via regex heuristics due to unacceptably high false-positive rates on domain terminology; redaction is strictly scoped to structured patterns (emails, phones, SSNs, IPs).
   - Wired into `_build_user_prompt()` before prompt assembly.
   - Emitted structured `pii_redacted_in_prompt` audit event recording the exact number of redacted items without ever logging the sensitive tokens.
 
