@@ -134,6 +134,7 @@ Threat scenario synthesis is performed by `agents/threat_agent/generator.py` usi
 ### OpenRouter Integration (Documented Deviation from Synopsis)
 The original project synopsis cited direct OpenAI integration (`gpt-4o`). The implementation has deliberately deviated to use **OpenRouter** (`https://openrouter.ai/api/v1`) via the OpenAI-compatible SDK client:
 * **Rationale**: Sourcing LLM completions through OpenRouter decouples the engine from a single vendor, allowing flexible model routing (e.g., DeepSeek, Claude 3.5 Haiku, Llama 3) based on cost, reasoning capability, and availability, without requiring application code changes.
+* **LLM Model**: Configurable via `TRC_LLM_MODEL` or `settings.OPENAI_MODEL`; defaults to `gpt-4o-mini`.
 * **Implementation**: If `settings.OPENAI_API_KEY` starts with `sk-or-`, `common/llm_client.py` automatically redirects the base URL to `https://openrouter.ai/api/v1`.
 * **Configured Default Model**: Sourced via the `TRC_LLM_MODEL` environment variable or `settings.OPENAI_MODEL`, defaulting to `gpt-4o-mini` (`agents/threat_agent/generator.py:83`). The low-level fallback constant `_DEFAULT_MODEL = "gpt-4o"` in `common/llm_client.py:106` applies only when the client is invoked without an explicit model parameter.
 

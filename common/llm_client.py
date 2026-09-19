@@ -103,6 +103,9 @@ class LLMAPIError(LLMClientError):
 
 # ── Internal constants ────────────────────────────────────────────────────────
 
+# Fallback default model for generic callers of chat_completion().
+# Note: Threat Agent explicitly passes its own configured model (defaulting to
+# "gpt-4o-mini" via settings.OPENAI_MODEL / TRC_LLM_MODEL) and does not rely on this fallback.
 _DEFAULT_MODEL = "gpt-4o"
 _DEFAULT_TIMEOUT_SECONDS = 30.0
 _MAX_ATTEMPTS = 3

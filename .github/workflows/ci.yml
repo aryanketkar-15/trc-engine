@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "develop", "feat/**", "fix/**", "ci/**"]
+  pull_request:
+    branches: ["main", "develop"]
+
+jobs:
+  test:
+    name: Lint, Build KB & Test Suite
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: trc_engine
+          POSTGRES_USER: trc_user
+          POSTGRES_PASSWORD: trc_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U trc_user -d trc_engine"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://trc_user:trc_password@localhost:5432/trc_engine
+      TRC_INTEGRATION_TESTS: "1"
+      USE_LIVE_LLM: "false"
+      OPENAI_API_KEY: "sk-mock-key-for-ci"
+      THREAT_AGENT_API_KEY: "trc-dev-secret-key"
+      KB_DATA_DIR: "kb/data"
+      ENVIRONMENT: "development"
+      PYTHONPATH: "."
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -c "
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              p = tomllib.load(f)
+          reqs = p['project']['dependencies'] + p['project']['optional-dependencies']['dev']
+          print('\n'.join(reqs))
+          " > /tmp/requirements-ci.txt
+          pip install -r /tmp/requirements-ci.txt sentence-transformers httpx
+
+      - name: Run Ruff Linter
+        run: |
+          ruff check .
+
+      - name: Build Knowledge Base Index (pgvector)
+        run: |
+          python -m kb.scripts.build_index
+
+      - name: Run Full Integration Test Suite
+        id: test_run
+        continue-on-error: true
+        run: |
+          pytest tests/ -v --tb=short 2>&1 | tee pytest.log
+
+      - name: Emit Workflow Annotations on Failure
+        if: steps.test_run.outcome != 'success'
+        run: |
+          python -c "
+          with open('pytest.log') as f:
+              content = f.read()
+          for line in content.splitlines():
+              if 'FAILED ' in line or 'ERROR ' in line or 'AssertionError' in line:
+                  print(f'::error::{line.strip()}')
+          print('::error::--- Pytest Summary ---')
+          for line in content.splitlines()[-35:]:
+              print(f'::notice::{line.strip()}')
+          "
+          exit 1
