@@ -32,7 +32,8 @@ _EMAIL_PATTERN = re.compile(
 )
 
 # Phone number patterns:
-# - North American & international punctuated formats: e.g. 555-123-4567, (555) 123-4567, +1-555-123-4567, +44 20 7123 4567
+# - North American & international punctuated formats: e.g. 555-123-4567,
+#   (555) 123-4567, +1-555-123-4567, +44 20 7123 4567
 # - Raw 10-to-12 digit strings: e.g. 5551234567, +15551234567
 _PHONE_PATTERN = re.compile(
     r"(?:(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}\b)|"
@@ -52,10 +53,10 @@ _IPV4_PATTERN = re.compile(
 )
 
 # Replacement tokens
-TOKEN_EMAIL = "[REDACTED_EMAIL]"
-TOKEN_PHONE = "[REDACTED_PHONE]"
-TOKEN_GOV_ID = "[REDACTED_GOV_ID]"
-TOKEN_IP = "[REDACTED_IP]"
+TOKEN_EMAIL = "[REDACTED_EMAIL]"  # noqa: S105
+TOKEN_PHONE = "[REDACTED_PHONE]"  # noqa: S105
+TOKEN_GOV_ID = "[REDACTED_GOV_ID]"  # noqa: S105
+TOKEN_IP = "[REDACTED_IP]"  # noqa: S105
 
 _ORDERED_RULES: list[tuple[re.Pattern[str], str]] = [
     (_EMAIL_PATTERN, TOKEN_EMAIL),
@@ -100,7 +101,7 @@ def redact_pii(text: str) -> str:
     return sanitized
 
 
-def redact_structure(data: Any) -> tuple[Any, int]:
+def redact_structure(data: Any) -> tuple[Any, int]:  # noqa: ANN401
     """Recursively redact string values inside dicts, lists, or primitive values.
 
     Structured keys (e.g. dict keys, object IDs) are preserved; only free-form

@@ -34,6 +34,7 @@ Re-run this script whenever:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -179,7 +180,6 @@ def _upsert_entries(
     Uses ON CONFLICT (source, pattern_id) DO UPDATE so re-running this
     script after adding new seed entries is fully idempotent.
     """
-    import json  # noqa: PLC0415
 
     print(f"  [DB] Upserting {len(entries)} entries…", file=sys.stderr)
     with get_db_connection() as conn:
