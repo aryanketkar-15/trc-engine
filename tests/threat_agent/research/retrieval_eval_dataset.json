@@ -1,0 +1,169 @@
+{
+  "benchmark_name": "TRC Engine Knowledge Base Retrieval Benchmark",
+  "dataset_version": "v1.0.0",
+  "kb_snapshot": "pgvector_24_patterns",
+  "total_queries": 6,
+  "total_pairs": 40,
+  "fixtures": [
+    "Smart Door Lock",
+    "Medical Infusion Pump"
+  ],
+  "labeled_queries": [
+    {
+      "query_id": "SDL-Q1",
+      "fixture": "Smart Door Lock",
+      "asset_id": "AS-1",
+      "asset_name": "BLE Controller",
+      "asset_type": "embedded firmware",
+      "interfaces": [
+        "BLE 5.0",
+        "GATT"
+      ],
+      "trust_zone": "untrusted",
+      "device_config": {
+        "auth": "PIN-only",
+        "encryption": "none",
+        "pairing": "unauthenticated"
+      },
+      "damage_scenario": "Unauthorised physical entry to premises via BLE replay or spoofing attack.",
+      "relevant_patterns": [
+        "CAPEC-94",
+        "CAPEC-60",
+        "STRIDE-S-001",
+        "CAPEC-196",
+        "CWE-306",
+        "CAPEC-112",
+        "STRIDE-D-001",
+        "CWE-798"
+      ]
+    },
+    {
+      "query_id": "SDL-Q2",
+      "fixture": "Smart Door Lock",
+      "asset_id": "AS-2",
+      "asset_name": "Secure Element",
+      "asset_type": "hardware security module",
+      "interfaces": [
+        "I2C",
+        "SPI"
+      ],
+      "trust_zone": "trusted",
+      "device_config": {
+        "key_storage": "persistent",
+        "tamper": "physical"
+      },
+      "damage_scenario": "Cryptographic key exfiltration enabling permanent device compromise.",
+      "relevant_patterns": [
+        "CWE-798",
+        "CWE-311",
+        "STRIDE-T-001",
+        "CAPEC-196",
+        "ATT&CK-T1078"
+      ]
+    },
+    {
+      "query_id": "SDL-Q3",
+      "fixture": "Smart Door Lock",
+      "asset_id": "AS-3",
+      "asset_name": "Cloud Backend",
+      "asset_type": "cloud api server",
+      "interfaces": [
+        "HTTPS",
+        "REST",
+        "WebSocket"
+      ],
+      "trust_zone": "external",
+      "device_config": {
+        "auth": "JWT",
+        "rate_limiting": "none"
+      },
+      "damage_scenario": "Mass compromise of all registered locks via cloud API takeover.",
+      "relevant_patterns": [
+        "ATT&CK-T1190",
+        "CAPEC-186",
+        "CAPEC-125",
+        "ATT&CK-T1498",
+        "ATT&CK-T1078",
+        "STRIDE-R-001",
+        "CAPEC-62"
+      ]
+    },
+    {
+      "query_id": "SDL-Q4",
+      "fixture": "Smart Door Lock",
+      "asset_id": "AS-4",
+      "asset_name": "Mobile Companion App",
+      "asset_type": "mobile application client",
+      "interfaces": [
+        "BLE",
+        "HTTPS"
+      ],
+      "trust_zone": "external",
+      "device_config": {
+        "platform": "iOS/Android",
+        "storage": "unencrypted_cache"
+      },
+      "damage_scenario": "Eavesdropping and credential interception from companion smartphone app.",
+      "relevant_patterns": [
+        "CAPEC-94",
+        "ATT&CK-T1557",
+        "STRIDE-I-001",
+        "CWE-311",
+        "CAPEC-60"
+      ]
+    },
+    {
+      "query_id": "INF-Q1",
+      "fixture": "Medical Infusion Pump",
+      "asset_id": "AS-1",
+      "asset_name": "Dosage Control Firmware",
+      "asset_type": "safety-critical embedded firmware",
+      "interfaces": [
+        "UART",
+        "CAN bus"
+      ],
+      "trust_zone": "trusted",
+      "device_config": {
+        "safety_level": "SIL-2",
+        "update_auth": "no-verify"
+      },
+      "damage_scenario": "Incorrect drug dosage delivered to patient due to firmware tampering, risking patient death.",
+      "relevant_patterns": [
+        "CAPEC-186",
+        "CAPEC-100",
+        "CWE-787",
+        "STRIDE-T-001",
+        "CWE-306",
+        "CWE-798",
+        "STRIDE-E-001"
+      ]
+    },
+    {
+      "query_id": "INF-Q2",
+      "fixture": "Medical Infusion Pump",
+      "asset_id": "AS-2",
+      "asset_name": "Hospital Network Interface",
+      "asset_type": "network endpoint",
+      "interfaces": [
+        "Ethernet",
+        "HL7 FHIR REST API"
+      ],
+      "trust_zone": "external",
+      "device_config": {
+        "segmentation": "flat",
+        "auth": "basic"
+      },
+      "damage_scenario": "Lateral movement through flat hospital network enabling attack on life-critical systems.",
+      "relevant_patterns": [
+        "ATT&CK-T1190",
+        "ATT&CK-T1040",
+        "ATT&CK-T1557",
+        "STRIDE-I-001",
+        "CWE-306",
+        "CAPEC-125",
+        "ATT&CK-T1498",
+        "CAPEC-62"
+      ]
+    }
+  ]
+}
