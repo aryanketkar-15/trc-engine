@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 import time
 
 import psycopg
@@ -79,7 +80,7 @@ class TestPgvectorRegression:
 
         # Run build_index.py to populate the DB from seed files
         result = subprocess.run(
-            ["python", "-m", "kb.scripts.build_index"],
+            [sys.executable, "-m", "kb.scripts.build_index"],
             capture_output=True,
             text=True,
             timeout=120,
@@ -135,7 +136,7 @@ class TestPgvectorRegression:
 
         for _ in range(2):
             result = subprocess.run(
-                ["python", "-m", "kb.scripts.build_index"],
+                [sys.executable, "-m", "kb.scripts.build_index"],
                 capture_output=True,
                 text=True,
                 timeout=120,

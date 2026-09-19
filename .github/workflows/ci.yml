@@ -68,23 +68,5 @@ jobs:
           python -m kb.scripts.build_index
 
       - name: Run Full Integration Test Suite
-        id: pytest_run
-        continue-on-error: true
         run: |
-          set -o pipefail
-          pytest tests/ -v --tb=short 2>&1 | tee pytest.log
-
-      - name: Report Test Results to Summary
-        run: |
-          if [ "${{ steps.pytest_run.outcome }}" != "success" ]; then
-            echo "### ❌ Pytest Failures" >> $GITHUB_STEP_SUMMARY
-            echo '```text' >> $GITHUB_STEP_SUMMARY
-            grep -A 50 "FAILURES" pytest.log | head -n 120 >> $GITHUB_STEP_SUMMARY || tail -n 80 pytest.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            exit 1
-          else
-            echo "### ✅ All Tests Passed" >> $GITHUB_STEP_SUMMARY
-            echo '```text' >> $GITHUB_STEP_SUMMARY
-            tail -n 25 pytest.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
+          pytest tests/ -v
