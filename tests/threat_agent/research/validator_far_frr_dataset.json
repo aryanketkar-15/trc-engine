@@ -1,0 +1,1102 @@
+[
+  {
+    "id": "VAL-CTL-001",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - BLE replay attack on pairing handshake (Spoofing)",
+    "scenario": {
+      "tid": "THR-CTL-001",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-1",
+      "stride_category": "Spoofing",
+      "attack_vector": "BLE replay attack on unauthenticated pairing handshake",
+      "kb_reference": "CAPEC-94",
+      "evidence_chain": {
+        "exposure": "BLE pairing interface operates without mandatory out-of-band PIN",
+        "matched_pattern": "CAPEC-94",
+        "applicability_reason": "Without cryptographic nonce validation or rolling challenge-response, intercepted pairing frames can be replayed.",
+        "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
+      },
+      "confidence_score": 0.85,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-002",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - Malicious OTA firmware update (Tampering)",
+    "scenario": {
+      "tid": "THR-CTL-002",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-3",
+      "stride_category": "Tampering",
+      "attack_vector": "Tampering with OTA firmware image via unsigned update mechanism",
+      "kb_reference": "CAPEC-186",
+      "evidence_chain": {
+        "exposure": "Bootloader accepts firmware binaries over BLE without cryptographic signature verification",
+        "matched_pattern": "CAPEC-186",
+        "applicability_reason": "Unsigned binary ingestion allows an attacker to replace vendor firmware with a trojanized version that unlocks the latch on arbitrary triggers.",
+        "citation": "CAPEC-186: Malicious Software Update (CAPEC v3.9)"
+      },
+      "confidence_score": 0.90,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-003",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - Audit log deletion on internal flash (Repudiation)",
+    "scenario": {
+      "tid": "THR-CTL-003",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-4",
+      "stride_category": "Repudiation",
+      "attack_vector": "Direct log deletion and audit log tampering via diagnostic port",
+      "kb_reference": "ATT&CK T1070",
+      "evidence_chain": {
+        "exposure": "Diagnostic UART interface exposes raw flash memory sector erase commands without authentication",
+        "matched_pattern": "ATT&CK T1070",
+        "applicability_reason": "An adversary with physical access can issue erase commands to wipe entry/exit audit trails, preventing forensic attribution.",
+        "citation": "MITRE ATT&CK T1070: Indicator Removal on Host (v14.1)"
+      },
+      "confidence_score": 0.82,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-004",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - Passive eavesdropping on BLE traffic (Information Disclosure)",
+    "scenario": {
+      "tid": "THR-CTL-004",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-5",
+      "stride_category": "InformationDisclosure",
+      "attack_vector": "Passive eavesdropping on cleartext BLE transmission to intercept unlock commands",
+      "kb_reference": "CAPEC-117",
+      "evidence_chain": {
+        "exposure": "Lock status notifications are broadcast over BLE without transport-layer encryption",
+        "matched_pattern": "CAPEC-117",
+        "applicability_reason": "Cleartext advertisements permit passive radio sniffers to capture authorization tokens and user presence data within 30 meters.",
+        "citation": "CAPEC-117: Interception (CAPEC v3.9)"
+      },
+      "confidence_score": 0.88,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-005",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - BLE advertising flood causing battery drain (Denial of Service)",
+    "scenario": {
+      "tid": "THR-CTL-005",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-1",
+      "stride_category": "DenialOfService",
+      "attack_vector": "Resource exhaustion flood on BLE radio causing battery drain and freeze",
+      "kb_reference": "CAPEC-125",
+      "evidence_chain": {
+        "exposure": "Radio wake-on-packet circuit keeps microcontroller in high-power state indefinitely when continuously pinged",
+        "matched_pattern": "CAPEC-125",
+        "applicability_reason": "Continuous BLE connection requests force radio active state, exhausting AA batteries within 48 hours and rendering the lock inoperable.",
+        "citation": "CAPEC-125: Flooding (CAPEC v3.9)"
+      },
+      "confidence_score": 0.84,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-006",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - Cloud API authentication bypass (Elevation of Privilege)",
+    "scenario": {
+      "tid": "THR-CTL-006",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-2",
+      "stride_category": "ElevationOfPrivilege",
+      "attack_vector": "Authentication bypass allowing unauthorized access to master lock API",
+      "kb_reference": "ATT&CK T1078",
+      "evidence_chain": {
+        "exposure": "Cloud management endpoint fails to validate JWT signature expiration and token scope",
+        "matched_pattern": "ATT&CK T1078",
+        "applicability_reason": "Forged or expired guest access tokens are accepted by the cloud relay, elevating a guest tenant to full administrator privileges.",
+        "citation": "MITRE ATT&CK T1078: Valid Accounts (v14.1)"
+      },
+      "confidence_score": 0.87,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-007",
+    "label": "valid",
+    "target_check": null,
+    "description": "Infusion Pump - Central telemetry server impersonation (Spoofing)",
+    "scenario": {
+      "tid": "THR-CTL-007",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-10",
+      "stride_category": "Spoofing",
+      "attack_vector": "Impersonation of hospital central telemetry server via fake mTLS certificate",
+      "kb_reference": "CAPEC-151",
+      "evidence_chain": {
+        "exposure": "Infusion pump telemetry client disables certificate root authority verification",
+        "matched_pattern": "CAPEC-151",
+        "applicability_reason": "Because root CA pinning is omitted, a rogue gateway on the clinical VLAN can impersonate the monitoring server and feed false status.",
+        "citation": "CAPEC-151: Identity Spoofing (CAPEC v3.9)"
+      },
+      "confidence_score": 0.86,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-008",
+    "label": "valid",
+    "target_check": null,
+    "description": "Infusion Pump - Dosage parameter tampering via buffer overflow (Tampering)",
+    "scenario": {
+      "tid": "THR-CTL-008",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-11",
+      "stride_category": "Tampering",
+      "attack_vector": "Buffer overflow parameter tampering in infusion rate dosage command",
+      "kb_reference": "CWE-120",
+      "evidence_chain": {
+        "exposure": "Dose parsing routine copies packet payload into fixed 64-byte stack buffer without bounds check",
+        "matched_pattern": "CWE-120",
+        "applicability_reason": "Malformed network commands overwrite stack variables controlling motor calibration, modifying delivery rate beyond clinical safety limits.",
+        "citation": "CWE-120: Buffer Copy without Checking Size of Input"
+      },
+      "confidence_score": 0.91,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-009",
+    "label": "valid",
+    "target_check": null,
+    "description": "Infusion Pump - Non-repudiation bypass on bolus delivery log (Repudiation)",
+    "scenario": {
+      "tid": "THR-CTL-009",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-12",
+      "stride_category": "Repudiation",
+      "attack_vector": "Cover tracks by non-repudiation bypass on bolus delivery log records",
+      "kb_reference": "CWE-778",
+      "evidence_chain": {
+        "exposure": "Bolus delivery events are stored in unindexed volatile RAM buffer before disk flush",
+        "matched_pattern": "CWE-778",
+        "applicability_reason": "Rapid power cycling or unlogged error states permit an operator to deny initiating an unauthorized high-dose bolus delivery.",
+        "citation": "CWE-778: Insufficient Logging"
+      },
+      "confidence_score": 0.80,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-010",
+    "label": "valid",
+    "target_check": null,
+    "description": "Infusion Pump - Patient vital signs sniffing on clinical WiFi (Information Disclosure)",
+    "scenario": {
+      "tid": "THR-CTL-010",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-13",
+      "stride_category": "InformationDisclosure",
+      "attack_vector": "Unencrypted transmission sniffing of vital telemetry and patient records",
+      "kb_reference": "CAPEC-157",
+      "evidence_chain": {
+        "exposure": "HL7 telemetry messages transmitted over TCP port 8000 without TLS encapsulation",
+        "matched_pattern": "CAPEC-157",
+        "applicability_reason": "Any connected workstation on the clinical LAN can execute passive packet sniffing to capture patient identifiers and medical dosages.",
+        "citation": "CAPEC-157: Sniffing Attacks (CAPEC v3.9)"
+      },
+      "confidence_score": 0.89,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-011",
+    "label": "valid",
+    "target_check": null,
+    "description": "Infusion Pump - Wireless communication flood and nurse disconnect (Denial of Service)",
+    "scenario": {
+      "tid": "THR-CTL-011",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-10",
+      "stride_category": "DenialOfService",
+      "attack_vector": "DoS flood against pump wireless interface disrupting nurse station heartbeat",
+      "kb_reference": "CAPEC-227",
+      "evidence_chain": {
+        "exposure": "Embedded WiFi firmware lacks rate limiting on TCP SYN connection handshakes",
+        "matched_pattern": "CAPEC-227",
+        "applicability_reason": "A flood of half-open TCP connections saturates socket buffers, causing the pump to drop off central telemetry and trigger alarm silence.",
+        "citation": "CAPEC-227: Sustained Client-Server Communication Flood (CAPEC v3.9)"
+      },
+      "confidence_score": 0.86,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-012",
+    "label": "valid",
+    "target_check": null,
+    "description": "Infusion Pump - Privilege escalation via technician interface (Elevation of Privilege)",
+    "scenario": {
+      "tid": "THR-CTL-012",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-14",
+      "stride_category": "ElevationOfPrivilege",
+      "attack_vector": "Privilege escalation bypass of technician authentication to reprogram rate limits",
+      "kb_reference": "ATT&CK T1068",
+      "evidence_chain": {
+        "exposure": "Service menu accessible via hardcoded default PIN over maintenance serial port",
+        "matched_pattern": "ATT&CK T1068",
+        "applicability_reason": "Hardcoded engineering credentials grant unauthorized root shell access, allowing override of maximum delivery rate safety guardrails.",
+        "citation": "MITRE ATT&CK T1068: Exploitation for Privilege Escalation (v14.1)"
+      },
+      "confidence_score": 0.88,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-013",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - Cloned NFC token replay attack (Spoofing)",
+    "scenario": {
+      "tid": "THR-CTL-013",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-6",
+      "stride_category": "Spoofing",
+      "attack_vector": "Credential theft via cloned NFC physical token replay",
+      "kb_reference": "CAPEC-62",
+      "evidence_chain": {
+        "exposure": "NFC reader uses static 4-byte UID without cryptographic challenge-response authentication",
+        "matched_pattern": "CAPEC-62",
+        "applicability_reason": "An adversary can read the card UID with a smartphone and emulate it against the door reader to gain physical entry.",
+        "citation": "CAPEC-62: Cross Site Request Forgery (CAPEC v3.9)"
+      },
+      "confidence_score": 0.83,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-014",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - Direct memory modification via JTAG (Tampering)",
+    "scenario": {
+      "tid": "THR-CTL-014",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-1",
+      "stride_category": "Tampering",
+      "attack_vector": "Direct memory modification and tampering via exposed hardware debug pads",
+      "kb_reference": "CAPEC-196",
+      "evidence_chain": {
+        "exposure": "SWD/JTAG test points remain enabled on production printed circuit board",
+        "matched_pattern": "CAPEC-196",
+        "applicability_reason": "Physical connection of a hardware debugger allows direct modification of internal lock state registers from locked to unlocked.",
+        "citation": "CAPEC-196: Session Hijacking (CAPEC v3.9)"
+      },
+      "confidence_score": 0.85,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-015",
+    "label": "valid",
+    "target_check": null,
+    "description": "Infusion Pump - Audit bypass preventing event logging (Repudiation)",
+    "scenario": {
+      "tid": "THR-CTL-015",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-12",
+      "stride_category": "Repudiation",
+      "attack_vector": "Audit bypass preventing recording of bolus dose override events",
+      "kb_reference": "ATT&CK T1562",
+      "evidence_chain": {
+        "exposure": "Firmware error handling routine skips syslog call when battery voltage is low",
+        "matched_pattern": "ATT&CK T1562",
+        "applicability_reason": "Deliberately causing a brownout condition prevents the audit logger from persisting safety interlock override events.",
+        "citation": "MITRE ATT&CK T1562: Impair Defenses (v14.1)"
+      },
+      "confidence_score": 0.81,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-016",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - Side-channel power analysis during crypto handshake (Information Disclosure)",
+    "scenario": {
+      "tid": "THR-CTL-016",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-1",
+      "stride_category": "InformationDisclosure",
+      "attack_vector": "Side channel power analysis during crypto handshake to leak AES master key",
+      "kb_reference": "CAPEC-189",
+      "evidence_chain": {
+        "exposure": "Cryptographic engine lacks power trace blinding capacitors and constant-time execution",
+        "matched_pattern": "CAPEC-189",
+        "applicability_reason": "Differential power analysis on the battery terminal enables extraction of the private device key during BLE authentication.",
+        "citation": "CAPEC-189: Flash Memory Tampering (CAPEC v3.9)"
+      },
+      "confidence_score": 0.84,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-017",
+    "label": "valid",
+    "target_check": null,
+    "description": "Infusion Pump - Dosage actuator watchdog shutdown (Denial of Service)",
+    "scenario": {
+      "tid": "THR-CTL-017",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-11",
+      "stride_category": "DenialOfService",
+      "attack_vector": "Resource exhaustion hang causing dosage watchdog shutdown and infusion halt",
+      "kb_reference": "CWE-400",
+      "evidence_chain": {
+        "exposure": "Motor control loop shares processor core with network communication stack",
+        "matched_pattern": "CWE-400",
+        "applicability_reason": "A flood of network diagnostic requests starves the stepper motor control task, tripping hardware watchdog and halting life-critical drug delivery.",
+        "citation": "CWE-400: Uncontrolled Resource Consumption"
+      },
+      "confidence_score": 0.89,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-018",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - Path traversal role escalation in cloud relay (Elevation of Privilege)",
+    "scenario": {
+      "tid": "THR-CTL-018",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-2",
+      "stride_category": "ElevationOfPrivilege",
+      "attack_vector": "Role escalation via path traversal granting administrator privileges",
+      "kb_reference": "CAPEC-122",
+      "evidence_chain": {
+        "exposure": "Cloud API routing logic improperly normalizes dot-dot-slash sequence in user profile endpoint",
+        "matched_pattern": "CAPEC-122",
+        "applicability_reason": "Path traversal allows a low-privilege guest account to execute administrative permission override routines.",
+        "citation": "CAPEC-122: Exploitation of Authorization (CAPEC v3.9)"
+      },
+      "confidence_score": 0.87,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-019",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - Session hijack on companion mobile app (Spoofing)",
+    "scenario": {
+      "tid": "THR-CTL-019",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-7",
+      "stride_category": "Spoofing",
+      "attack_vector": "Session hijack via forged authorization tokens on companion mobile app",
+      "kb_reference": "CAPEC-196",
+      "evidence_chain": {
+        "exposure": "Mobile application stores OAuth refresh tokens in unencrypted shared preferences",
+        "matched_pattern": "CAPEC-196",
+        "applicability_reason": "Malicious applications on the same mobile device can read the stored token and forge authenticated session requests to the lock gateway.",
+        "citation": "CAPEC-196: Session Hijacking (CAPEC v3.9)"
+      },
+      "confidence_score": 0.84,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-020",
+    "label": "valid",
+    "target_check": null,
+    "description": "Infusion Pump - SQL injection modifying drug formulation concentration (Tampering)",
+    "scenario": {
+      "tid": "THR-CTL-020",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-15",
+      "stride_category": "Tampering",
+      "attack_vector": "SQL injection modifying drug formulation concentration tables",
+      "kb_reference": "CAPEC-66",
+      "evidence_chain": {
+        "exposure": "Drug library update script concatenates formulation XML directly into SQL queries",
+        "matched_pattern": "CAPEC-66",
+        "applicability_reason": "Unsanitized input allows malicious database alterations, changing unit concentration metrics from mg/mL to mcg/mL.",
+        "citation": "CAPEC-66: SQL Injection (CAPEC v3.9)"
+      },
+      "confidence_score": 0.90,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-021",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - Cloud websocket amplification flood (Denial of Service)",
+    "scenario": {
+      "tid": "THR-CTL-021",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-2",
+      "stride_category": "DenialOfService",
+      "attack_vector": "Websocket amplification flood crashing IoT notification gateway",
+      "kb_reference": "CAPEC-490",
+      "evidence_chain": {
+        "exposure": "Cloud gateway maintains unbounded queue of pending lock status events",
+        "matched_pattern": "CAPEC-490",
+        "applicability_reason": "A flood of artificial state query messages exhausts heap memory on the cloud bridge, disconnecting all associated door locks.",
+        "citation": "CAPEC-490: Resource Amplification (CAPEC v3.9)"
+      },
+      "confidence_score": 0.83,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-022",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - Memory disclosure leak via unhandled panic stack trace (Information Disclosure)",
+    "scenario": {
+      "tid": "THR-CTL-022",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-3",
+      "stride_category": "InformationDisclosure",
+      "attack_vector": "Memory disclosure leak via unhandled panic stack trace output",
+      "kb_reference": "CWE-209",
+      "evidence_chain": {
+        "exposure": "Embedded crash handler dumps register states and memory buffers over diagnostic UART",
+        "matched_pattern": "CWE-209",
+        "applicability_reason": "Inducing a firmware crash causes internal cryptographic keys and PIN hashes residing in SRAM to be dumped in cleartext.",
+        "citation": "CWE-209: Generation of Error Message Containing Sensitive Information"
+      },
+      "confidence_score": 0.86,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-023",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - Physical badge cloning (Valid threat, vocabulary gap edge case)",
+    "scenario": {
+      "tid": "THR-CTL-023",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-6",
+      "stride_category": "Spoofing",
+      "attack_vector": "Physical duplication of RFID transponder to mimic authorized tenant keycard",
+      "kb_reference": "CAPEC-94",
+      "evidence_chain": {
+        "exposure": "Proximity badge reader uses unencrypted Mifare Classic 1K cards with known default keys",
+        "matched_pattern": "CAPEC-94",
+        "applicability_reason": "Known cryptographic weaknesses in Mifare Classic permit cloning badge sectors within seconds using an inexpensive handheld reader.",
+        "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
+      },
+      "confidence_score": 0.82,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-CTL-024",
+    "label": "valid",
+    "target_check": null,
+    "description": "Smart Door Lock - Hardware bus probing (Valid threat, vocabulary gap edge case)",
+    "scenario": {
+      "tid": "THR-CTL-024",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-1",
+      "stride_category": "InformationDisclosure",
+      "attack_vector": "Oscilloscope probing of serial SPI bus during device startup sequence",
+      "kb_reference": "CAPEC-117",
+      "evidence_chain": {
+        "exposure": "SPI bus lines connecting flash chip to main MCU are unshielded and unencrypted",
+        "matched_pattern": "CAPEC-117",
+        "applicability_reason": "Direct logic probe attachment allows an attacker with momentary physical access to record the master PIN as it is fetched during boot.",
+        "citation": "CAPEC-117: Interception (CAPEC v3.9)"
+      },
+      "confidence_score": 0.85,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-001",
+    "label": "invalid",
+    "target_check": "CHECK_CITATION_MISSING",
+    "description": "Invalid: Empty citation string",
+    "scenario": {
+      "tid": "THR-INV-001",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-1",
+      "stride_category": "Spoofing",
+      "attack_vector": "BLE replay attack on unauthenticated pairing handshake",
+      "kb_reference": "CAPEC-94",
+      "evidence_chain": {
+        "exposure": "BLE pairing interface operates without mandatory out-of-band PIN",
+        "matched_pattern": "CAPEC-94",
+        "applicability_reason": "Without cryptographic nonce validation or rolling challenge-response, intercepted pairing frames can be replayed.",
+        "citation": ""
+      },
+      "confidence_score": 0.80,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-002",
+    "label": "invalid",
+    "target_check": "CHECK_CITATION_MISSING",
+    "description": "Invalid: Whitespace-only citation string",
+    "scenario": {
+      "tid": "THR-INV-002",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-3",
+      "stride_category": "Tampering",
+      "attack_vector": "Tampering with OTA firmware image via unsigned update mechanism",
+      "kb_reference": "CAPEC-186",
+      "evidence_chain": {
+        "exposure": "Bootloader accepts firmware binaries over BLE without cryptographic signature verification",
+        "matched_pattern": "CAPEC-186",
+        "applicability_reason": "Unsigned binary ingestion allows an attacker to replace vendor firmware with a trojanized version that unlocks the latch.",
+        "citation": "     "
+      },
+      "confidence_score": 0.80,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-003",
+    "label": "invalid",
+    "target_check": "CHECK_CITATION_MISSING",
+    "description": "Invalid: Placeholder citation 'TBD'",
+    "scenario": {
+      "tid": "THR-INV-003",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-4",
+      "stride_category": "Repudiation",
+      "attack_vector": "Direct log deletion and audit log tampering via diagnostic port",
+      "kb_reference": "ATT&CK T1070",
+      "evidence_chain": {
+        "exposure": "Diagnostic UART interface exposes raw flash memory sector erase commands without authentication",
+        "matched_pattern": "ATT&CK T1070",
+        "applicability_reason": "An adversary with physical access can issue erase commands to wipe entry/exit audit trails.",
+        "citation": "TBD"
+      },
+      "confidence_score": 0.75,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-004",
+    "label": "invalid",
+    "target_check": "CHECK_CITATION_MISSING",
+    "description": "Invalid: Placeholder citation 'N/A'",
+    "scenario": {
+      "tid": "THR-INV-004",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-5",
+      "stride_category": "InformationDisclosure",
+      "attack_vector": "Passive eavesdropping on cleartext BLE transmission to intercept unlock commands",
+      "kb_reference": "CAPEC-117",
+      "evidence_chain": {
+        "exposure": "Lock status notifications are broadcast over BLE without transport-layer encryption",
+        "matched_pattern": "CAPEC-117",
+        "applicability_reason": "Cleartext advertisements permit passive radio sniffers to capture authorization tokens.",
+        "citation": "N/A"
+      },
+      "confidence_score": 0.70,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-005",
+    "label": "invalid",
+    "target_check": "CHECK_CITATION_MISSING",
+    "description": "Invalid: Placeholder citation 'unknown'",
+    "scenario": {
+      "tid": "THR-INV-005",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-1",
+      "stride_category": "DenialOfService",
+      "attack_vector": "Resource exhaustion flood on BLE radio causing battery drain and freeze",
+      "kb_reference": "CAPEC-125",
+      "evidence_chain": {
+        "exposure": "Radio wake-on-packet circuit keeps microcontroller in high-power state indefinitely",
+        "matched_pattern": "CAPEC-125",
+        "applicability_reason": "Continuous BLE connection requests force radio active state, exhausting batteries quickly.",
+        "citation": "unknown"
+      },
+      "confidence_score": 0.65,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-006",
+    "label": "invalid",
+    "target_check": "CHECK_CITATION_MISSING",
+    "description": "Invalid: Non-standard placeholder citation phrase (Heuristic boundary case)",
+    "scenario": {
+      "tid": "THR-INV-006",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-2",
+      "stride_category": "ElevationOfPrivilege",
+      "attack_vector": "Authentication bypass allowing unauthorized access to master lock API",
+      "kb_reference": "ATT&CK T1078",
+      "evidence_chain": {
+        "exposure": "Cloud management endpoint fails to validate JWT signature expiration and token scope",
+        "matched_pattern": "ATT&CK T1078",
+        "applicability_reason": "Forged tokens are accepted by the cloud relay, elevating tenant permissions.",
+        "citation": "None provided by LLM analysis"
+      },
+      "confidence_score": 0.60,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-007",
+    "label": "invalid",
+    "target_check": "CHECK_SCHEMA_INCOMPLETE",
+    "description": "Invalid: Whitespace-only tid",
+    "scenario": {
+      "tid": "   ",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-1",
+      "stride_category": "Spoofing",
+      "attack_vector": "BLE replay attack on unauthenticated pairing handshake",
+      "kb_reference": "CAPEC-94",
+      "evidence_chain": {
+        "exposure": "BLE pairing interface operates without mandatory out-of-band PIN",
+        "matched_pattern": "CAPEC-94",
+        "applicability_reason": "Without cryptographic nonce validation or rolling challenge-response, intercepted pairing frames can be replayed.",
+        "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
+      },
+      "confidence_score": 0.85,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-008",
+    "label": "invalid",
+    "target_check": "CHECK_SCHEMA_INCOMPLETE",
+    "description": "Invalid: Whitespace-only asset_id",
+    "scenario": {
+      "tid": "THR-INV-008",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "   ",
+      "stride_category": "Tampering",
+      "attack_vector": "Tampering with OTA firmware image via unsigned update mechanism",
+      "kb_reference": "CAPEC-186",
+      "evidence_chain": {
+        "exposure": "Bootloader accepts firmware binaries over BLE without cryptographic signature verification",
+        "matched_pattern": "CAPEC-186",
+        "applicability_reason": "Unsigned binary ingestion allows an attacker to replace vendor firmware with a trojanized version that unlocks the latch.",
+        "citation": "CAPEC-186: Malicious Software Update (CAPEC v3.9)"
+      },
+      "confidence_score": 0.85,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-009",
+    "label": "invalid",
+    "target_check": "CHECK_SCHEMA_INCOMPLETE",
+    "description": "Invalid: Whitespace-only attack_vector",
+    "scenario": {
+      "tid": "THR-INV-009",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-4",
+      "stride_category": "Repudiation",
+      "attack_vector": "    ",
+      "kb_reference": "ATT&CK T1070",
+      "evidence_chain": {
+        "exposure": "Diagnostic UART interface exposes raw flash memory sector erase commands without authentication",
+        "matched_pattern": "ATT&CK T1070",
+        "applicability_reason": "An adversary with physical access can issue erase commands to wipe entry/exit audit trails.",
+        "citation": "MITRE ATT&CK T1070: Indicator Removal on Host (v14.1)"
+      },
+      "confidence_score": 0.85,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-010",
+    "label": "invalid",
+    "target_check": "CHECK_SCHEMA_INCOMPLETE",
+    "description": "Invalid: Whitespace-only kb_reference",
+    "scenario": {
+      "tid": "THR-INV-010",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-5",
+      "stride_category": "InformationDisclosure",
+      "attack_vector": "Passive eavesdropping on cleartext BLE transmission to intercept unlock commands",
+      "kb_reference": "   ",
+      "evidence_chain": {
+        "exposure": "Lock status notifications are broadcast over BLE without transport-layer encryption",
+        "matched_pattern": "CAPEC-117",
+        "applicability_reason": "Cleartext advertisements permit passive radio sniffers to capture authorization tokens.",
+        "citation": "CAPEC-117: Interception (CAPEC v3.9)"
+      },
+      "confidence_score": 0.85,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-011",
+    "label": "invalid",
+    "target_check": "CHECK_SCHEMA_INCOMPLETE",
+    "description": "Invalid: Multiple empty fields (tid and attack_vector empty)",
+    "scenario": {
+      "tid": "",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-1",
+      "stride_category": "DenialOfService",
+      "attack_vector": "",
+      "kb_reference": "CAPEC-125",
+      "evidence_chain": {
+        "exposure": "Radio wake-on-packet circuit keeps microcontroller in high-power state indefinitely",
+        "matched_pattern": "CAPEC-125",
+        "applicability_reason": "Continuous BLE connection requests force radio active state, exhausting batteries quickly.",
+        "citation": "CAPEC-125: Flooding (CAPEC v3.9)"
+      },
+      "confidence_score": 0.80,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-012",
+    "label": "invalid",
+    "target_check": "CHECK_CONSISTENCY_MISMATCH",
+    "description": "Invalid: Spoofing category paired with pure DoS UDP packet flood vector",
+    "scenario": {
+      "tid": "THR-INV-012",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-1",
+      "stride_category": "Spoofing",
+      "attack_vector": "High volume UDP packet storm causing network interface to drop incoming connections",
+      "kb_reference": "CAPEC-94",
+      "evidence_chain": {
+        "exposure": "Network interface has no rate-limiting queue controls",
+        "matched_pattern": "CAPEC-94",
+        "applicability_reason": "Traffic spikes exhaust buffer pools, leading to complete communication lockout.",
+        "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
+      },
+      "confidence_score": 0.80,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-013",
+    "label": "invalid",
+    "target_check": "CHECK_CONSISTENCY_MISMATCH",
+    "description": "Invalid: Tampering category paired with social engineering email phishing vector",
+    "scenario": {
+      "tid": "THR-INV-013",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-3",
+      "stride_category": "Tampering",
+      "attack_vector": "Social engineering spear phishing email tricking reception staff into revealing passwords",
+      "kb_reference": "CAPEC-186",
+      "evidence_chain": {
+        "exposure": "Staff training records lack regular phishing awareness simulations",
+        "matched_pattern": "CAPEC-186",
+        "applicability_reason": "Employees yield portal login credentials through persuasive deception emails.",
+        "citation": "CAPEC-186: Malicious Software Update (CAPEC v3.9)"
+      },
+      "confidence_score": 0.78,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-014",
+    "label": "invalid",
+    "target_check": "CHECK_CONSISTENCY_MISMATCH",
+    "description": "Invalid: Repudiation category paired with memory corruption remote execution vector",
+    "scenario": {
+      "tid": "THR-INV-014",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-4",
+      "stride_category": "Repudiation",
+      "attack_vector": "Return-oriented programming payload executed via unvalidated network daemon packet",
+      "kb_reference": "ATT&CK T1070",
+      "evidence_chain": {
+        "exposure": "Daemon compiled without stack canaries or address space layout randomization",
+        "matched_pattern": "ATT&CK T1070",
+        "applicability_reason": "Stack corruption directs program counter to attacker shellcode for arbitrary control.",
+        "citation": "MITRE ATT&CK T1070: Indicator Removal on Host (v14.1)"
+      },
+      "confidence_score": 0.80,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-015",
+    "label": "invalid",
+    "target_check": "CHECK_CONSISTENCY_MISMATCH",
+    "description": "Invalid: Information Disclosure category paired with CPU cooling loop starvation vector",
+    "scenario": {
+      "tid": "THR-INV-015",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-5",
+      "stride_category": "InformationDisclosure",
+      "attack_vector": "Infinite loop trigger causing thermal overload and processor shutdown",
+      "kb_reference": "CAPEC-117",
+      "evidence_chain": {
+        "exposure": "Microcontroller thermal regulation code lacks watchdog reset trap",
+        "matched_pattern": "CAPEC-117",
+        "applicability_reason": "Uncontrolled instruction spinning drives junction temperatures above emergency cutoff.",
+        "citation": "CAPEC-117: Interception (CAPEC v3.9)"
+      },
+      "confidence_score": 0.75,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-016",
+    "label": "invalid",
+    "target_check": "CHECK_CONSISTENCY_MISMATCH",
+    "description": "Invalid: Denial of Service category paired with passive network traffic capture vector",
+    "scenario": {
+      "tid": "THR-INV-016",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-1",
+      "stride_category": "DenialOfService",
+      "attack_vector": "Passive network traffic capture recording session tokens from wireless packets",
+      "kb_reference": "CAPEC-125",
+      "evidence_chain": {
+        "exposure": "Packets routed without link layer encryption on 802.15.4 radio link",
+        "matched_pattern": "CAPEC-125",
+        "applicability_reason": "A covert receiver gathers authentication cookies without alerting the gateway.",
+        "citation": "CAPEC-125: Flooding (CAPEC v3.9)"
+      },
+      "confidence_score": 0.78,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-017",
+    "label": "invalid",
+    "target_check": "CHECK_CONSISTENCY_MISMATCH",
+    "description": "Invalid: Elevation of Privilege category paired with disk wipe command vector",
+    "scenario": {
+      "tid": "THR-INV-017",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-2",
+      "stride_category": "ElevationOfPrivilege",
+      "attack_vector": "Execution of raw disk partition wipe utility erasing historical records",
+      "kb_reference": "ATT&CK T1078",
+      "evidence_chain": {
+        "exposure": "Storage utility executable by local console without root credentials",
+        "matched_pattern": "ATT&CK T1078",
+        "applicability_reason": "Wiping sectors destroys forensic evidence of prior system interaction.",
+        "citation": "MITRE ATT&CK T1078: Valid Accounts (v14.1)"
+      },
+      "confidence_score": 0.75,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-018",
+    "label": "invalid",
+    "target_check": "CHECK_CONSISTENCY_MISMATCH",
+    "description": "Invalid: DoS attack with negation phrase containing spoofing keyword (False Accept trap)",
+    "scenario": {
+      "tid": "THR-INV-018",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-1",
+      "stride_category": "Spoofing",
+      "attack_vector": "Volumetric packet blast which strictly avoids any fake identity or spoofing attempt",
+      "kb_reference": "CAPEC-94",
+      "evidence_chain": {
+        "exposure": "Network interface is susceptible to pure bandwidth consumption attacks",
+        "matched_pattern": "CAPEC-94",
+        "applicability_reason": "The attack is purely volumetric denial of service and does not involve impersonating any genuine entity.",
+        "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
+      },
+      "confidence_score": 0.82,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-019",
+    "label": "invalid",
+    "target_check": "CHECK_CONSISTENCY_MISMATCH",
+    "description": "Invalid: Physical turning attack with negation phrase containing disclosure keyword (False Accept trap)",
+    "scenario": {
+      "tid": "THR-INV-019",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-5",
+      "stride_category": "InformationDisclosure",
+      "attack_vector": "Physical wrench torque on bolt mechanism ensuring zero data leak or secret exposure",
+      "kb_reference": "CAPEC-117",
+      "evidence_chain": {
+        "exposure": "Physical deadbolt chassis has insufficient resistance to mechanical shear stress",
+        "matched_pattern": "CAPEC-117",
+        "applicability_reason": "Mechanical force shears the strike plate directly; no digital information or credentials are leaked.",
+        "citation": "CAPEC-117: Interception (CAPEC v3.9)"
+      },
+      "confidence_score": 0.80,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-020",
+    "label": "invalid",
+    "target_check": "CHECK_EVIDENCE_GENERIC",
+    "description": "Invalid: Empty evidence exposure",
+    "scenario": {
+      "tid": "THR-INV-020",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-1",
+      "stride_category": "Spoofing",
+      "attack_vector": "BLE replay attack on unauthenticated pairing handshake",
+      "kb_reference": "CAPEC-94",
+      "evidence_chain": {
+        "exposure": "",
+        "matched_pattern": "CAPEC-94",
+        "applicability_reason": "Without cryptographic nonce validation or rolling challenge-response, intercepted pairing frames can be replayed.",
+        "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
+      },
+      "confidence_score": 0.70,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-021",
+    "label": "invalid",
+    "target_check": "CHECK_EVIDENCE_GENERIC",
+    "description": "Invalid: Empty evidence matched_pattern",
+    "scenario": {
+      "tid": "THR-INV-021",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-3",
+      "stride_category": "Tampering",
+      "attack_vector": "Tampering with OTA firmware image via unsigned update mechanism",
+      "kb_reference": "CAPEC-186",
+      "evidence_chain": {
+        "exposure": "Bootloader accepts firmware binaries over BLE without cryptographic signature verification",
+        "matched_pattern": "    ",
+        "applicability_reason": "Unsigned binary ingestion allows an attacker to replace vendor firmware with a trojanized version.",
+        "citation": "CAPEC-186: Malicious Software Update (CAPEC v3.9)"
+      },
+      "confidence_score": 0.70,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-022",
+    "label": "invalid",
+    "target_check": "CHECK_EVIDENCE_GENERIC",
+    "description": "Invalid: Empty evidence applicability_reason",
+    "scenario": {
+      "tid": "THR-INV-022",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-4",
+      "stride_category": "Repudiation",
+      "attack_vector": "Direct log deletion and audit log tampering via diagnostic port",
+      "kb_reference": "ATT&CK T1070",
+      "evidence_chain": {
+        "exposure": "Diagnostic UART interface exposes raw flash memory sector erase commands without authentication",
+        "matched_pattern": "ATT&CK T1070",
+        "applicability_reason": "",
+        "citation": "MITRE ATT&CK T1070: Indicator Removal on Host (v14.1)"
+      },
+      "confidence_score": 0.65,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-023",
+    "label": "invalid",
+    "target_check": "CHECK_EVIDENCE_GENERIC",
+    "description": "Invalid: Placeholder applicability_reason 'TBD'",
+    "scenario": {
+      "tid": "THR-INV-023",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-5",
+      "stride_category": "InformationDisclosure",
+      "attack_vector": "Passive eavesdropping on cleartext BLE transmission to intercept unlock commands",
+      "kb_reference": "CAPEC-117",
+      "evidence_chain": {
+        "exposure": "Lock status notifications are broadcast over BLE without transport-layer encryption",
+        "matched_pattern": "CAPEC-117",
+        "applicability_reason": "TBD",
+        "citation": "CAPEC-117: Interception (CAPEC v3.9)"
+      },
+      "confidence_score": 0.60,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-024",
+    "label": "invalid",
+    "target_check": "CHECK_EVIDENCE_GENERIC",
+    "description": "Invalid: Placeholder applicability_reason 'not applicable'",
+    "scenario": {
+      "tid": "THR-INV-024",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-1",
+      "stride_category": "DenialOfService",
+      "attack_vector": "Resource exhaustion flood on BLE radio causing battery drain and freeze",
+      "kb_reference": "CAPEC-125",
+      "evidence_chain": {
+        "exposure": "Radio wake-on-packet circuit keeps microcontroller in high-power state indefinitely",
+        "matched_pattern": "CAPEC-125",
+        "applicability_reason": "not applicable",
+        "citation": "CAPEC-125: Flooding (CAPEC v3.9)"
+      },
+      "confidence_score": 0.60,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-025",
+    "label": "invalid",
+    "target_check": "CHECK_EVIDENCE_GENERIC",
+    "description": "Invalid: Short applicability_reason below 20 characters",
+    "scenario": {
+      "tid": "THR-INV-025",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-2",
+      "stride_category": "ElevationOfPrivilege",
+      "attack_vector": "Authentication bypass allowing unauthorized access to master lock API",
+      "kb_reference": "ATT&CK T1078",
+      "evidence_chain": {
+        "exposure": "Cloud management endpoint fails to validate JWT signature expiration and token scope",
+        "matched_pattern": "ATT&CK T1078",
+        "applicability_reason": "Asset is insecure.",
+        "citation": "MITRE ATT&CK T1078: Valid Accounts (v14.1)"
+      },
+      "confidence_score": 0.60,
+      "status": "pending_test"
+    }
+  },
+  {
+    "id": "VAL-INV-026",
+    "label": "invalid",
+    "target_check": "CHECK_EVIDENCE_GENERIC",
+    "description": "Invalid: Tautological/vacuous applicability reason (False Accept trap)",
+    "scenario": {
+      "tid": "THR-INV-026",
+      "run_id": "RUN-RESEARCH-FAR-FRR",
+      "asset_id": "AS-10",
+      "stride_category": "Spoofing",
+      "attack_vector": "Impersonation of hospital central telemetry server via fake mTLS certificate",
+      "kb_reference": "CAPEC-151",
+      "evidence_chain": {
+        "exposure": "Infusion pump telemetry client disables certificate root authority verification",
+        "matched_pattern": "CAPEC-151",
+        "applicability_reason": "This pattern applies to this asset because the vulnerability is applicable to the system configuration.",
+        "citation": "CAPEC-151: Identity Spoofing (CAPEC v3.9)"
+      },
+      "confidence_score": 0.70,
+      "status": "pending_test"
+    }
+  }
+]
