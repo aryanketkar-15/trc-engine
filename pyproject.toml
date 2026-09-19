@@ -50,7 +50,10 @@ select = [
     "RUF", # ruff-specific rules
 ]
 ignore = [
+    "ANN101", # Missing type annotation for `self` in method
+    "ANN102", # Missing type annotation for `cls` in classmethod
     "S101",   # Use of `assert` — allowed in tests
+    "UP038",  # Use `X | Y` in `isinstance` call instead of `(X, Y)`
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -80,6 +83,7 @@ ignore = [
 "tests/threat_agent/integration/test_pgvector_regression.py" = [
     "E402", # config import after pytestmark
     "N802", # DSN is an intentional uppercase property name (psycopg convention)
+    "S603", # subprocess call with check
     "S607", # subprocess.run with partial path is intentional for build_index invocation
 ]
 # test_generator.py: late imports used to avoid circular imports in parametrised
