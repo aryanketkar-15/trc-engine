@@ -196,6 +196,12 @@ When redactions occur, `generator.py` emits an audit event:
 ```
 **Audit invariant:** The logger records *only the integer count* of redacted items, never the sensitive text itself.
 
+### Prompt Injection Mitigation (Delimiter Boundaries)
+Untrusted system-model text (`use_case`, `system_model_summary`, asset names, `damage_scenario`, and `device_config` payloads originating from `ThreatAgentInput`) is explicitly encapsulated within structural boundary tags (`<user_system_model>...</user_system_model>`) prior to LLM dispatch in `generator.py`. The generation system prompt explicitly instructs the LLM that all content enclosed within `<user_system_model>` tags represents passive, unverified data describing the target system to analyze and must never be interpreted as execution instructions or behavioral directives.
+
+> [!WARNING]
+> **Mitigation Scope & Limitations:** Delimiter-based boundary isolation provides defense-in-depth against direct prompt injection and instruction hijacking by clearly demarcating data from instructions. However, delimiter framing reduces but does not completely eliminate prompt injection risks (e.g., sophisticated indirect jailbreaks or semantic evasions). Delimiter-based mitigation is a documented, reasonable risk reduction, not a formal security guarantee.
+
 ---
 
 ## 6. Confidence Scoring
