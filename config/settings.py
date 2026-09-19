@@ -1,0 +1,256 @@
+"""config/settings.py
+══════════════════════════════════════════════════════════════════════════════
+TRC Engine — Phase 1  |  Application Configuration (Day-1 + Day-2)
+──────────────────────────────────────────────────────────────────────────────
+Loads all runtime configuration from environment variables (or a .env file)
+using pydantic-settings.  No secret value is ever hardcoded here.
+
+Usage
+─────
+    from config.settings import get_settings
+
+    settings = get_settings()
+    client = OpenAI(api_key=settings.OPENAI_API_KEY.get_secret_value())
+    index_path = settings.FAISS_INDEX_PATH   # pathlib.Path
+
+Environment variable reference
+───────────────────────────────
+    OPENAI_API_KEY        — Required.  OpenAI API key (secret).
+    THREAT_AGENT_API_KEY  — Optional.  API key for state-changing endpoints
+                            (/analyze, /approve, /reject). Passed via X-API-Key.
+                            Defaults to "trc-dev-secret-key".
+    ENVIRONMENT           — Optional.  "development" | "staging" | "production".
+                            Defaults to "development".
+    LOG_LEVEL             — Optional.  Python logging level string.
+                            Defaults to "INFO".
+    MAX_RETRY_COUNT       — Optional.  Max LLM retry attempts (capped at 3
+                            by the ValidationResult schema).  Defaults to 3.
+    DATABASE_URL          — Optional.  PostgreSQL connection string for pgvector.
+                            Defaults to postgresql://trc_user:trc_password@localhost:5432/trc_engine.
+    EMBEDDING_MODEL_NAME  — Optional.  Sentence-transformers model for pgvector
+                            embeddings.  Defaults to "all-MiniLM-L6-v2".
+    KB_SNAPSHOT_VERSION   — Optional.  Version tag of the KB snapshot in use.
+                            Defaults to "v1.0".
+    KB_DATA_DIR           — Required.  Directory containing raw + processed KB
+                            files (STRIDE / CAPEC / ATT&CK / CWE).
+
+.env file
+─────────
+    Copy .env.example to .env and fill in real values.  The .env file is
+    git-ignored — never commit it.
+
+Ruff compliance
+───────────────
+    • Line length <= 88 chars.
+    • Full annotations on all fields and functions (ANN rules).
+    • No unused imports.
+    • SecretStr used for OPENAI_API_KEY (S106 / no plaintext secrets).
+"""
+
+from __future__ import annotations
+
+from functools import lru_cache
+from pathlib import Path
+from typing import Annotated, Literal
+
+from pydantic import Field, SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Application-wide configuration, sourced exclusively from environment.
+
+    All fields map 1-to-1 to an environment variable of the same name
+    (case-insensitive on most platforms).  pydantic-settings reads the .env
+    file first, then real environment variables (env vars take precedence).
+
+    Secrets policy (S2.10 of build plan):
+        OPENAI_API_KEY is typed as SecretStr so it is never accidentally
+        logged or serialised as plain text.  Access its value explicitly with
+        ``.get_secret_value()`` only at the call site that needs it.
+    """
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        # Extra fields in .env are ignored rather than raising an error,
+        # so teammates can add convenience vars without breaking each other.
+        extra="ignore",
+        # Re-validate on assignment — ensures MAX_RETRY_COUNT stays <= 3
+        # even if updated programmatically in tests.
+        validate_default=True,
+    )
+
+    # ── Secrets ───────────────────────────────────────────────────────────────
+
+    OPENAI_API_KEY: Annotated[
+        SecretStr,
+        Field(
+            description=(
+                "OpenAI API key.  Required — the application will not start "
+                "if this variable is missing or empty.  Never log or print "
+                "this value; use .get_secret_value() only at the call site."
+            ),
+        ),
+    ]
+
+    THREAT_AGENT_API_KEY: Annotated[
+        SecretStr,
+        Field(
+            default=SecretStr("trc-dev-secret-key"),
+            description=(
+                "Shared API key required for state-changing endpoints "
+                "(/analyze, /approve, /reject). Passed via X-API-Key header."
+            ),
+        ),
+    ]
+
+    DATABASE_URL: Annotated[
+        str,
+        Field(
+            default="postgresql://trc_user:trc_password@localhost:5432/trc_engine",
+            description="PostgreSQL connection string.",
+        ),
+    ]
+
+    POSTGRES_DB: str = "trc_engine"
+    POSTGRES_USER: str = "trc_user"
+    POSTGRES_PASSWORD: Annotated[SecretStr, Field(default=SecretStr("trc_password"))]
+
+    # ── Runtime environment ───────────────────────────────────────────────────
+
+    ENVIRONMENT: Annotated[
+        Literal["development", "staging", "production"],
+        Field(
+            default="development",
+            description=(
+                "Deployment environment.  Controls log verbosity defaults, "
+                "debug middleware, and SCRS persistence behaviour.  "
+                "Must be one of: development | staging | production."
+            ),
+        ),
+    ]
+
+    # ── Logging ───────────────────────────────────────────────────────────────
+
+    LOG_LEVEL: Annotated[
+        Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        Field(
+            default="INFO",
+            description=(
+                "Python logging level for the application root logger.  "
+                "In production, prefer INFO or WARNING.  DEBUG emits "
+                "full prompt and KB-chunk logs — do not use in production."
+            ),
+        ),
+    ]
+
+    # ── Agent behaviour ───────────────────────────────────────────────────────
+
+    MAX_RETRY_COUNT: Annotated[
+        int,
+        Field(
+            default=3,
+            ge=1,
+            le=3,
+            description=(
+                "Maximum number of LLM retry attempts before the Threat Agent "
+                "escalates to human review as a flagged failure.  "
+                "Strictly capped at le=3 — mirrors the ValidationResult schema "
+                "constraint so the two values are always consistent.  "
+                "Reduce to 1 in CI to keep test runs fast."
+            ),
+        ),
+    ]
+
+    # FAISS_INDEX_PATH is kept here so .env files from before the pgvector migration
+    # are still accepted (extra="ignore" in model_config silently drops unknown keys,
+    # but this keeps the docstring for any teammate who has an old .env).
+    # retrieval.py no longer reads this value.
+
+    EMBEDDING_MODEL_NAME: Annotated[
+        str,
+        Field(
+            default="all-MiniLM-L6-v2",
+            min_length=1,
+            description=(
+                "Sentence-transformers model name used to embed asset attributes "
+                "into pgvector query vectors.  Must match the model used when "
+                "build_index.py was last run — a mismatch produces silently wrong "
+                "retrieval scores.  Defaults to 'all-MiniLM-L6-v2'."
+            ),
+        ),
+    ]
+
+    KB_SNAPSHOT_VERSION: Annotated[
+        str,
+        Field(
+            default="v1.0",
+            min_length=1,
+            description=(
+                "Version tag of the KB snapshot in use.  Logged verbatim in "
+                "every run for reproducibility (S2.7 of build plan).  "
+                "Update this when kb/data/ is rebuilt from a new KB export."
+            ),
+        ),
+    ]
+
+    KB_DATA_DIR: Annotated[
+        Path,
+        Field(
+            description=(
+                "Root directory containing raw and processed KB files for "
+                "all sources (STRIDE / CAPEC / ATT&CK / CWE).  "
+                "Required — KB loaders in kb/loaders/ resolve all data paths "
+                "relative to this directory.  Example: kb/data"
+            ),
+        ),
+    ]
+
+    # ── LLM Generation & Inference ────────────────────────────────────────────
+
+    USE_LIVE_LLM: Annotated[
+        bool,
+        Field(
+            default=True,
+            description=(
+                "Whether generator.py calls the live LLM API by default (True) "
+                "or uses deterministic fallback (False) for predictable offline demos."
+            ),
+        ),
+    ]
+
+    OPENAI_MODEL: Annotated[
+        str,
+        Field(
+            default="gpt-4o-mini",
+            description="OpenAI model identifier for threat scenario generation.",
+        ),
+    ]
+
+    OPENAI_BASE_URL: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="Optional custom base URL for OpenAI client (e.g. OpenRouter).",
+        ),
+    ]
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    """Return the singleton Settings instance, cached after the first call.
+
+    Using lru_cache(maxsize=1) means the .env file is read exactly once
+    per process lifetime.  In tests, call ``get_settings.cache_clear()``
+    before patching environment variables to force a fresh load.
+
+    Returns:
+        The application-wide Settings instance.
+
+    Raises:
+        ValidationError: If a required field (e.g. OPENAI_API_KEY) is missing
+            or any field fails its constraint — the application fails closed
+            rather than starting with a broken configuration.
+    """
+    return Settings()

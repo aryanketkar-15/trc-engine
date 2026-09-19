@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "trc-engine"
+version = "0.1.0"
+description = "Threat-Risk-Compliance Engine — Phase 1: Threat Agent"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic==2.7.4",
+    "pydantic-settings==2.3.4",
+    "fastapi==0.111.1",
+    "uvicorn[standard]==0.30.1",
+    "pgvector>=0.2.5",
+    "psycopg[binary,pool]>=3.1.18",
+    "openai>=1.30.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.2.2",
+    "pytest-asyncio==0.23.7",
+    "ruff==0.4.10",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agents*", "scrp*", "common*", "config*"]
+
+# ---------------------------------------------------------------------------
+# ruff configuration
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = ["docs/"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "ANN", # flake8-annotations (type hints)
+    "S",   # flake8-bandit (security)
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "ANN101", # Missing type annotation for `self`
+    "ANN102", # Missing type annotation for `cls`
+    "S101",   # Use of `assert` — allowed in tests
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "ANN",  # type hints in tests are optional
+    "S101", # assert is fine in pytest
+]
+# schemas.py uses Unicode box-drawing chars and arrow symbols in section banners.
+# These are intentional decorative formatting — suppress the ambiguous-Unicode rules.
+"agents/threat_agent/schemas.py" = [
+    "E501",   # long decorative Unicode section-banner lines throughout the file
+    "RUF002", # ambiguous Unicode in docstrings (box-drawing / arrow chars)
+    "RUF003", # ambiguous Unicode in comments (box-drawing / arrow chars)
+    "W291",   # trailing whitespace from multi-byte Unicode arrow sequences
+]
+
+
+
+"scripts/**/*.py" = [
+    "E402", # sys.path and sys.stdout tweaks before imports in standalone CLI scripts
+    "T201", # print is intentional in CLI demo scripts
+]
+
+# ---------------------------------------------------------------------------
+# pytest configuration
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

@@ -1,0 +1,58 @@
+[
+  {
+    "pattern_id": "CAPEC-62",
+    "title": "Cross-Site Request Forgery via IMG Tag",
+    "description": "An adversary crafts malicious web content that, when viewed by a victim, forces the victim's browser to send an authenticated request to a target site without the victim's knowledge. In IoT and embedded firmware web-management interfaces with session-based authentication and no CSRF tokens, this allows an attacker to issue privileged commands such as resetting credentials, changing firmware update URLs, or disabling security features.",
+    "stride_hint": "Tampering",
+    "mitre_tactics": ["TA0001", "TA0002"]
+  },
+  {
+    "pattern_id": "CAPEC-94",
+    "title": "Adversary in the Middle (AiTM)",
+    "description": "An adversary positions themselves between two communicating parties to intercept, relay, or modify messages without either party's knowledge. In BLE-based smart lock systems, an attacker within radio range can replay captured pairing tokens or insert forged commands between the mobile app and the lock controller, bypassing authentication entirely. Applicable to unencrypted BLE advertisement channels and insecure paring modes (e.g., Just Works).",
+    "stride_hint": "Spoofing",
+    "mitre_tactics": ["TA0006", "TA0009"]
+  },
+  {
+    "pattern_id": "CAPEC-196",
+    "title": "Session Credential Falsification via Forging",
+    "description": "An attacker forges session credentials (tokens, cookies, or BLE pairing keys) to impersonate a legitimate client. In smart lock and embedded IoT devices, session tokens stored in firmware with weak entropy or predictable structure can be guessed or brute-forced, allowing an attacker to authenticate as the device owner and issue unlock commands remotely.",
+    "stride_hint": "Spoofing",
+    "mitre_tactics": ["TA0001", "TA0006"]
+  },
+  {
+    "pattern_id": "CAPEC-186",
+    "title": "Malicious Software Update",
+    "description": "An adversary exploits insecure firmware over-the-air (FOTA/OTA) update mechanisms to deliver malicious firmware to an IoT device. When update servers are not authenticated via certificate pinning, update packages are unsigned, or the update channel is unencrypted, an attacker can replace legitimate firmware with a backdoored version. Affects smart locks with cloud-based OTA, infusion pumps with hospital-network firmware delivery, and automotive ECUs with OTA capability.",
+    "stride_hint": "Tampering",
+    "mitre_tactics": ["TA0001", "TA0003", "TA0040"]
+  },
+  {
+    "pattern_id": "CAPEC-60",
+    "title": "Reusing Session IDs (Session Replay Attack)",
+    "description": "An adversary captures a valid session token or BLE pairing handshake packet and replays it later to authenticate as the legitimate user without knowing the actual credential. Particularly effective against BLE devices using static or weakly randomised nonces in the GATT authentication exchange, or IoT devices that do not implement session expiry.",
+    "stride_hint": "Spoofing",
+    "mitre_tactics": ["TA0001"]
+  },
+  {
+    "pattern_id": "CAPEC-112",
+    "title": "Brute Force",
+    "description": "An adversary uses exhaustive trial-and-error to discover authentication credentials such as PINs, passwords, or cryptographic keys. Embedded IoT devices with short PIN lengths (4–6 digits), no lockout policy, and no rate limiting are highly susceptible. Smart door locks with BLE or NFC interfaces and infusion pumps with web-management interfaces are common targets.",
+    "stride_hint": "Spoofing",
+    "mitre_tactics": ["TA0006"]
+  },
+  {
+    "pattern_id": "CAPEC-125",
+    "title": "Flooding (Denial of Service via Resource Exhaustion)",
+    "description": "An adversary sends a high volume of requests or packets to exhaust the target's CPU, memory, or network buffer resources, rendering it unavailable. In embedded IoT systems with limited processing capacity, BLE flooding (advertising packets or GATT read/write requests), UDP floods against cloud-management APIs, or CAN bus message injection can crash the device or prevent legitimate operation.",
+    "stride_hint": "DenialOfService",
+    "mitre_tactics": ["TA0040"]
+  },
+  {
+    "pattern_id": "CAPEC-100",
+    "title": "Overflow Buffers",
+    "description": "An adversary sends more data than a buffer can hold, causing adjacent memory to be overwritten. In safety-critical embedded firmware (infusion pump dosage controllers, automotive ECUs), a heap or stack buffer overflow in a network-facing parser (BLE GATT parser, HTTP parser, CAN frame decoder) can corrupt control data, crash the device, or enable arbitrary code execution with elevated privileges.",
+    "stride_hint": "ElevationOfPrivilege",
+    "mitre_tactics": ["TA0002", "TA0004"]
+  }
+]

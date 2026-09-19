@@ -13,7 +13,7 @@ Use Case + System Model
         │
         ▼
   ┌─────────────┐     ┌──────────────┐     ┌───────────────────┐
-  │  KB / FAISS │────▶│ Attack Chain │────▶│ Threat Scenario    │
+  │ KB/pgvector │────▶│ Attack Chain │────▶│ Threat Scenario    │
   │  Retrieval  │     │  Analysis    │     │ Generator (LLM)    │
   └─────────────┘     └──────────────┘     └────────┬──────────┘
                                                     │
@@ -36,7 +36,7 @@ Use Case + System Model
 
 | Member | Domain |
 |--------|--------|
-| Aryan | KB Ingestion, FAISS Vector DB, Retrieval, Attack Chain |
+| Aryan | KB Ingestion, pgvector DB, Retrieval, Attack Chain |
 | Chetan | Threat Generator, Confidence Scorer, Prompts |
 | Shriraj | Protocol Invariant Validator, Retry Loop, SCRS Write |
 | Manthan | API Layer, LLM Client, Logging, Config, CI |
@@ -46,11 +46,44 @@ Use Case + System Model
 ```
 main
  └── develop
-      ├── feature/threat-agent-retrieval   (Aryan)
-      ├── feature/threat-agent-generator   (Chetan)
-      ├── feature/threat-agent-validator   (Shriraj)
-      └── feature/threat-agent-api-tests   (Manthan)
+      ├── feature/threat-agent-retrieval        (Aryan)
+      ├── feature/retrieval-pgvector-migration  (Aryan)
+      ├── feature/threat-agent-generator        (Chetan)
+      ├── feature/threat-agent-validator        (Shriraj)
+      └── feature/threat-agent-api-tests        (Manthan)
 ```
+
+## Quickstart
+
+### 1. Start PostgreSQL with pgvector
+
+```bash
+# Requires Docker. Reads credentials from .env
+docker compose up -d
+```
+
+### 2. Populate the Knowledge Base
+
+```bash
+# Embeds seed JSONs and upserts into the threat_patterns table.
+# Idempotent — safe to re-run after adding new seed entries.
+python -m kb.scripts.build_index
+```
+
+### 3. Run the CLI demo
+
+```bash
+python scripts/demo_cli.py
+```
+
+### 4. Run the test suite
+
+```bash
+pytest tests/ -v
+```
+
+> **Integration tests** (live pgvector) are skipped by default.  
+> To run them: `TRC_INTEGRATION_TESTS=1 pytest tests/threat_agent/integration/ -v`
 
 ## Day-1 Contract
 

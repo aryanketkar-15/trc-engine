@@ -1,0 +1,30 @@
+[
+  {
+    "pattern_id": "CWE-306",
+    "title": "Missing Authentication for Critical Function",
+    "description": "The software does not perform any authentication for functionality that requires a provable user identity or consumes a significant amount of resources. In embedded IoT firmware, unauthenticated BLE GATT characteristics that control device state (lock/unlock, dosage adjustment, OTA trigger) represent critical missing authentication vulnerabilities that can be exploited by any nearby Bluetooth device.",
+    "stride_hint": "ElevationOfPrivilege",
+    "mitre_tactics": []
+  },
+  {
+    "pattern_id": "CWE-311",
+    "title": "Missing Encryption of Sensitive Data",
+    "description": "The software does not encrypt sensitive or critical information before storage or transmission. IoT devices that transmit authentication tokens, session keys, or user commands in cleartext over BLE, WiFi, or HTTP allow passive eavesdroppers to capture and replay credentials. Medical devices transmitting patient dosage commands or biometric readings without TLS are especially at risk.",
+    "stride_hint": "InformationDisclosure",
+    "mitre_tactics": []
+  },
+  {
+    "pattern_id": "CWE-787",
+    "title": "Out-of-bounds Write",
+    "description": "The software writes data past the end, or before the beginning, of the intended buffer. In embedded firmware, an out-of-bounds write in a network-facing parser (BLE stack, HTTP server, CAN frame decoder) can overwrite adjacent memory, corrupt control-flow data, and lead to arbitrary code execution. Safety-critical devices such as infusion pumps and automotive ECUs are particularly impacted when dosage parameters or safety thresholds are stored adjacent to a vulnerable buffer.",
+    "stride_hint": "Tampering",
+    "mitre_tactics": []
+  },
+  {
+    "pattern_id": "CWE-798",
+    "title": "Use of Hard-coded Credentials",
+    "description": "The software contains hard-coded credentials, such as a password or cryptographic key, that it uses for its own inbound authentication or for outbound communication to external components. Hard-coded default credentials in IoT firmware (admin passwords, BLE pairing keys, cloud API tokens) are frequently discovered by reverse-engineering firmware images and provide trivial authentication bypass.",
+    "stride_hint": "Spoofing",
+    "mitre_tactics": []
+  }
+]

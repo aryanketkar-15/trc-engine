@@ -1,0 +1,247 @@
+{
+  "0": {
+    "pattern_id": "CAPEC-62",
+    "source": "CAPEC",
+    "title": "Cross-Site Request Forgery via IMG Tag",
+    "description": "An adversary crafts malicious web content that, when viewed by a victim, forces the victim's browser to send an authenticated request to a target site without the victim's knowledge. In IoT and embedded firmware web-management interfaces with session-based authentication and no CSRF tokens, this allows an attacker to issue privileged commands such as resetting credentials, changing firmware update URLs, or disabling security features.",
+    "stride_hint": "Tampering",
+    "mitre_tactics": [
+      "TA0001",
+      "TA0002"
+    ]
+  },
+  "1": {
+    "pattern_id": "CAPEC-94",
+    "source": "CAPEC",
+    "title": "Adversary in the Middle (AiTM)",
+    "description": "An adversary positions themselves between two communicating parties to intercept, relay, or modify messages without either party's knowledge. In BLE-based smart lock systems, an attacker within radio range can replay captured pairing tokens or insert forged commands between the mobile app and the lock controller, bypassing authentication entirely. Applicable to unencrypted BLE advertisement channels and insecure paring modes (e.g., Just Works).",
+    "stride_hint": "Spoofing",
+    "mitre_tactics": [
+      "TA0006",
+      "TA0009"
+    ]
+  },
+  "2": {
+    "pattern_id": "CAPEC-196",
+    "source": "CAPEC",
+    "title": "Session Credential Falsification via Forging",
+    "description": "An attacker forges session credentials (tokens, cookies, or BLE pairing keys) to impersonate a legitimate client. In smart lock and embedded IoT devices, session tokens stored in firmware with weak entropy or predictable structure can be guessed or brute-forced, allowing an attacker to authenticate as the device owner and issue unlock commands remotely.",
+    "stride_hint": "Spoofing",
+    "mitre_tactics": [
+      "TA0001",
+      "TA0006"
+    ]
+  },
+  "3": {
+    "pattern_id": "CAPEC-186",
+    "source": "CAPEC",
+    "title": "Malicious Software Update",
+    "description": "An adversary exploits insecure firmware over-the-air (FOTA/OTA) update mechanisms to deliver malicious firmware to an IoT device. When update servers are not authenticated via certificate pinning, update packages are unsigned, or the update channel is unencrypted, an attacker can replace legitimate firmware with a backdoored version. Affects smart locks with cloud-based OTA, infusion pumps with hospital-network firmware delivery, and automotive ECUs with OTA capability.",
+    "stride_hint": "Tampering",
+    "mitre_tactics": [
+      "TA0001",
+      "TA0003",
+      "TA0040"
+    ]
+  },
+  "4": {
+    "pattern_id": "CAPEC-60",
+    "source": "CAPEC",
+    "title": "Reusing Session IDs (Session Replay Attack)",
+    "description": "An adversary captures a valid session token or BLE pairing handshake packet and replays it later to authenticate as the legitimate user without knowing the actual credential. Particularly effective against BLE devices using static or weakly randomised nonces in the GATT authentication exchange, or IoT devices that do not implement session expiry.",
+    "stride_hint": "Spoofing",
+    "mitre_tactics": [
+      "TA0001"
+    ]
+  },
+  "5": {
+    "pattern_id": "CAPEC-112",
+    "source": "CAPEC",
+    "title": "Brute Force",
+    "description": "An adversary uses exhaustive trial-and-error to discover authentication credentials such as PINs, passwords, or cryptographic keys. Embedded IoT devices with short PIN lengths (4–6 digits), no lockout policy, and no rate limiting are highly susceptible. Smart door locks with BLE or NFC interfaces and infusion pumps with web-management interfaces are common targets.",
+    "stride_hint": "Spoofing",
+    "mitre_tactics": [
+      "TA0006"
+    ]
+  },
+  "6": {
+    "pattern_id": "CAPEC-125",
+    "source": "CAPEC",
+    "title": "Flooding (Denial of Service via Resource Exhaustion)",
+    "description": "An adversary sends a high volume of requests or packets to exhaust the target's CPU, memory, or network buffer resources, rendering it unavailable. In embedded IoT systems with limited processing capacity, BLE flooding (advertising packets or GATT read/write requests), UDP floods against cloud-management APIs, or CAN bus message injection can crash the device or prevent legitimate operation.",
+    "stride_hint": "DenialOfService",
+    "mitre_tactics": [
+      "TA0040"
+    ]
+  },
+  "7": {
+    "pattern_id": "CAPEC-100",
+    "source": "CAPEC",
+    "title": "Overflow Buffers",
+    "description": "An adversary sends more data than a buffer can hold, causing adjacent memory to be overwritten. In safety-critical embedded firmware (infusion pump dosage controllers, automotive ECUs), a heap or stack buffer overflow in a network-facing parser (BLE GATT parser, HTTP parser, CAN frame decoder) can corrupt control data, crash the device, or enable arbitrary code execution with elevated privileges.",
+    "stride_hint": "ElevationOfPrivilege",
+    "mitre_tactics": [
+      "TA0002",
+      "TA0004"
+    ]
+  },
+  "8": {
+    "pattern_id": "ATT&CK-T1190",
+    "source": "ATT&CK",
+    "title": "Exploit Public-Facing Application",
+    "description": "Adversaries may attempt to exploit a weakness in an Internet-facing host or system to initially access a network. The weakness in the system can be a software bug, a temporary glitch, or a misconfiguration. Exploited applications are often websites and database servers (e.g. WebLogic, Tomcat), but also includes web-management interfaces on IoT devices, embedded firmware REST APIs, and hospital network gateways accessible via VLAN.",
+    "stride_hint": "Tampering",
+    "mitre_tactics": [
+      "TA0001"
+    ]
+  },
+  "9": {
+    "pattern_id": "ATT&CK-T1078",
+    "source": "ATT&CK",
+    "title": "Valid Accounts",
+    "description": "Adversaries may obtain and abuse credentials of existing accounts as a means of gaining Initial Access, Persistence, Privilege Escalation, or Defense Evasion. Compromised credentials may be used to bypass access controls placed on various resources on systems within the network. In IoT and embedded systems, hardcoded default credentials (admin/admin, root/root) on BLE management endpoints, web-admin consoles, and cloud APIs provide trivial access.",
+    "stride_hint": "Spoofing",
+    "mitre_tactics": [
+      "TA0001",
+      "TA0003",
+      "TA0004",
+      "TA0005"
+    ]
+  },
+  "10": {
+    "pattern_id": "ATT&CK-T1557",
+    "source": "ATT&CK",
+    "title": "Adversary-in-the-Middle",
+    "description": "Adversaries may attempt to position themselves between two or more networked devices using an adversary-in-the-middle (AiTM) technique to support follow-on behaviors such as Network Sniffing or Transmitted Data Manipulation. By abusing features of common networking protocols that can determine the flow of network traffic, adversaries may force a device to communicate through an adversary-controlled system. Applicable to BLE GATT interception, hospital WiFi ARP spoofing, and CAN bus replay attacks.",
+    "stride_hint": "InformationDisclosure",
+    "mitre_tactics": [
+      "TA0006",
+      "TA0009"
+    ]
+  },
+  "11": {
+    "pattern_id": "ATT&CK-T1040",
+    "source": "ATT&CK",
+    "title": "Network Sniffing",
+    "description": "Adversaries may sniff network traffic to capture information about an environment, including authentication material passed over the network. Network sniffing refers to using the network interface on a system to monitor or capture information sent over a wired or wireless connection. Wireless interfaces operating in promiscuous mode can passively capture BLE advertisements, ZigBee frames, and unencrypted WiFi traffic from nearby IoT devices and wearables.",
+    "stride_hint": "InformationDisclosure",
+    "mitre_tactics": [
+      "TA0007",
+      "TA0009"
+    ]
+  },
+  "12": {
+    "pattern_id": "ATT&CK-T1498",
+    "source": "ATT&CK",
+    "title": "Network Denial of Service",
+    "description": "Adversaries may perform Network Denial of Service (DoS) attacks to degrade or block the availability of targeted resources to users. Network DoS can be performed by exhausting the network bandwidth or resources targeted victims rely on. For IoT devices with limited network buffers (smart locks, infusion pumps, industrial controllers), even a moderate-volume SYN flood or BLE advertising flood can render the management interface unresponsive.",
+    "stride_hint": "DenialOfService",
+    "mitre_tactics": [
+      "TA0040"
+    ]
+  },
+  "13": {
+    "pattern_id": "ATT&CK-T1195",
+    "source": "ATT&CK",
+    "title": "Supply Chain Compromise",
+    "description": "Adversaries may manipulate products or product delivery mechanisms prior to receipt by a final consumer for the purpose of data or system compromise. Supply chain compromise can take place at many stages of the supply chain: from development through distribution. Affected vectors include malicious firmware pre-installed on IoT devices, compromised third-party libraries in embedded SDKs, and tampered hardware components in medical devices.",
+    "stride_hint": "Tampering",
+    "mitre_tactics": [
+      "TA0001"
+    ]
+  },
+  "14": {
+    "pattern_id": "CWE-306",
+    "source": "CWE",
+    "title": "Missing Authentication for Critical Function",
+    "description": "The software does not perform any authentication for functionality that requires a provable user identity or consumes a significant amount of resources. In embedded IoT firmware, unauthenticated BLE GATT characteristics that control device state (lock/unlock, dosage adjustment, OTA trigger) represent critical missing authentication vulnerabilities that can be exploited by any nearby Bluetooth device.",
+    "stride_hint": "ElevationOfPrivilege",
+    "mitre_tactics": []
+  },
+  "15": {
+    "pattern_id": "CWE-311",
+    "source": "CWE",
+    "title": "Missing Encryption of Sensitive Data",
+    "description": "The software does not encrypt sensitive or critical information before storage or transmission. IoT devices that transmit authentication tokens, session keys, or user commands in cleartext over BLE, WiFi, or HTTP allow passive eavesdroppers to capture and replay credentials. Medical devices transmitting patient dosage commands or biometric readings without TLS are especially at risk.",
+    "stride_hint": "InformationDisclosure",
+    "mitre_tactics": []
+  },
+  "16": {
+    "pattern_id": "CWE-787",
+    "source": "CWE",
+    "title": "Out-of-bounds Write",
+    "description": "The software writes data past the end, or before the beginning, of the intended buffer. In embedded firmware, an out-of-bounds write in a network-facing parser (BLE stack, HTTP server, CAN frame decoder) can overwrite adjacent memory, corrupt control-flow data, and lead to arbitrary code execution. Safety-critical devices such as infusion pumps and automotive ECUs are particularly impacted when dosage parameters or safety thresholds are stored adjacent to a vulnerable buffer.",
+    "stride_hint": "Tampering",
+    "mitre_tactics": []
+  },
+  "17": {
+    "pattern_id": "CWE-798",
+    "source": "CWE",
+    "title": "Use of Hard-coded Credentials",
+    "description": "The software contains hard-coded credentials, such as a password or cryptographic key, that it uses for its own inbound authentication or for outbound communication to external components. Hard-coded default credentials in IoT firmware (admin passwords, BLE pairing keys, cloud API tokens) are frequently discovered by reverse-engineering firmware images and provide trivial authentication bypass.",
+    "stride_hint": "Spoofing",
+    "mitre_tactics": []
+  },
+  "18": {
+    "pattern_id": "STRIDE-S-001",
+    "source": "STRIDE",
+    "title": "Spoofing Identity via BLE Device Impersonation",
+    "description": "An attacker clones or spoofs the BLE MAC address or advertisement data of a legitimate device to impersonate it. Devices that rely solely on MAC address for authentication (without cryptographic pairing) accept commands from the spoofed device. Common in smart locks, wearables, and BLE-enabled medical devices operating in open or Just Works pairing mode.",
+    "stride_hint": "Spoofing",
+    "mitre_tactics": [
+      "TA0001"
+    ]
+  },
+  "19": {
+    "pattern_id": "STRIDE-T-001",
+    "source": "STRIDE",
+    "title": "Tampering with Firmware Parameters via Unprotected Storage",
+    "description": "An attacker with physical or network access modifies firmware configuration parameters stored in unprotected flash memory or exposed over an unauthenticated interface. Parameters such as dosage thresholds, access control lists, or cryptographic keys can be overwritten to alter device behaviour, disable security features, or create persistent backdoors.",
+    "stride_hint": "Tampering",
+    "mitre_tactics": [
+      "TA0003",
+      "TA0040"
+    ]
+  },
+  "20": {
+    "pattern_id": "STRIDE-R-001",
+    "source": "STRIDE",
+    "title": "Repudiation via Audit Log Deletion",
+    "description": "An attacker with elevated access deletes or tampers with audit log entries to conceal malicious actions. Embedded devices that store audit logs in unprotected flash or RAM, or that allow log deletion without authentication, enable an attacker to erase evidence of lock bypasses, unauthorised commands, or configuration changes.",
+    "stride_hint": "Repudiation",
+    "mitre_tactics": [
+      "TA0005"
+    ]
+  },
+  "21": {
+    "pattern_id": "STRIDE-I-001",
+    "source": "STRIDE",
+    "title": "Information Disclosure via Cleartext Credential Transmission",
+    "description": "An IoT device transmits authentication credentials, session tokens, or sensitive operational data over an unencrypted channel. Passive eavesdroppers within radio or network range can capture these credentials for replay or offline cracking. Especially critical for medical devices transmitting patient data or smart locks broadcasting unlock codes over unencrypted BLE characteristics.",
+    "stride_hint": "InformationDisclosure",
+    "mitre_tactics": [
+      "TA0009"
+    ]
+  },
+  "22": {
+    "pattern_id": "STRIDE-D-001",
+    "source": "STRIDE",
+    "title": "Denial of Service via BLE Advertising Flood",
+    "description": "An attacker continuously broadcasts high-frequency BLE advertisement packets in the vicinity of a target device, saturating its radio receiver and processing stack. Embedded BLE stacks with limited interrupt handling capacity can become unresponsive to legitimate commands, effectively locking out authorised users from door locks, medical device controls, or industrial actuators.",
+    "stride_hint": "DenialOfService",
+    "mitre_tactics": [
+      "TA0040"
+    ]
+  },
+  "23": {
+    "pattern_id": "STRIDE-E-001",
+    "source": "STRIDE",
+    "title": "Elevation of Privilege via Path Traversal in Firmware Web Interface",
+    "description": "An attacker exploits a path traversal vulnerability in the embedded HTTP server of an IoT device's web management interface to read or write files outside the intended web root. This can expose cryptographic keys, password files, or firmware binaries, or allow overwriting of configuration files to gain administrative access without authentication.",
+    "stride_hint": "ElevationOfPrivilege",
+    "mitre_tactics": [
+      "TA0004",
+      "TA0005"
+    ]
+  }
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "pattern_id": "ATT&CK-T1190",
+    "title": "Exploit Public-Facing Application",
+    "description": "Adversaries may attempt to exploit a weakness in an Internet-facing host or system to initially access a network. The weakness in the system can be a software bug, a temporary glitch, or a misconfiguration. Exploited applications are often websites and database servers (e.g. WebLogic, Tomcat), but also includes web-management interfaces on IoT devices, embedded firmware REST APIs, and hospital network gateways accessible via VLAN.",
+    "stride_hint": "Tampering",
+    "mitre_tactics": ["TA0001"]
+  },
+  {
+    "pattern_id": "ATT&CK-T1078",
+    "title": "Valid Accounts",
+    "description": "Adversaries may obtain and abuse credentials of existing accounts as a means of gaining Initial Access, Persistence, Privilege Escalation, or Defense Evasion. Compromised credentials may be used to bypass access controls placed on various resources on systems within the network. In IoT and embedded systems, hardcoded default credentials (admin/admin, root/root) on BLE management endpoints, web-admin consoles, and cloud APIs provide trivial access.",
+    "stride_hint": "Spoofing",
+    "mitre_tactics": ["TA0001", "TA0003", "TA0004", "TA0005"]
+  },
+  {
+    "pattern_id": "ATT&CK-T1557",
+    "title": "Adversary-in-the-Middle",
+    "description": "Adversaries may attempt to position themselves between two or more networked devices using an adversary-in-the-middle (AiTM) technique to support follow-on behaviors such as Network Sniffing or Transmitted Data Manipulation. By abusing features of common networking protocols that can determine the flow of network traffic, adversaries may force a device to communicate through an adversary-controlled system. Applicable to BLE GATT interception, hospital WiFi ARP spoofing, and CAN bus replay attacks.",
+    "stride_hint": "InformationDisclosure",
+    "mitre_tactics": ["TA0006", "TA0009"]
+  },
+  {
+    "pattern_id": "ATT&CK-T1040",
+    "title": "Network Sniffing",
+    "description": "Adversaries may sniff network traffic to capture information about an environment, including authentication material passed over the network. Network sniffing refers to using the network interface on a system to monitor or capture information sent over a wired or wireless connection. Wireless interfaces operating in promiscuous mode can passively capture BLE advertisements, ZigBee frames, and unencrypted WiFi traffic from nearby IoT devices and wearables.",
+    "stride_hint": "InformationDisclosure",
+    "mitre_tactics": ["TA0007", "TA0009"]
+  },
+  {
+    "pattern_id": "ATT&CK-T1498",
+    "title": "Network Denial of Service",
+    "description": "Adversaries may perform Network Denial of Service (DoS) attacks to degrade or block the availability of targeted resources to users. Network DoS can be performed by exhausting the network bandwidth or resources targeted victims rely on. For IoT devices with limited network buffers (smart locks, infusion pumps, industrial controllers), even a moderate-volume SYN flood or BLE advertising flood can render the management interface unresponsive.",
+    "stride_hint": "DenialOfService",
+    "mitre_tactics": ["TA0040"]
+  },
+  {
+    "pattern_id": "ATT&CK-T1195",
+    "title": "Supply Chain Compromise",
+    "description": "Adversaries may manipulate products or product delivery mechanisms prior to receipt by a final consumer for the purpose of data or system compromise. Supply chain compromise can take place at many stages of the supply chain: from development through distribution. Affected vectors include malicious firmware pre-installed on IoT devices, compromised third-party libraries in embedded SDKs, and tampered hardware components in medical devices.",
+    "stride_hint": "Tampering",
+    "mitre_tactics": ["TA0001"]
+  }
+]
