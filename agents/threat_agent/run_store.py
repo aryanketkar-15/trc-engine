@@ -20,6 +20,7 @@ Ruff compliance:
 
 from __future__ import annotations
 
+import json
 import logging
 import threading
 from abc import ABC, abstractmethod
@@ -338,7 +339,10 @@ class PostgresRunRegistryStore(RunRegistryStore):
                     {
                         "run_id": run_id,
                         "status": status.value,
-                        "scenarios": Jsonb(scenarios_payload),
+                        "scenarios": Jsonb(
+                            scenarios_payload,
+                            dumps=lambda x: json.dumps(x, default=str),
+                        ),
                         "retry_count": effective_rejections,
                         "validator_retry_count": validator_retry_count,
                         "human_rejection_count": effective_rejections,

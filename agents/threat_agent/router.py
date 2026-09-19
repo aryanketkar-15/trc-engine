@@ -423,7 +423,7 @@ async def analyze(
         # Execute automated retrieval, generation, and validation retry loop
         scenarios, validator_retries, validation_status = orchestrator(payload)
         scenarios_dicts = [
-            s.model_dump() if hasattr(s, "model_dump") else s
+            s.model_dump(mode="json") if hasattr(s, "model_dump") else s
             for s in scenarios
         ]
 
