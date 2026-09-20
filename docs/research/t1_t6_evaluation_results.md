@@ -15,10 +15,12 @@
 
 ---
 
-## Run 1 — Fixture Asset Coverage Gap Identified
+## Run 1 — Original Evaluation (Three-Asset Fixture, Fallback Generation)
 
 * **Execution Date:** 2026-09-19T09:02:06.327224+00:00
 * **Fixture Evaluated:** Initial 3-asset fixture (`smart_door_lock/input.json`)
+* **Generation Mode:** Deterministic fallback generation (`_deterministic_fallback_for_path`).
+* **Generation Mode Evidence:** `OPENAI_API_KEY` in environment was a placeholder mock key (`sk-local****-key`). When `chat_completion()` was called, OpenAI returned HTTP 401 Unauthorized (`invalid_api_key`), triggering `llm_fallback_engaged` audit events. All 30 generated scenarios (100%) follow the deterministic template syntax: `"Exploitation of {pattern} ({title}) via {kw} targeting {asset}"`.
 * **Raw Scenario Audit:** [`docs/research/smart_door_lock_scenarios_raw_run1.json`](file:///c:/Users/Chetan/trc-engine/docs/research/smart_door_lock_scenarios_raw_run1.json)
 
 ### Run 1 Summary & Metrics
@@ -54,7 +56,7 @@
 
 ---
 
-## Run 2 — Corrected Six-Asset Fixture
+## Run 2 — Six-Asset Fixture (Deterministic Fallback Generation)
 
 * **Execution Date:** 2026-09-20T09:32:41.582412+00:00
 * **Fixture Evaluated:** Corrected 6-asset fixture (`smart_door_lock/input.json`) matching company document Section 2.4:
@@ -64,7 +66,10 @@
   - `AS-4`: Audit Log (`Lock, Cloud`, event log)
   - `AS-5`: User PII (`Cloud, App`, schedule & user data)
   - `AS-6`: Cryptographic Keys (`Secure element`, key material)
-* **Raw Scenario Audit:** [`docs/research/smart_door_lock_scenarios_raw_run2.json`](file:///c:/Users/Chetan/trc-engine/docs/research/smart_door_lock_scenarios_raw_run2.json)
+* **Generation Mode:** Deterministic fallback generation (`_deterministic_fallback_for_path`).
+* **Generation Mode Evidence:** `OPENAI_API_KEY` was configured with local placeholder `sk-local****-key`. `chat_completion()` returned HTTP 401 Unauthorized (`invalid_api_key`), triggering `llm_fallback_engaged` audit logs. All 60 generated scenarios (100%) adhere strictly to the fallback template syntax: `"Exploitation of {pattern} ({title}) via {kw} targeting {asset}"`.
+* **Auditability & Preservation:** Preserved verbatim for auditability in [`docs/research/smart_door_lock_scenarios_raw_run2.json`](file:///c:/Users/Chetan/trc-engine/docs/research/smart_door_lock_scenarios_raw_run2.json).
+* **Comparison Context:** Because both Run 1 and Run 2 executed under the deterministic fallback generator, Run 2 isolates the effect of expanding asset coverage from 3 to 6 assets under the heuristic engine. However, neither run executed live LLM inference; a true live-LLM evaluation remains pending provision of an active OpenAI API key.
 * **Methodology Integrity:** Evaluation methodology, cosine similarity threshold ($0.75$), and matching predicate are **100% identical** to Run 1 (no tuning, no threshold relaxation).
 
 ### Run 2 Summary & Metrics
@@ -108,9 +113,10 @@ All six assets now exist in the fixture and were actively evaluated by the pipel
 4. **T4: Eavesdropping/MitM (`AS-5`) — Similarity: 0.5481:**
    * **Expert Vector:** *"Eavesdropping and adversary-in-the-middle sniffing communication traffic on unencrypted channels to disclose sensitive information."*
    * **Top Scenario (`THR-PATH-9658B404-023`):** In Run 1, `AS-5` was absent. In Run 2, `AS-5` was populated and evaluated, achieving 0.5481 similarity on Information Disclosure, but below the 0.75 cutoff.
-5. **T5: DoS on cloud (`AS-1`) — Similarity: 0.3497:**
+5. **T5: DoS on cloud (`AS-1`) — Similarity: 0.3497 (Investigation of T5 Diagnostic Signal):**
    * **Expert Vector:** *"Denial of Service via resource exhaustion flooding cloud or lock communication channels to prevent normal lock operations."*
-   * **Top Scenario (`THR-PATH-E91AA507-045`):** Pipeline prioritized physical unlock manipulation over volumetric cloud API flooding for `AS-1`.
+   * **Run 1 Context (0.6934):** In Run 1, `evaluate_t1_t6.py` computed `highest_sim_per_threat` across all 30 generated scenarios regardless of asset ID. It matched scenario `THR-PATH-F3D7436E-026` (`CAPEC-125: Flooding`), which targeted `AS-3: Cloud Backend`. Although `AS-3` scored 0.6934 against T5's text, it was rejected as a True Positive because T5 requires `asset_id == AS-1`.
+   * **Run 2 Context (0.3497):** When `smart_door_lock/input.json` was corrected to Company Spec §2.4, `AS-3` became `Firmware Image` and the standalone `Cloud Backend` entity was removed. Consequently, `CAPEC-125` on cloud backend was no longer retrieved or generated. Across all 60 scenarios in Run 2, the scenario with the highest text similarity to T5 happened to be `THR-PATH-E91AA507-045` (targeting `AS-5: User PII`), yielding 0.3497. The change is thus an artifact of correcting fixture assets, not a divergence in generation mode.
 6. **T6: Key extraction via side-channel (`AS-6`) — Similarity: 0.4466:**
    * **Expert Vector:** *"Cryptographic key extraction via physical or electromagnetic side-channel analysis."*
    * **Top Scenario (`THR-PATH-00398FCF-055`):** In Run 1, `AS-6` was absent. In Run 2, `AS-6` Cryptographic Keys was evaluated and achieved 0.4466 similarity on hardware key compromise, below 0.75.
@@ -140,6 +146,15 @@ All six assets now exist in the fixture and were actively evaluated by the pipel
 1. **Methodological Rigor Preserved:** The metric scores ($P=0, R=0, F1=0$) remained at 0 because the strict 0.75 cosine similarity threshold was maintained without post-hoc tuning.
 2. **Elimination of Structural Defect:** Expanding the fixture to all six assets completely resolved the architectural coverage gap where T4 and T6 were impossible to evaluate. Scenarios targeting `AS-5` and `AS-6` are now actively generated, validated, and ranked.
 3. **Similarity Progress:** Cosine similarity improved for T1 (0.7020), T3 (0.6167), T4 (0.5481), and T6 (0.4466). T1 is within 0.048 of a formal match.
+
+---
+
+## Preflight Status & Live LLM Execution Requirements
+
+* **Live Mode Configured:** `USE_LIVE_LLM=True` (configured in `config/settings.py`).
+* **API Credential Status:** The active `.env` configuration contains a local development placeholder (`sk-local****-key`), which causes `common/llm_client.py` to receive HTTP 401 Unauthorized (`invalid_api_key`) and engage graceful fallback (`_deterministic_fallback_for_path`).
+* **Impact:** Both Run 1 and Run 2 executed under the deterministic fallback generator. The experimental delta strictly isolates the effect of the 6-asset fixture under this generator.
+* **Prerequisite for Live-LLM Re-evaluation:** To execute an evaluation against a live model (`gpt-4o-mini`), a valid OpenAI API key must be provisioned in `.env` (`OPENAI_API_KEY=sk-...`). Once provisioned, `chat_completion()` will emit `llm_call_complete` events and live LLM scenarios will be generated.
 
 ---
 
