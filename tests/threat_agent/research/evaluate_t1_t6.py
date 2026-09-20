@@ -42,6 +42,7 @@ _FIXTURE_PATH = (
 )
 _RESULTS_DOC_PATH = _REPO_ROOT / "docs" / "research" / "t1_t6_evaluation_results.md"
 _RAW_SCENARIOS_PATH = _REPO_ROOT / "docs" / "research" / "smart_door_lock_scenarios_raw.json"
+_RAW_SCENARIOS_RUN2_PATH = _REPO_ROOT / "docs" / "research" / "smart_door_lock_scenarios_raw_run2.json"
 
 
 def is_stride_match(scenario_stride: str, target_stride: str | list[str]) -> bool:
@@ -170,7 +171,8 @@ def run_evaluation(threshold: float = 0.75) -> dict[str, Any]:
     _RAW_SCENARIOS_PATH.parent.mkdir(parents=True, exist_ok=True)
     raw_scenarios_data = [s.model_dump(mode="json") for s in scenarios]
     _RAW_SCENARIOS_PATH.write_text(json.dumps(raw_scenarios_data, indent=2), encoding="utf-8")
-    print("Saved raw scenario output to:", _RAW_SCENARIOS_PATH)
+    _RAW_SCENARIOS_RUN2_PATH.write_text(json.dumps(raw_scenarios_data, indent=2), encoding="utf-8")
+    print("Saved raw scenario output to:", _RAW_SCENARIOS_RUN2_PATH)
 
     print("[4/5] Loading SentenceTransformer(all-MiniLM-L6-v2) for semantic matching...")
     model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -376,7 +378,7 @@ def write_results_markdown(
         lines.append(f"* **Expert Vector:** {t['attack_vector']}")
         lines.append(f"* **Highest Observed Cosine Similarity:** {best_info.get('cosine_similarity', 0.0)} ({best_info.get('scenario_tid', 'N/A')})")
 
-        fixture_assets = ["AS-1", "AS-2", "AS-3"]
+        fixture_assets = ["AS-1", "AS-2", "AS-3", "AS-4", "AS-5", "AS-6"]
         if t["asset_id"] not in fixture_assets:
             lines.append(
                 f"* **Root Cause Analysis (Asset Fixture Boundary):** The Smart Door Lock fixture (`tests/threat_agent/e2e/fixtures/smart_door_lock/input.json`) "
