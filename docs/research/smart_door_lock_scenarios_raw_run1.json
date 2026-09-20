@@ -1,0 +1,542 @@
+[
+  {
+    "tid": "THR-PATH-3098473D-001",
+    "asset_id": "AS-1",
+    "stride_category": "ElevationOfPrivilege",
+    "attack_vector": "Exploitation of CWE-306 (Missing Authentication for Critical Function) via access control bypass targeting BLE Controller",
+    "kb_reference": "CWE-306",
+    "evidence_chain": {
+      "exposure": "BLE 5.0, GATT interface (untrusted trust zone)",
+      "matched_pattern": "CWE-306",
+      "applicability_reason": "The asset 'BLE Controller' exposes BLE 5.0, GATT interfaces in untrusted zone, allowing an adversary to execute CWE-306 via access control bypass.",
+      "citation": "CWE-306: Missing Authentication for Critical Function (CWE)"
+    },
+    "confidence_score": 0.8384626507759094,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:44.013525Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-FC7C1505-002",
+    "asset_id": "AS-1",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of CAPEC-94 (Adversary in the Middle (AiTM)) via replay targeting BLE Controller",
+    "kb_reference": "CAPEC-94",
+    "evidence_chain": {
+      "exposure": "BLE 5.0, GATT interface (untrusted trust zone)",
+      "matched_pattern": "CAPEC-94",
+      "applicability_reason": "The asset 'BLE Controller' exposes BLE 5.0, GATT interfaces in untrusted zone, allowing an adversary to execute CAPEC-94 via replay.",
+      "citation": "CAPEC-94: Adversary in the Middle (AiTM) (CAPEC)"
+    },
+    "confidence_score": 0.7912660663565363,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:44.749505Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-4DC3BCD8-003",
+    "asset_id": "AS-1",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of STRIDE-S-001 (Spoofing Identity via BLE Device Impersonation) via replay targeting BLE Controller",
+    "kb_reference": "STRIDE-S-001",
+    "evidence_chain": {
+      "exposure": "BLE 5.0, GATT interface (untrusted trust zone)",
+      "matched_pattern": "STRIDE-S-001",
+      "applicability_reason": "The asset 'BLE Controller' exposes BLE 5.0, GATT interfaces in untrusted zone, allowing an adversary to execute STRIDE-S-001 via replay.",
+      "citation": "STRIDE-S-001: Spoofing Identity via BLE Device Impersonation (STRIDE)"
+    },
+    "confidence_score": 0.7906427383422852,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:45.312108Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-A5AAE330-004",
+    "asset_id": "AS-1",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of CAPEC-60 (Reusing Session IDs (Session Replay Attack)) via replay targeting BLE Controller",
+    "kb_reference": "CAPEC-60",
+    "evidence_chain": {
+      "exposure": "BLE 5.0, GATT interface (untrusted trust zone)",
+      "matched_pattern": "CAPEC-60",
+      "applicability_reason": "The asset 'BLE Controller' exposes BLE 5.0, GATT interfaces in untrusted zone, allowing an adversary to execute CAPEC-60 via replay.",
+      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack) (CAPEC)"
+    },
+    "confidence_score": 0.7535466996701543,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:46.081631Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-CCC410C2-005",
+    "asset_id": "AS-1",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of CWE-798 (Use of Hard-coded Credentials) via replay targeting BLE Controller",
+    "kb_reference": "CWE-798",
+    "evidence_chain": {
+      "exposure": "BLE 5.0, GATT interface (untrusted trust zone)",
+      "matched_pattern": "CWE-798",
+      "applicability_reason": "The asset 'BLE Controller' exposes BLE 5.0, GATT interfaces in untrusted zone, allowing an adversary to execute CWE-798 via replay.",
+      "citation": "CWE-798: Use of Hard-coded Credentials (CWE)"
+    },
+    "confidence_score": 0.7498733401298523,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:46.790939Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-2CAAB2E2-006",
+    "asset_id": "AS-1",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of CAPEC-196 (Session Credential Falsification via Forging) via replay targeting BLE Controller",
+    "kb_reference": "CAPEC-196",
+    "evidence_chain": {
+      "exposure": "BLE 5.0, GATT interface (untrusted trust zone)",
+      "matched_pattern": "CAPEC-196",
+      "applicability_reason": "The asset 'BLE Controller' exposes BLE 5.0, GATT interfaces in untrusted zone, allowing an adversary to execute CAPEC-196 via replay.",
+      "citation": "CAPEC-196: Session Credential Falsification via Forging (CAPEC)"
+    },
+    "confidence_score": 0.7474290581089824,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:47.504946Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-3E9477A3-007",
+    "asset_id": "AS-1",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of CAPEC-112 (Brute Force) via replay targeting BLE Controller",
+    "kb_reference": "CAPEC-112",
+    "evidence_chain": {
+      "exposure": "BLE 5.0, GATT interface (untrusted trust zone)",
+      "matched_pattern": "CAPEC-112",
+      "applicability_reason": "The asset 'BLE Controller' exposes BLE 5.0, GATT interfaces in untrusted zone, allowing an adversary to execute CAPEC-112 via replay.",
+      "citation": "CAPEC-112: Brute Force (CAPEC)"
+    },
+    "confidence_score": 0.7457480880172205,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:48.055810Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-93775C91-008",
+    "asset_id": "AS-2",
+    "stride_category": "Tampering",
+    "attack_vector": "Exploitation of STRIDE-T-001 (Tampering with Firmware Parameters via Unprotected Storage) via injection targeting Secure Element",
+    "kb_reference": "STRIDE-T-001",
+    "evidence_chain": {
+      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "matched_pattern": "STRIDE-T-001",
+      "applicability_reason": "The asset 'Secure Element' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute STRIDE-T-001 via injection.",
+      "citation": "STRIDE-T-001: Tampering with Firmware Parameters via Unprotected Storage (STRIDE)"
+    },
+    "confidence_score": 0.7449737045184555,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:48.438659Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-9794D76B-009",
+    "asset_id": "AS-2",
+    "stride_category": "Tampering",
+    "attack_vector": "Exploitation of CAPEC-186 (Malicious Software Update) via injection targeting Secure Element",
+    "kb_reference": "CAPEC-186",
+    "evidence_chain": {
+      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "matched_pattern": "CAPEC-186",
+      "applicability_reason": "The asset 'Secure Element' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute CAPEC-186 via injection.",
+      "citation": "CAPEC-186: Malicious Software Update (CAPEC)"
+    },
+    "confidence_score": 0.7362457679217138,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:48.918506Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-DD190F10-010",
+    "asset_id": "AS-2",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of CAPEC-196 (Session Credential Falsification via Forging) via replay targeting Secure Element",
+    "kb_reference": "CAPEC-196",
+    "evidence_chain": {
+      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "matched_pattern": "CAPEC-196",
+      "applicability_reason": "The asset 'Secure Element' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute CAPEC-196 via replay.",
+      "citation": "CAPEC-196: Session Credential Falsification via Forging (CAPEC)"
+    },
+    "confidence_score": 0.722173425892183,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:49.667213Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-B7111CCB-011",
+    "asset_id": "AS-1",
+    "stride_category": "InformationDisclosure",
+    "attack_vector": "Exploitation of ATT&CK-T1557 (Adversary-in-the-Middle) via unencrypted transmission targeting BLE Controller",
+    "kb_reference": "ATT&CK-T1557",
+    "evidence_chain": {
+      "exposure": "BLE 5.0, GATT interface (untrusted trust zone)",
+      "matched_pattern": "ATT&CK-T1557",
+      "applicability_reason": "The asset 'BLE Controller' exposes BLE 5.0, GATT interfaces in untrusted zone, allowing an adversary to execute ATT&CK-T1557 via unencrypted transmission.",
+      "citation": "ATT&CK-T1557: Adversary-in-the-Middle (ATT&CK)"
+    },
+    "confidence_score": 0.7206102478140448,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:50.107290Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-7187CB9D-012",
+    "asset_id": "AS-1",
+    "stride_category": "DenialOfService",
+    "attack_vector": "Exploitation of STRIDE-D-001 (Denial of Service via BLE Advertising Flood) via resource exhaustion targeting BLE Controller",
+    "kb_reference": "STRIDE-D-001",
+    "evidence_chain": {
+      "exposure": "BLE 5.0, GATT interface (untrusted trust zone)",
+      "matched_pattern": "STRIDE-D-001",
+      "applicability_reason": "The asset 'BLE Controller' exposes BLE 5.0, GATT interfaces in untrusted zone, allowing an adversary to execute STRIDE-D-001 via resource exhaustion.",
+      "citation": "STRIDE-D-001: Denial of Service via BLE Advertising Flood (STRIDE)"
+    },
+    "confidence_score": 0.7170884777850823,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:50.551067Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-C65E2B2A-013",
+    "asset_id": "AS-2",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of CAPEC-112 (Brute Force) via replay targeting Secure Element",
+    "kb_reference": "CAPEC-112",
+    "evidence_chain": {
+      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "matched_pattern": "CAPEC-112",
+      "applicability_reason": "The asset 'Secure Element' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute CAPEC-112 via replay.",
+      "citation": "CAPEC-112: Brute Force (CAPEC)"
+    },
+    "confidence_score": 0.7167225221726272,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:50.921287Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-46246AEB-014",
+    "asset_id": "AS-1",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of ATT&CK-T1078 (Valid Accounts) via replay targeting BLE Controller",
+    "kb_reference": "ATT&CK-T1078",
+    "evidence_chain": {
+      "exposure": "BLE 5.0, GATT interface (untrusted trust zone)",
+      "matched_pattern": "ATT&CK-T1078",
+      "applicability_reason": "The asset 'BLE Controller' exposes BLE 5.0, GATT interfaces in untrusted zone, allowing an adversary to execute ATT&CK-T1078 via replay.",
+      "citation": "ATT&CK-T1078: Valid Accounts (ATT&CK)"
+    },
+    "confidence_score": 0.7105073693545869,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:51.433614Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-6524575B-015",
+    "asset_id": "AS-2",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of STRIDE-S-001 (Spoofing Identity via BLE Device Impersonation) via replay targeting Secure Element",
+    "kb_reference": "STRIDE-S-001",
+    "evidence_chain": {
+      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "matched_pattern": "STRIDE-S-001",
+      "applicability_reason": "The asset 'Secure Element' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute STRIDE-S-001 via replay.",
+      "citation": "STRIDE-S-001: Spoofing Identity via BLE Device Impersonation (STRIDE)"
+    },
+    "confidence_score": 0.6950926068369984,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:51.853843Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-8F9A937D-016",
+    "asset_id": "AS-2",
+    "stride_category": "Repudiation",
+    "attack_vector": "Exploitation of STRIDE-R-001 (Repudiation via Audit Log Deletion) via audit bypass targeting Secure Element",
+    "kb_reference": "STRIDE-R-001",
+    "evidence_chain": {
+      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "matched_pattern": "STRIDE-R-001",
+      "applicability_reason": "The asset 'Secure Element' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute STRIDE-R-001 via audit bypass.",
+      "citation": "STRIDE-R-001: Repudiation via Audit Log Deletion (STRIDE)"
+    },
+    "confidence_score": 0.6907438557453327,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:52.253879Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-344BFB78-017",
+    "asset_id": "AS-2",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of CAPEC-60 (Reusing Session IDs (Session Replay Attack)) via replay targeting Secure Element",
+    "kb_reference": "CAPEC-60",
+    "evidence_chain": {
+      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "matched_pattern": "CAPEC-60",
+      "applicability_reason": "The asset 'Secure Element' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute CAPEC-60 via replay.",
+      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack) (CAPEC)"
+    },
+    "confidence_score": 0.6782701100981104,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:52.702272Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-CC31DAD8-018",
+    "asset_id": "AS-2",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of CAPEC-94 (Adversary in the Middle (AiTM)) via replay targeting Secure Element",
+    "kb_reference": "CAPEC-94",
+    "evidence_chain": {
+      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "matched_pattern": "CAPEC-94",
+      "applicability_reason": "The asset 'Secure Element' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute CAPEC-94 via replay.",
+      "citation": "CAPEC-94: Adversary in the Middle (AiTM) (CAPEC)"
+    },
+    "confidence_score": 0.6662966112736927,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:53.219490Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-F787D850-019",
+    "asset_id": "AS-2",
+    "stride_category": "InformationDisclosure",
+    "attack_vector": "Exploitation of STRIDE-I-001 (Information Disclosure via Cleartext Credential Transmission) via unencrypted transmission targeting Secure Element",
+    "kb_reference": "STRIDE-I-001",
+    "evidence_chain": {
+      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "matched_pattern": "STRIDE-I-001",
+      "applicability_reason": "The asset 'Secure Element' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute STRIDE-I-001 via unencrypted transmission.",
+      "citation": "STRIDE-I-001: Information Disclosure via Cleartext Credential Transmission (STRIDE)"
+    },
+    "confidence_score": 0.66274143305523,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:53.702257Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-38526E5C-020",
+    "asset_id": "AS-2",
+    "stride_category": "Tampering",
+    "attack_vector": "Exploitation of CAPEC-62 (Cross-Site Request Forgery via IMG Tag) via injection targeting Secure Element",
+    "kb_reference": "CAPEC-62",
+    "evidence_chain": {
+      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "matched_pattern": "CAPEC-62",
+      "applicability_reason": "The asset 'Secure Element' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute CAPEC-62 via injection.",
+      "citation": "CAPEC-62: Cross-Site Request Forgery via IMG Tag (CAPEC)"
+    },
+    "confidence_score": 0.6589932096304539,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:54.215685Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-C5C14F4F-021",
+    "asset_id": "AS-3",
+    "stride_category": "ElevationOfPrivilege",
+    "attack_vector": "Exploitation of CWE-306 (Missing Authentication for Critical Function) via access control bypass targeting Cloud Backend",
+    "kb_reference": "CWE-306",
+    "evidence_chain": {
+      "exposure": "HTTPS, REST, WebSocket interface (external trust zone)",
+      "matched_pattern": "CWE-306",
+      "applicability_reason": "The asset 'Cloud Backend' exposes HTTPS, REST, WebSocket interfaces in external zone, allowing an adversary to execute CWE-306 via access control bypass.",
+      "citation": "CWE-306: Missing Authentication for Critical Function (CWE)"
+    },
+    "confidence_score": 0.6206353530287743,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:54.912287Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-8073CBCD-022",
+    "asset_id": "AS-3",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of CAPEC-196 (Session Credential Falsification via Forging) via replay targeting Cloud Backend",
+    "kb_reference": "CAPEC-196",
+    "evidence_chain": {
+      "exposure": "HTTPS, REST, WebSocket interface (external trust zone)",
+      "matched_pattern": "CAPEC-196",
+      "applicability_reason": "The asset 'Cloud Backend' exposes HTTPS, REST, WebSocket interfaces in external zone, allowing an adversary to execute CAPEC-196 via replay.",
+      "citation": "CAPEC-196: Session Credential Falsification via Forging (CAPEC)"
+    },
+    "confidence_score": 0.6198292601210322,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:55.297541Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-9387522B-023",
+    "asset_id": "AS-3",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of CAPEC-60 (Reusing Session IDs (Session Replay Attack)) via replay targeting Cloud Backend",
+    "kb_reference": "CAPEC-60",
+    "evidence_chain": {
+      "exposure": "HTTPS, REST, WebSocket interface (external trust zone)",
+      "matched_pattern": "CAPEC-60",
+      "applicability_reason": "The asset 'Cloud Backend' exposes HTTPS, REST, WebSocket interfaces in external zone, allowing an adversary to execute CAPEC-60 via replay.",
+      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack) (CAPEC)"
+    },
+    "confidence_score": 0.6164258500083777,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:55.778457Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-7885C1DB-024",
+    "asset_id": "AS-3",
+    "stride_category": "InformationDisclosure",
+    "attack_vector": "Exploitation of CWE-311 (Missing Encryption of Sensitive Data) via unencrypted transmission targeting Cloud Backend",
+    "kb_reference": "CWE-311",
+    "evidence_chain": {
+      "exposure": "HTTPS, REST, WebSocket interface (external trust zone)",
+      "matched_pattern": "CWE-311",
+      "applicability_reason": "The asset 'Cloud Backend' exposes HTTPS, REST, WebSocket interfaces in external zone, allowing an adversary to execute CWE-311 via unencrypted transmission.",
+      "citation": "CWE-311: Missing Encryption of Sensitive Data (CWE)"
+    },
+    "confidence_score": 0.6098889112472534,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:56.245288Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-1C6EDF01-025",
+    "asset_id": "AS-3",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of CWE-798 (Use of Hard-coded Credentials) via replay targeting Cloud Backend",
+    "kb_reference": "CWE-798",
+    "evidence_chain": {
+      "exposure": "HTTPS, REST, WebSocket interface (external trust zone)",
+      "matched_pattern": "CWE-798",
+      "applicability_reason": "The asset 'Cloud Backend' exposes HTTPS, REST, WebSocket interfaces in external zone, allowing an adversary to execute CWE-798 via replay.",
+      "citation": "CWE-798: Use of Hard-coded Credentials (CWE)"
+    },
+    "confidence_score": 0.6085688769817352,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:56.665799Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-F3D7436E-026",
+    "asset_id": "AS-3",
+    "stride_category": "DenialOfService",
+    "attack_vector": "Exploitation of CAPEC-125 (Flooding (Denial of Service via Resource Exhaustion)) via resource exhaustion targeting Cloud Backend",
+    "kb_reference": "CAPEC-125",
+    "evidence_chain": {
+      "exposure": "HTTPS, REST, WebSocket interface (external trust zone)",
+      "matched_pattern": "CAPEC-125",
+      "applicability_reason": "The asset 'Cloud Backend' exposes HTTPS, REST, WebSocket interfaces in external zone, allowing an adversary to execute CAPEC-125 via resource exhaustion.",
+      "citation": "CAPEC-125: Flooding (Denial of Service via Resource Exhaustion) (CAPEC)"
+    },
+    "confidence_score": 0.6083067889030703,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:57.222976Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-EE6C5276-027",
+    "asset_id": "AS-3",
+    "stride_category": "Tampering",
+    "attack_vector": "Exploitation of CAPEC-186 (Malicious Software Update) via injection targeting Cloud Backend",
+    "kb_reference": "CAPEC-186",
+    "evidence_chain": {
+      "exposure": "HTTPS, REST, WebSocket interface (external trust zone)",
+      "matched_pattern": "CAPEC-186",
+      "applicability_reason": "The asset 'Cloud Backend' exposes HTTPS, REST, WebSocket interfaces in external zone, allowing an adversary to execute CAPEC-186 via injection.",
+      "citation": "CAPEC-186: Malicious Software Update (CAPEC)"
+    },
+    "confidence_score": 0.60688621658765,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:57.882393Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-908C25A0-028",
+    "asset_id": "AS-3",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of ATT&CK-T1078 (Valid Accounts) via replay targeting Cloud Backend",
+    "kb_reference": "ATT&CK-T1078",
+    "evidence_chain": {
+      "exposure": "HTTPS, REST, WebSocket interface (external trust zone)",
+      "matched_pattern": "ATT&CK-T1078",
+      "applicability_reason": "The asset 'Cloud Backend' exposes HTTPS, REST, WebSocket interfaces in external zone, allowing an adversary to execute ATT&CK-T1078 via replay.",
+      "citation": "ATT&CK-T1078: Valid Accounts (ATT&CK)"
+    },
+    "confidence_score": 0.6014925867763933,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:58.387460Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-8EE9E759-029",
+    "asset_id": "AS-3",
+    "stride_category": "Spoofing",
+    "attack_vector": "Exploitation of CAPEC-112 (Brute Force) via replay targeting Cloud Backend",
+    "kb_reference": "CAPEC-112",
+    "evidence_chain": {
+      "exposure": "HTTPS, REST, WebSocket interface (external trust zone)",
+      "matched_pattern": "CAPEC-112",
+      "applicability_reason": "The asset 'Cloud Backend' exposes HTTPS, REST, WebSocket interfaces in external zone, allowing an adversary to execute CAPEC-112 via replay.",
+      "citation": "CAPEC-112: Brute Force (CAPEC)"
+    },
+    "confidence_score": 0.5896856507846326,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:58.838452Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  },
+  {
+    "tid": "THR-PATH-B81376BA-030",
+    "asset_id": "AS-3",
+    "stride_category": "Tampering",
+    "attack_vector": "Exploitation of CAPEC-62 (Cross-Site Request Forgery via IMG Tag) via injection targeting Cloud Backend",
+    "kb_reference": "CAPEC-62",
+    "evidence_chain": {
+      "exposure": "HTTPS, REST, WebSocket interface (external trust zone)",
+      "matched_pattern": "CAPEC-62",
+      "applicability_reason": "The asset 'Cloud Backend' exposes HTTPS, REST, WebSocket interfaces in external zone, allowing an adversary to execute CAPEC-62 via injection.",
+      "citation": "CAPEC-62: Cross-Site Request Forgery via IMG Tag (CAPEC)"
+    },
+    "confidence_score": 0.5860465790643269,
+    "status": "pending_test",
+    "created_at": "2026-09-19T09:01:59.332389Z",
+    "run_id": "RUN-SDL-E2E-001",
+    "validation_status": "passed"
+  }
+]
