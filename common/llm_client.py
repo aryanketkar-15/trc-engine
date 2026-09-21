@@ -108,6 +108,7 @@ class LLMAPIError(LLMClientError):
 # "gpt-4o-mini" via settings.OPENAI_MODEL / TRC_LLM_MODEL) and does not rely on this fallback.
 _DEFAULT_MODEL = "gpt-4o"
 _DEFAULT_TIMEOUT_SECONDS = 30.0
+_DEFAULT_MAX_TOKENS = 4096
 _MAX_ATTEMPTS = 3
 _BACKOFF_BASE_SECONDS = 1.0  # doubles on each retry: 1s, 2s, 4s
 
@@ -125,6 +126,7 @@ def chat_completion(
     prompt_version: str = "unversioned",
     run_id: str = "",
     timeout_seconds: float = _DEFAULT_TIMEOUT_SECONDS,
+    max_tokens: int = _DEFAULT_MAX_TOKENS,
 ) -> str:
     """Call OpenAI chat completions and return the raw text response.
 
@@ -183,7 +185,9 @@ def chat_completion(
 
     for attempt in range(1, _MAX_ATTEMPTS + 1):
         try:
-            response = _call_api(client, resolved_model, system_prompt, user_prompt)
+            response = _call_api(
+                client, resolved_model, system_prompt, user_prompt, max_tokens=max_tokens
+            )
 
             log_step(
                 logger,
@@ -294,6 +298,7 @@ def _call_api(
     model: str,
     system_prompt: str,
     user_prompt: str,
+    max_tokens: int = _DEFAULT_MAX_TOKENS,
 ) -> str:
     """Execute the raw OpenAI chat completions call.
 
@@ -305,6 +310,7 @@ def _call_api(
         model:         Model identifier string.
         system_prompt: System-role message content.
         user_prompt:   User-role message content.
+        max_tokens:    Maximum completion tokens to generate.
 
     Returns:
         Raw text of the first choice's message content.
@@ -317,7 +323,11 @@ def _call_api(
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
-    completion = client.chat.completions.create(model=model, messages=messages)
+    completion = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        max_tokens=max_tokens,
+    )
     content = completion.choices[0].message.content
     if not content:
         raise ValueError(

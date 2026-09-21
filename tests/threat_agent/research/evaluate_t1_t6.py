@@ -42,7 +42,7 @@ _FIXTURE_PATH = (
 )
 _RESULTS_DOC_PATH = _REPO_ROOT / "docs" / "research" / "t1_t6_evaluation_results.md"
 _RAW_SCENARIOS_PATH = _REPO_ROOT / "docs" / "research" / "smart_door_lock_scenarios_raw.json"
-_RAW_SCENARIOS_RUN2_PATH = _REPO_ROOT / "docs" / "research" / "smart_door_lock_scenarios_raw_run2.json"
+_RAW_SCENARIOS_LIVE_PATH = _REPO_ROOT / "docs" / "research" / "smart_door_lock_scenarios_raw_live.json"
 
 
 def is_stride_match(scenario_stride: str, target_stride: str | list[str]) -> bool:
@@ -171,8 +171,8 @@ def run_evaluation(threshold: float = 0.75) -> dict[str, Any]:
     _RAW_SCENARIOS_PATH.parent.mkdir(parents=True, exist_ok=True)
     raw_scenarios_data = [s.model_dump(mode="json") for s in scenarios]
     _RAW_SCENARIOS_PATH.write_text(json.dumps(raw_scenarios_data, indent=2), encoding="utf-8")
-    _RAW_SCENARIOS_RUN2_PATH.write_text(json.dumps(raw_scenarios_data, indent=2), encoding="utf-8")
-    print("Saved raw scenario output to:", _RAW_SCENARIOS_RUN2_PATH)
+    _RAW_SCENARIOS_LIVE_PATH.write_text(json.dumps(raw_scenarios_data, indent=2), encoding="utf-8")
+    print("Saved raw scenario output to:", _RAW_SCENARIOS_LIVE_PATH)
 
     print("[4/5] Loading SentenceTransformer(all-MiniLM-L6-v2) for semantic matching...")
     model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -278,8 +278,10 @@ def run_evaluation(threshold: float = 0.75) -> dict[str, Any]:
     print(f"F1 Score:              {f1:.4f}")
     print("==========================================================\n")
 
-    # Write results document
-    write_results_markdown(results_summary, ground_truth, scenarios)
+    # Write results summary json for audit
+    _live_results_path = _REPO_ROOT / "docs" / "research" / "t1_t6_live_results.json"
+    _live_results_path.write_text(json.dumps(results_summary, indent=2, default=str), encoding="utf-8")
+    print("Saved live results summary to:", _live_results_path)
 
     return results_summary
 
