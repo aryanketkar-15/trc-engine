@@ -1,0 +1,79 @@
+{
+  "timestamp": "2026-09-21T06:02:42.561250+00:00",
+  "total_expert_threats": 6,
+  "total_generated_scenarios": 60,
+  "true_positives_tp": 0,
+  "false_negatives_fn": 6,
+  "false_positives_fp": 60,
+  "precision": 0.0,
+  "recall": 0.0,
+  "f1": 0.0,
+  "threshold": 0.75,
+  "tp_threat_ids": [],
+  "fn_threat_ids": [
+    "T1",
+    "T2",
+    "T3",
+    "T4",
+    "T5",
+    "T6"
+  ],
+  "matched_details": {
+    "T1": [],
+    "T2": [],
+    "T3": [],
+    "T4": [],
+    "T5": [],
+    "T6": []
+  },
+  "highest_sim_per_threat": {
+    "T1": {
+      "cosine_similarity": 0.7858,
+      "scenario_tid": "THR-PATH-DD25A39F-055",
+      "asset_id": "AS-2",
+      "stride_category": "InformationDisclosure",
+      "kb_reference": "CWE-311",
+      "attack_vector": "An attacker intercepts unencrypted BLE communication to capture authentication tokens."
+    },
+    "T2": {
+      "cosine_similarity": 0.5021,
+      "scenario_tid": "THR-PATH-7A628459-056",
+      "asset_id": "AS-2",
+      "stride_category": "Spoofing",
+      "kb_reference": "CAPEC-60",
+      "attack_vector": "An adversary reuses a captured e-key credential to gain unauthorized access as the legitimate user."
+    },
+    "T3": {
+      "cosine_similarity": 0.7606,
+      "scenario_tid": "THR-PATH-315E1A26-058",
+      "asset_id": "AS-2",
+      "stride_category": "Tampering",
+      "kb_reference": "CAPEC-186",
+      "attack_vector": "An attacker exploits the insecure OTA update mechanism to deliver malicious firmware, enabling unauthorized control of the door lock."
+    },
+    "T4": {
+      "cosine_similarity": 0.5481,
+      "scenario_tid": "THR-PATH-7297F659-023",
+      "asset_id": "AS-6",
+      "stride_category": "InformationDisclosure",
+      "kb_reference": "STRIDE-I-001",
+      "attack_vector": "Exploitation of STRIDE-I-001 (Information Disclosure via Cleartext Credential Transmission) via unencrypted transmission targeting Cryptographic Keys"
+    },
+    "T5": {
+      "cosine_similarity": 0.3497,
+      "scenario_tid": "THR-PATH-E6AB3B4A-045",
+      "asset_id": "AS-5",
+      "stride_category": "InformationDisclosure",
+      "kb_reference": "ATT&CK-T1557",
+      "attack_vector": "Exploitation of ATT&CK-T1557 (Adversary-in-the-Middle) via unencrypted transmission targeting User PII (schedule, address)"
+    },
+    "T6": {
+      "cosine_similarity": 0.4692,
+      "scenario_tid": "THR-PATH-E2D2713B-018",
+      "asset_id": "AS-6",
+      "stride_category": "Spoofing",
+      "kb_reference": "CAPEC-112",
+      "attack_vector": "An attacker exploits weak authentication mechanisms to gain unauthorized access to cryptographic key material."
+    }
+  }
+}
