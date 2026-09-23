@@ -51,7 +51,12 @@ except ImportError:
 
 from agents.threat_agent.attack_chain import build_paths, build_single_step_path
 from agents.threat_agent.generator import generate_scenarios
+from agents.threat_agent.orchestrator import (
+    MAX_VALIDATION_ATTEMPTS,
+    regenerate_after_human_rejection,
+)
 from agents.threat_agent.retrieval import build_retrieval_plan, fetch_candidates
+from agents.threat_agent.router import MAX_HUMAN_REJECTIONS
 from agents.threat_agent.schemas import (
     AssetModel,
     DFDContext,
@@ -525,65 +530,185 @@ def run_demo() -> None:
         sys.exit(1)
 
     # Step 7: Human-in-the-Loop Approval & SCRS Persistence
-    conf = target_scenario.confidence_score
-    is_low_conf = conf < LOW_CONFIDENCE_THRESHOLD
+    # Mirrors the reject -> reason -> regenerate -> re-validate -> re-review
+    # loop wired into router.reject_run() (MAX_HUMAN_REJECTIONS attempts before
+    # escalating to a terminal rejection).
+    rejection_count = 0
+    approve = "n"
 
-    if console:
-        console.print("\n[bold cyan]Stage 6: Human-in-the-Loop Approval Gate[/bold cyan]")
-        if is_low_conf:
-            console.print(
-                f"  [bold red]⚠ LOW CONFIDENCE: {conf:.4f} "
-                f"(below threshold {LOW_CONFIDENCE_THRESHOLD})[/bold red]"
-            )
-        else:
-            console.print(f"  Confidence Score: [bold green]{conf:.4f}[/bold green]")
+    while True:
+        conf = target_scenario.confidence_score
+        is_low_conf = conf < LOW_CONFIDENCE_THRESHOLD
 
-        prompt_text = (
-            f"Approve ThreatScenario [bold yellow]{target_scenario.tid}[/bold yellow] "
-            f"(Confidence: {conf:.4f}) for SCRS?"
-        )
-        approve = Prompt.ask(
-            prompt_text,
-            choices=["y", "n"],
-            default="y",
-        )
-    else:
-        warn_text = (
-            f" [⚠ LOW CONFIDENCE: {conf:.4f}]"
-            if is_low_conf
-            else f" [Confidence: {conf:.4f}]"
-        )
-        prompt_msg = (
-            f"\nApprove ThreatScenario {target_scenario.tid}{warn_text} "
-            f"for SCRS? [y/n] (default y): "
-        )
-        approve = input(prompt_msg).strip() or "y"
-
-    if approve.lower() == "y":
-        try:
-            target_scenario = target_scenario.model_copy(
-                update={"status": ThreatStatus.APPROVED}
-            )
-            state_mgr = StateManager()
-            state_mgr.write_threat_scenario(target_scenario, run_id=agent_input.run_id)
-            if console:
-                console.print(
-                    f"[bold green][+] Scenario {target_scenario.tid} written to SCRS![/bold green]"
-                )
-            else:
-                print(f"[+] ThreatScenario {target_scenario.tid} written to SCRS!")
-        except Exception as exc:
-            print(f"[ERROR] Failed to write to SCRS: {exc}")
-    else:
-        target_scenario = target_scenario.model_copy(
-            update={"status": ThreatStatus.REJECTED}
-        )
         if console:
             console.print(
-                f"[bold red][-] Scenario {target_scenario.tid} rejected by user.[/bold red]"
+                "\n[bold cyan]Stage 6: Human-in-the-Loop Approval Gate[/bold cyan]"
+            )
+            if is_low_conf:
+                console.print(
+                    f"  [bold red]⚠ LOW CONFIDENCE: {conf:.4f} "
+                    f"(below threshold {LOW_CONFIDENCE_THRESHOLD})[/bold red]"
+                )
+            else:
+                console.print(f"  Confidence Score: [bold green]{conf:.4f}[/bold green]")
+
+            prompt_text = (
+                f"Approve ThreatScenario [bold yellow]{target_scenario.tid}[/bold yellow] "
+                f"(Confidence: {conf:.4f}) for SCRS?"
+            )
+            approve = Prompt.ask(prompt_text, choices=["y", "n"], default="y")
+        else:
+            warn_text = (
+                f" [⚠ LOW CONFIDENCE: {conf:.4f}]"
+                if is_low_conf
+                else f" [Confidence: {conf:.4f}]"
+            )
+            prompt_msg = (
+                f"\nApprove ThreatScenario {target_scenario.tid}{warn_text} "
+                f"for SCRS? [y/n] (default y): "
+            )
+            approve = input(prompt_msg).strip() or "y"
+
+        if approve.lower() == "y":
+            try:
+                target_scenario = target_scenario.model_copy(
+                    update={"status": ThreatStatus.APPROVED}
+                )
+                state_mgr = StateManager()
+                state_mgr.write_threat_scenario(
+                    target_scenario, run_id=agent_input.run_id
+                )
+                if console:
+                    console.print(
+                        f"[bold green][+] Scenario {target_scenario.tid} "
+                        "written to SCRS![/bold green]"
+                    )
+                else:
+                    print(f"[+] ThreatScenario {target_scenario.tid} written to SCRS!")
+            except Exception as exc:
+                print(f"[ERROR] Failed to write to SCRS: {exc}")
+            break
+
+        # Rejected — collect a reason, log it, and regenerate (bounded retry).
+        rejection_count += 1
+        reason_prompt = "Reason for rejection"
+        reason = (
+            Prompt.ask(f"[bold yellow]{reason_prompt}[/bold yellow]")
+            if console
+            else input(f"{reason_prompt}: ").strip()
+        )
+        reason = reason or "No reason provided."
+
+        try:
+            StateManager().log_rejection(
+                run_id=agent_input.run_id,
+                reason=reason,
+                rejected_scenarios=[target_scenario],
+            )
+        except Exception as exc:
+            logger.warning("Failed to log rejection to SCRS: %s", exc)
+
+        if rejection_count >= MAX_HUMAN_REJECTIONS:
+            target_scenario = target_scenario.model_copy(
+                update={"status": ThreatStatus.REJECTED}
+            )
+            msg = (
+                f"[-] Scenario {target_scenario.tid} rejected {rejection_count} "
+                "time(s) — retry cap reached, escalating without further "
+                "regeneration."
+            )
+            if console:
+                console.print(f"[bold red]{msg}[/bold red]")
+            else:
+                print(msg)
+            break
+
+        regen_msg = (
+            f"[cyan]Regenerating with reviewer feedback "
+            f"(attempt {rejection_count + 1}/{MAX_HUMAN_REJECTIONS})...[/cyan]"
+        )
+        print(regen_msg) if not console else console.print(regen_msg)
+
+        try:
+            new_scenarios, _val_retries, batch_val_status = regenerate_after_human_rejection(
+                agent_input=agent_input,
+                human_feedback=reason,
+                previous_scenarios=[target_scenario],
+            )
+        except Exception as exc:
+            print(f"[ERROR] Regeneration after rejection failed: {exc}")
+            break
+
+        if not new_scenarios:
+            print("[WARNING] Regeneration produced no scenarios; stopping.")
+            break
+
+        target_scenario = new_scenarios[0]
+
+        # Show the reviewer what actually changed — without this, "PASSED"
+        # is meaningless: they can't tell regeneration produced new content
+        # (vs. re-showing the same rejected scenario) without seeing it.
+        s = target_scenario
+        if console:
+            console.print(
+                Panel(
+                    f"[bold white]TID:[/bold white] {s.tid}\n"
+                    f"[bold white]Asset:[/bold white] {s.asset_id}\n"
+                    f"[bold white]STRIDE:[/bold white] {s.stride_category}\n"
+                    f"[bold white]Attack Vector:[/bold white] {s.attack_vector}\n"
+                    f"[bold white]KB Reference:[/bold white] {s.kb_reference}\n"
+                    f"[bold white]Confidence Score:[/bold white] "
+                    f"{s.confidence_score:.4f}",
+                    title="Revised ThreatScenario (after your feedback)",
+                    border_style="yellow",
+                )
             )
         else:
-            print(f"[-] ThreatScenario {target_scenario.tid} rejected.")
+            print(
+                f"Revised ThreatScenario -> TID: {s.tid} | Asset: {s.asset_id} | "
+                f"STRIDE: {s.stride_category} | Attack Vector: {s.attack_vector} | "
+                f"KB Reference: {s.kb_reference} | "
+                f"Confidence: {s.confidence_score:.4f}"
+            )
+
+        v_result = Validator().validate(target_scenario)
+        revalidate_msg = (
+            f"Revalidation Status: {'PASSED' if v_result.passed else 'FAILED'} "
+            f"({4 - len(v_result.failed_checks)}/4 checks)"
+        )
+        if console:
+            color = "bold green" if v_result.passed else "bold red"
+            console.print(f"[{color}]{revalidate_msg}[/{color}]")
+        else:
+            print(revalidate_msg)
+
+        # Surface the *batch's* validation_status too: the reviewed candidate
+        # can individually pass while sibling candidates from the same
+        # regeneration round were escalated after exhausting machine retries.
+        #
+        # NOTE: generate_and_validate_with_retry() stamps validation_status
+        # onto every scenario in the batch uniformly when escalation occurs
+        # (see orchestrator.py), so that field can't distinguish "this one
+        # actually failed a check" from "this one shipped alongside a
+        # failure." Re-validate each sibling individually instead of
+        # trusting the coarse batch-wide label.
+        if batch_val_status == "escalated_after_retries":
+            actually_failed = sum(
+                1
+                for s in new_scenarios
+                if s.tid != target_scenario.tid and not Validator().validate(s).passed
+            )
+            batch_msg = (
+                "[!] Batch validation status: escalated_after_retries "
+                f"({actually_failed} of {len(new_scenarios) - 1} other "
+                "candidate(s) in this regeneration round failed an invariant "
+                f"check after {MAX_VALIDATION_ATTEMPTS} attempts — reviewed "
+                "here only, not shown to you)."
+            )
+            if console:
+                console.print(f"[bold yellow]{batch_msg}[/bold yellow]")
+            else:
+                print(batch_msg)
 
     # Step 8: Tail Structured JSON Logs
     if console:
