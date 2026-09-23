@@ -101,6 +101,7 @@ def generate_and_validate_with_retry(
     paths: list[AttackPath] | None = None,
     validator: Validator | None = None,
     max_attempts: int = MAX_VALIDATION_ATTEMPTS,
+    initial_failure_details: list[str] | None = None,
 ) -> tuple[list[ThreatScenario], int, str]:
     """Execute scenario generation and invariant validation with automated retries.
 
@@ -110,6 +111,7 @@ def generate_and_validate_with_retry(
                       re-invokes retrieval and attack chaining.
         validator:    Optional Validator instance (defaults to Validator()).
         max_attempts: Maximum generation + validation attempts (default 3).
+        initial_failure_details: Optional initial failure context (e.g. human feedback).
 
     Returns:
         tuple of:
@@ -120,7 +122,9 @@ def generate_and_validate_with_retry(
     val = validator or Validator()
     run_id = agent_input.run_id
     validator_retry_count = 0
-    failure_details: list[str] | None = None
+    failure_details: list[str] | None = (
+        list(initial_failure_details) if initial_failure_details else None
+    )
     last_scenarios: list[ThreatScenario] = []
 
     for attempt in range(1, max_attempts + 1):
@@ -231,5 +235,35 @@ def generate_and_validate_with_retry(
                 for s in scenarios
             ]
             return annotated_scenarios, validator_retry_count, "escalated_after_retries"
-
     return last_scenarios, validator_retry_count, "escalated_after_retries"
+
+
+def regenerate_after_human_rejection(
+    agent_input: ThreatAgentInput,
+    human_feedback: str,
+    previous_scenarios: list[ThreatScenario] | list[dict[str, object]] | None = None,
+    validator: Validator | None = None,
+) -> tuple[list[ThreatScenario], int, str]:
+    """Regenerate threat scenarios following human reviewer rejection.
+
+    Thin wrapper around generate_and_validate_with_retry() that seeds
+    failure_details with human feedback so attempt 1 incorporates reviewer
+    objections directly into prompt context.
+
+    Args:
+        agent_input: The original ThreatAgentInput system model.
+        human_feedback: Rationale string provided by human reviewer.
+        previous_scenarios: Scenarios rejected in the previous round.
+        validator: Optional Validator instance.
+
+    Returns:
+        tuple of (scenarios, validator_retry_count, validation_status)
+    """
+    human_context = f"HUMAN REJECTION: {human_feedback}"
+    return generate_and_validate_with_retry(
+        agent_input=agent_input,
+        paths=None,
+        validator=validator,
+        initial_failure_details=[human_context],
+    )
+

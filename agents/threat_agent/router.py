@@ -40,12 +40,16 @@ from __future__ import annotations
 import logging
 import secrets
 from collections.abc import Callable
-from typing import Annotated
+from datetime import UTC, datetime
+from typing import Annotated, Final
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Path, status
 from pydantic import BaseModel, Field
 
-from agents.threat_agent.orchestrator import generate_and_validate_with_retry
+from agents.threat_agent.orchestrator import (
+    generate_and_validate_with_retry,
+    regenerate_after_human_rejection,
+)
 from agents.threat_agent.run_store import (
     InvalidStateTransitionError,
     RunNotFoundError,
@@ -100,6 +104,30 @@ def get_orchestrator() -> Callable[..., tuple[list[ThreatScenario], int, str]]:
     Can be overridden in tests via FastAPI dependency_overrides.
     """
     return generate_and_validate_with_retry
+
+
+MAX_HUMAN_REJECTIONS: Final[int] = 3
+
+
+def get_regenerator(
+    orchestrator: Annotated[
+        Callable[..., tuple[list[ThreatScenario], int, str]],
+        Depends(get_orchestrator),
+    ] = generate_and_validate_with_retry,
+) -> Callable[..., tuple[list[ThreatScenario], int, str]]:
+    """Return the regenerator function for human rejection retry.
+
+    If get_orchestrator is overridden (e.g. in tests) and get_regenerator is not,
+    automatically delegates to the injected orchestrator.
+    """
+    if orchestrator is not generate_and_validate_with_retry:
+        return (
+            lambda agent_input, human_feedback, previous_scenarios=None, **kwargs: (
+                orchestrator(agent_input)
+            )
+        )
+    return regenerate_after_human_rejection
+
 
 
 def verify_api_key(
@@ -311,6 +339,13 @@ class RejectResponse(BaseModel):
             description="Human rejections received.",
         ),
     ] = None
+    scenarios: Annotated[
+        list[dict[str, object]] | None,
+        Field(
+            default=None,
+            description="Newly regenerated scenarios if retry occurred.",
+        ),
+    ] = None
 
 
 class NotApprovedErrorDetail(BaseModel):
@@ -436,6 +471,7 @@ async def analyze(
             validator_retry_count=validator_retries,
             human_rejection_count=0,
             validation_status=validation_status,
+            agent_input=payload.model_dump(mode="json"),
         )
 
         return AnalyzeResponse(
@@ -596,8 +632,8 @@ async def approve_run(
     summary="Human rejection — trigger retry or escalation",
     description=(
         "Human reviewer rejects the threat scenarios for this run with a "
-        "reason.  If retry_count < 3, triggers a new Act+Fetch+Reason cycle "
-        "with the rejection reason injected as context.  At retry_count == 3, "
+        "reason.  If human_rejection_count < 3, triggers a new Act+Fetch+Reason cycle "
+        "with the rejection reason injected as context.  At human_rejection_count >= 3, "
         "escalates to status=rejected (human-flagged failure)."
     ),
     dependencies=[Depends(verify_api_key)],
@@ -615,6 +651,10 @@ async def reject_run(
         RunRegistryStore,
         Depends(get_run_store),
     ],
+    regenerator: Annotated[
+        Callable[..., tuple[list[ThreatScenario], int, str]],
+        Depends(get_regenerator),
+    ],
 ) -> RejectResponse:
     """Reject a threat analysis run and trigger retry or escalation.
 
@@ -622,9 +662,10 @@ async def reject_run(
         run_id: The unique run identifier to reject.
         body: RejectRequest containing the human reviewer's reason.
         store: RunRegistryStore storage provider (injected).
+        regenerator: Function handling scenario regeneration with human feedback.
 
     Returns:
-        RejectResponse with updated status and retry_count.
+        RejectResponse with updated status, retry_count, and regenerated scenarios.
 
     Raises:
         HTTPException 404: If run_id is not found.
@@ -636,22 +677,114 @@ async def reject_run(
         extra={"run_id": run_id, "reason": body.reason},
     )
 
-    _get_run_or_404(run_id, store)
+    run = _get_run_or_404(run_id, store)
 
+    if run.status != ThreatStatus.PENDING_HUMAN:
+        if run.status == ThreatStatus.APPROVED:
+            detail = f"Run '{run_id}' is already approved and cannot be rejected."
+        elif run.status in (ThreatStatus.REJECTED, ThreatStatus.ESCALATED):
+            detail = (
+                f"Run '{run_id}' is already rejected and cannot be rejected again."
+            )
+        else:
+            detail = (
+                f"Run '{run_id}' is in status '{run.status.value}', "
+                "which cannot be rejected (must be in pending_human)."
+            )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=detail,
+        )
+
+    # Log rejection to SCRS audit log and revision history
     try:
-        run = store.transition_run(
+        from scrp.state_manager import StateManager
+
+        state_mgr = StateManager()
+        state_mgr.log_rejection(
+            run_id=run_id,
+            reason=body.reason,
+            rejected_scenarios=run.scenarios,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Failed to log rejection to SCRS for run %s: %s", run_id, exc
+        )
+
+    current_rejections = run.human_rejection_count
+
+    # Check if this rejection reaches or exceeds the cap
+    if current_rejections + 1 >= MAX_HUMAN_REJECTIONS:
+        rejection_entry: dict[str, object] = {
+            "attempt": current_rejections + 1,
+            "reason": body.reason,
+            "rejected_scenarios": run.scenarios,
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+        updated_run = store.transition_run(
             run_id=run_id,
             expected_status=ThreatStatus.PENDING_HUMAN,
             new_status=ThreatStatus.REJECTED,
             increment_retry=True,
+            rejection_entry=rejection_entry,
+        )
+        return RejectResponse(
+            run_id=updated_run.run_id,
+            status=updated_run.status,
+            retry_count=min(updated_run.retry_count, 3),
+            human_rejection_count=updated_run.human_rejection_count,
+            scenarios=None,
+        )
+
+    # Under cap: attempt regeneration
+    rejection_entry = {
+        "attempt": current_rejections + 1,
+        "reason": body.reason,
+        "rejected_scenarios": run.scenarios,
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
+
+    try:
+        if run.agent_input:
+            agent_input = ThreatAgentInput.model_validate(run.agent_input)
+        else:
+            from agents.threat_agent.schemas import TargetSystem
+
+            agent_input = ThreatAgentInput(
+                run_id=run_id,
+                system_model=TargetSystem(
+                    system_name=run_id, components=[], connections=[]
+                ),
+                assets=[],
+            )
+
+        new_scenarios, _val_retries, _val_status = regenerator(
+            agent_input=agent_input,
+            human_feedback=body.reason,
+            previous_scenarios=run.scenarios,
+        )
+        scenarios_dicts = [
+            s.model_dump(mode="json") if hasattr(s, "model_dump") else s
+            for s in new_scenarios
+        ]
+
+        updated_run = store.transition_run(
+            run_id=run_id,
+            expected_status=ThreatStatus.PENDING_HUMAN,
+            new_status=ThreatStatus.PENDING_HUMAN,
+            increment_retry=True,
+            rejection_entry=rejection_entry,
+            updated_scenarios=scenarios_dicts,
         )
 
         return RejectResponse(
-            run_id=run.run_id,
-            status=run.status,
-            retry_count=run.retry_count,
-            human_rejection_count=run.human_rejection_count,
+            run_id=updated_run.run_id,
+            status=updated_run.status,
+            retry_count=min(updated_run.retry_count, 3),
+            human_rejection_count=updated_run.human_rejection_count,
+            scenarios=scenarios_dicts,
         )
+
     except RunNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -659,6 +792,14 @@ async def reject_run(
         ) from exc
     except InvalidStateTransitionError as exc:
         _raise_invalid_transition(exc, action="reject")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Regeneration failed for run %s: %s", run_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to regenerate threat scenarios: {exc}",
+        ) from exc
 
 
 @router.get(
