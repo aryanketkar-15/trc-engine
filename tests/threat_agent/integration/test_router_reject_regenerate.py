@@ -235,3 +235,24 @@ class TestRouterRejectRegenerate:
         )
         assert res_reject.status_code == 409
         assert "already approved" in res_reject.json()["detail"].lower()
+
+    def test_reject_without_stored_agent_input_returns_422(
+        self,
+        app_and_client: tuple[FastAPI, TestClient],
+    ) -> None:
+        """Rejecting a run that has no stored agent_input returns 422 with explanation."""
+        _, client = app_and_client
+        store = get_in_memory_run_store()
+        run_id = "RUN-LEGACY-NO-INPUT"
+        store.create_run(
+            run_id=run_id,
+            status=ThreatStatus.PENDING_HUMAN,
+            scenarios=[],
+            agent_input={},
+        )
+        res = client.post(
+            f"/threat-agent/{run_id}/reject",
+            json={"reason": "Cannot regenerate without input model"},
+        )
+        assert res.status_code == 422
+        assert "no stored system model" in res.json()["detail"].lower()
