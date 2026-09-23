@@ -682,7 +682,7 @@ async def reject_run(
     if run.status != ThreatStatus.PENDING_HUMAN:
         if run.status == ThreatStatus.APPROVED:
             detail = f"Run '{run_id}' is already approved and cannot be rejected."
-        elif run.status in (ThreatStatus.REJECTED, ThreatStatus.ESCALATED):
+        elif run.status == ThreatStatus.REJECTED:
             detail = (
                 f"Run '{run_id}' is already rejected and cannot be rejected again."
             )
@@ -744,19 +744,18 @@ async def reject_run(
         "timestamp": datetime.now(UTC).isoformat(),
     }
 
-    try:
-        if run.agent_input:
-            agent_input = ThreatAgentInput.model_validate(run.agent_input)
-        else:
-            from agents.threat_agent.schemas import TargetSystem
+    if not run.agent_input:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Run '{run_id}' has no stored system model and predates "
+                "reject-regenerate support.  It cannot be automatically "
+                "regenerated; resolve manually or re-submit via /analyze."
+            ),
+        )
 
-            agent_input = ThreatAgentInput(
-                run_id=run_id,
-                system_model=TargetSystem(
-                    system_name=run_id, components=[], connections=[]
-                ),
-                assets=[],
-            )
+    try:
+        agent_input = ThreatAgentInput.model_validate(run.agent_input)
 
         new_scenarios, _val_retries, _val_status = regenerator(
             agent_input=agent_input,

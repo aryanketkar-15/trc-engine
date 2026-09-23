@@ -100,7 +100,6 @@ class ThreatStatus(StrEnum):
     PENDING_HUMAN = "pending_human"
     APPROVED = "approved"
     REJECTED = "rejected"
-    ESCALATED = "escalated_human"
 
 
 class KBSource(StrEnum):
