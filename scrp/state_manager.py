@@ -131,6 +131,67 @@ class StateManager:
         )
         return True
 
+    def log_rejection(
+        self,
+        run_id: str,
+        reason: str,
+        rejected_scenarios: list[ThreatScenario] | list[dict[str, object]] | None = None,
+    ) -> None:
+        """Record a human rejection and preserve rejected scenarios in revision history.
+
+        Args:
+            run_id: Unique identifier for the pipeline run.
+            reason: Feedback / rationale provided by the human reviewer.
+            rejected_scenarios: Scenarios rejected in this round.
+        """
+        raw_scenarios = rejected_scenarios or []
+        scenarios_payload = [
+            s.model_dump(mode="json") if hasattr(s, "model_dump") else s
+            for s in raw_scenarios
+        ]
+
+        history_entry: dict[str, object] = {
+            "timestamp": datetime.now(UTC).isoformat(),
+            "reason": reason,
+            "scenarios": scenarios_payload,
+        }
+        self._state.revision_history.setdefault(run_id, []).append(history_entry)
+
+        if scenarios_payload:
+            for item in scenarios_payload:
+                tid = (
+                    str(item.get("tid", "UNKNOWN"))
+                    if isinstance(item, dict)
+                    else "UNKNOWN"
+                )
+                self._state.audit_log.append(
+                    AuditLogEntry(
+                        run_id=run_id,
+                        tid=tid,
+                        timestamp=datetime.now(UTC),
+                        action="reject",
+                        reason=reason,
+                    )
+                )
+        else:
+            self._state.audit_log.append(
+                AuditLogEntry(
+                    run_id=run_id,
+                    tid="N/A",
+                    timestamp=datetime.now(UTC),
+                    action="reject",
+                    reason=reason,
+                )
+            )
+
+        self._persist()
+        logger.info(
+            "SCRS rejection logged: run_id=%s reason=%s scenario_count=%d",
+            run_id,
+            reason,
+            len(scenarios_payload),
+        )
+
     # ------------------------------------------------------------------
     # Read helpers (Phase 1 stubs — full read interface in Phase 2)
     # ------------------------------------------------------------------
@@ -142,6 +203,14 @@ class StateManager:
     def get_threat_scenarios(self) -> dict[str, object]:
         """Return a shallow copy of all stored threat scenarios (read-only)."""
         return dict(self._state.threat_scenarios)
+
+    def get_revision_history(
+        self, run_id: str | None = None
+    ) -> dict[str, list[dict[str, object]]] | list[dict[str, object]]:
+        """Return a copy of the revision history, optionally filtered by run_id."""
+        if run_id is not None:
+            return list(self._state.revision_history.get(run_id, []))
+        return dict(self._state.revision_history)
 
     # ------------------------------------------------------------------
     # Private persistence helpers

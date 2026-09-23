@@ -38,9 +38,17 @@ class AuditLogEntry(BaseModel):
         default_factory=lambda: datetime.now(UTC),
         description="UTC timestamp of the write action.",
     )
-    action: Literal["write"] = Field(
+    action: Literal["write", "reject", "revise", "approve"] = Field(
         default="write",
-        description="Action performed.  Only 'write' is valid for Phase 1.",
+        description="Action performed.",
+    )
+    reason: str | None = Field(
+        default=None,
+        description="Optional human-provided reason or context for the action.",
+    )
+    previous_tid: str | None = Field(
+        default=None,
+        description="Optional reference to previous threat ID if revised.",
     )
 
 
@@ -61,3 +69,8 @@ class SCRSState(BaseModel):
         default_factory=list,
         description="Append-only audit log of all SCRS write actions.",
     )
+    revision_history: dict[str, list[dict[str, object]]] = Field(
+        default_factory=dict,
+        description="Keyed by run_id; lists previous iterations of rejected scenarios.",
+    )
+

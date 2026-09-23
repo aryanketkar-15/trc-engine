@@ -53,6 +53,8 @@ class RunRecord(BaseModel):
     human_rejection_count: int = 0
     validation_status: str | None = None
     scrs_entry_id: str | None = None
+    agent_input: dict[str, object] = Field(default_factory=dict)
+    rejection_history: list[dict[str, object]] = Field(default_factory=list)
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -98,6 +100,16 @@ def _row_to_run_record(row: dict[str, Any]) -> RunRecord:
     retry_cnt = row.get("retry_count", 0)
     human_rej_cnt = row.get("human_rejection_count", retry_cnt)
 
+    agent_in = row.get("agent_input")
+    agent_input_dict: dict[str, object] = (
+        agent_in if isinstance(agent_in, dict) else {}
+    )
+
+    rej_hist = row.get("rejection_history")
+    rejection_history_list: list[dict[str, object]] = (
+        rej_hist if isinstance(rej_hist, list) else []
+    )
+
     return RunRecord(
         run_id=row["run_id"],
         status=ThreatStatus(row["status"]),
@@ -107,6 +119,8 @@ def _row_to_run_record(row: dict[str, Any]) -> RunRecord:
         human_rejection_count=human_rej_cnt,
         validation_status=row.get("validation_status"),
         scrs_entry_id=row.get("scrs_entry_id"),
+        agent_input=agent_input_dict,
+        rejection_history=rejection_history_list,
         created_at=row.get("created_at"),
         updated_at=row.get("updated_at"),
     )
@@ -131,6 +145,8 @@ class RunRegistryStore(ABC):
         human_rejection_count: int = 0,
         validation_status: str | None = None,
         scrs_entry_id: str | None = None,
+        agent_input: dict[str, object] | None = None,
+        rejection_history: list[dict[str, object]] | None = None,
     ) -> RunRecord:
         """Create or register a run record (idempotent upsert)."""
         ...
@@ -153,6 +169,8 @@ class RunRegistryStore(ABC):
         new_status: ThreatStatus,
         scrs_entry_id: str | None = None,
         increment_retry: bool = False,
+        rejection_entry: dict[str, object] | None = None,
+        updated_scenarios: list[dict[str, object]] | None = None,
     ) -> RunRecord:
         """Atomically transition run from expected_status to new_status.
 
@@ -190,6 +208,8 @@ class InMemoryRunRegistryStore(RunRegistryStore):
         human_rejection_count: int = 0,
         validation_status: str | None = None,
         scrs_entry_id: str | None = None,
+        agent_input: dict[str, object] | None = None,
+        rejection_history: list[dict[str, object]] | None = None,
     ) -> RunRecord:
         effective_rejections = human_rejection_count or retry_count
         record = RunRecord(
@@ -201,6 +221,8 @@ class InMemoryRunRegistryStore(RunRegistryStore):
             human_rejection_count=effective_rejections,
             validation_status=validation_status,
             scrs_entry_id=scrs_entry_id,
+            agent_input=agent_input or {},
+            rejection_history=rejection_history or [],
             created_at=datetime.now(),
             updated_at=datetime.now(),
         )
@@ -226,6 +248,8 @@ class InMemoryRunRegistryStore(RunRegistryStore):
         new_status: ThreatStatus,
         scrs_entry_id: str | None = None,
         increment_retry: bool = False,
+        rejection_entry: dict[str, object] | None = None,
+        updated_scenarios: list[dict[str, object]] | None = None,
     ) -> RunRecord:
         with self._lock:
             record = self._runs.get(run_id)
@@ -246,6 +270,10 @@ class InMemoryRunRegistryStore(RunRegistryStore):
             if increment_retry:
                 record.human_rejection_count += 1
                 record.retry_count = record.human_rejection_count
+            if rejection_entry is not None:
+                record.rejection_history.append(rejection_entry)
+            if updated_scenarios is not None:
+                record.scenarios = updated_scenarios
             record.updated_at = datetime.now()
             return record.model_copy()
 
@@ -283,6 +311,10 @@ def init_postgres_run_store_schema() -> None:
                     ADD COLUMN IF NOT EXISTS human_rejection_count INTEGER NOT NULL DEFAULT 0;
                 ALTER TABLE threat_agent_runs
                     ADD COLUMN IF NOT EXISTS validation_status TEXT;
+                ALTER TABLE threat_agent_runs
+                    ADD COLUMN IF NOT EXISTS agent_input JSONB NOT NULL DEFAULT '{}'::jsonb;
+                ALTER TABLE threat_agent_runs
+                    ADD COLUMN IF NOT EXISTS rejection_history JSONB NOT NULL DEFAULT '[]'::jsonb;
                 """
             )
             cur.execute(
@@ -309,9 +341,13 @@ class PostgresRunRegistryStore(RunRegistryStore):
         human_rejection_count: int = 0,
         validation_status: str | None = None,
         scrs_entry_id: str | None = None,
+        agent_input: dict[str, object] | None = None,
+        rejection_history: list[dict[str, object]] | None = None,
     ) -> RunRecord:
         scenarios_payload = scenarios or []
         effective_rejections = human_rejection_count or retry_count
+        agent_in = agent_input or {}
+        rej_hist = rejection_history or []
         with get_db_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cur:
                 cur.execute(
@@ -319,11 +355,13 @@ class PostgresRunRegistryStore(RunRegistryStore):
                     INSERT INTO threat_agent_runs (
                         run_id, status, scenarios, retry_count,
                         validator_retry_count, human_rejection_count,
-                        validation_status, scrs_entry_id, created_at, updated_at
+                        validation_status, scrs_entry_id, agent_input,
+                        rejection_history, created_at, updated_at
                     ) VALUES (
                         %(run_id)s, %(status)s, %(scenarios)s, %(retry_count)s,
                         %(validator_retry_count)s, %(human_rejection_count)s,
-                        %(validation_status)s, %(scrs_entry_id)s, now(), now()
+                        %(validation_status)s, %(scrs_entry_id)s, %(agent_input)s,
+                        %(rejection_history)s, now(), now()
                     )
                     ON CONFLICT (run_id) DO UPDATE SET
                         status = EXCLUDED.status,
@@ -333,6 +371,8 @@ class PostgresRunRegistryStore(RunRegistryStore):
                         human_rejection_count = EXCLUDED.human_rejection_count,
                         validation_status = EXCLUDED.validation_status,
                         scrs_entry_id = EXCLUDED.scrs_entry_id,
+                        agent_input = EXCLUDED.agent_input,
+                        rejection_history = EXCLUDED.rejection_history,
                         updated_at = now()
                     RETURNING *;
                     """,
@@ -348,6 +388,12 @@ class PostgresRunRegistryStore(RunRegistryStore):
                         "human_rejection_count": effective_rejections,
                         "validation_status": validation_status,
                         "scrs_entry_id": scrs_entry_id,
+                        "agent_input": Jsonb(
+                            agent_in, dumps=lambda x: json.dumps(x, default=str)
+                        ),
+                        "rejection_history": Jsonb(
+                            rej_hist, dumps=lambda x: json.dumps(x, default=str)
+                        ),
                     },
                 )
                 row = cur.fetchone()
@@ -376,11 +422,13 @@ class PostgresRunRegistryStore(RunRegistryStore):
                     INSERT INTO threat_agent_runs (
                         run_id, status, scenarios, retry_count,
                         validator_retry_count, human_rejection_count,
-                        validation_status, scrs_entry_id, created_at, updated_at
+                        validation_status, scrs_entry_id, agent_input,
+                        rejection_history, created_at, updated_at
                     ) VALUES (
                         %(run_id)s, %(status)s, %(scenarios)s, %(retry_count)s,
                         %(validator_retry_count)s, %(human_rejection_count)s,
-                        %(validation_status)s, %(scrs_entry_id)s,
+                        %(validation_status)s, %(scrs_entry_id)s, %(agent_input)s,
+                        %(rejection_history)s,
                         COALESCE(%(created_at)s, now()),
                         COALESCE(%(updated_at)s, now())
                     )
@@ -392,6 +440,8 @@ class PostgresRunRegistryStore(RunRegistryStore):
                         human_rejection_count = EXCLUDED.human_rejection_count,
                         validation_status = EXCLUDED.validation_status,
                         scrs_entry_id = EXCLUDED.scrs_entry_id,
+                        agent_input = EXCLUDED.agent_input,
+                        rejection_history = EXCLUDED.rejection_history,
                         updated_at = now();
                     """,
                     {
@@ -403,6 +453,8 @@ class PostgresRunRegistryStore(RunRegistryStore):
                         "human_rejection_count": record.human_rejection_count,
                         "validation_status": record.validation_status,
                         "scrs_entry_id": record.scrs_entry_id,
+                        "agent_input": Jsonb(record.agent_input),
+                        "rejection_history": Jsonb(record.rejection_history),
                         "created_at": record.created_at,
                         "updated_at": record.updated_at,
                     },
@@ -416,38 +468,47 @@ class PostgresRunRegistryStore(RunRegistryStore):
         new_status: ThreatStatus,
         scrs_entry_id: str | None = None,
         increment_retry: bool = False,
+        rejection_entry: dict[str, object] | None = None,
+        updated_scenarios: list[dict[str, object]] | None = None,
     ) -> RunRecord:
         """Atomic conditional UPDATE enforcing status = expected_status."""
         with get_db_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cur:
+                set_clauses = ["status = %(new_status)s", "updated_at = now()"]
+                params: dict[str, Any] = {
+                    "run_id": run_id,
+                    "expected_status": expected_status.value,
+                    "new_status": new_status.value,
+                    "scrs_entry_id": scrs_entry_id,
+                }
+
                 if increment_retry:
-                    query = """
-                        UPDATE threat_agent_runs
-                        SET status = %(new_status)s,
-                            retry_count = retry_count + 1,
-                            human_rejection_count = human_rejection_count + 1,
-                            updated_at = now()
-                        WHERE run_id = %(run_id)s AND status = %(expected_status)s
-                        RETURNING *;
-                    """
-                else:
-                    query = """
-                        UPDATE threat_agent_runs
-                        SET status = %(new_status)s,
-                            scrs_entry_id = COALESCE(%(scrs_entry_id)s, scrs_entry_id),
-                            updated_at = now()
-                        WHERE run_id = %(run_id)s AND status = %(expected_status)s
-                        RETURNING *;
-                    """
-                cur.execute(
-                    query,
-                    {
-                        "run_id": run_id,
-                        "expected_status": expected_status.value,
-                        "new_status": new_status.value,
-                        "scrs_entry_id": scrs_entry_id,
-                    },
-                )
+                    set_clauses.append("retry_count = retry_count + 1")
+                    set_clauses.append("human_rejection_count = human_rejection_count + 1")
+
+                if scrs_entry_id is not None:
+                    set_clauses.append("scrs_entry_id = %(scrs_entry_id)s")
+
+                if rejection_entry is not None:
+                    set_clauses.append(
+                        "rejection_history = rejection_history || %(rejection_json)s::jsonb"
+                    )
+                    params["rejection_json"] = json.dumps([rejection_entry], default=str)
+
+                if updated_scenarios is not None:
+                    set_clauses.append("scenarios = %(updated_scenarios)s")
+                    params["updated_scenarios"] = Jsonb(
+                        updated_scenarios,
+                        dumps=lambda x: json.dumps(x, default=str),
+                    )
+
+                query = f"""
+                    UPDATE threat_agent_runs
+                    SET {', '.join(set_clauses)}
+                    WHERE run_id = %(run_id)s AND status = %(expected_status)s
+                    RETURNING *;
+                """  # noqa: S608
+                cur.execute(query, params)
                 row = cur.fetchone()
                 if row is not None:
                     conn.commit()
