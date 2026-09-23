@@ -1,1081 +1,1081 @@
 [
   {
-    "tid": "THR-PATH-E73AF25F-001",
+    "tid": "THR-PATH-87F3D3C9-001",
     "asset_id": "AS-1",
     "stride_category": "ElevationOfPrivilege",
-    "attack_vector": "An attacker exploits the unauthenticated BLE GATT characteristics to remotely unlock the door without permission.",
+    "attack_vector": "An attacker sends an unlock command using unauthenticated BLE access.",
     "kb_reference": "CWE-306",
     "evidence_chain": {
-      "exposure": "unauthenticated BLE GATT characteristics",
+      "exposure": "BLE 5.0 interface with unauthenticated pairing",
       "matched_pattern": "CWE-306",
-      "applicability_reason": "The lock's control command lacks authentication mechanisms and is accessible via BLE, enabling unauthorized users to manipulate its state.",
+      "applicability_reason": "The lack of authentication on the BLE GATT characteristics allows any nearby device to issue critical commands without verification.",
       "citation": "CWE-306: Missing Authentication for Critical Function"
     },
     "confidence_score": 0.7815094124371169,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:42.074091Z",
+    "created_at": "2026-09-23T19:15:10.157009Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-061CC10A-002",
+    "tid": "THR-PATH-88CB46DA-002",
     "asset_id": "AS-3",
     "stride_category": "Tampering",
-    "attack_vector": "Exploitation of CAPEC-186 (Malicious Software Update) via injection targeting Firmware Image",
+    "attack_vector": "An attacker exploits the lack of signature verification to upload malicious firmware via the BLE OTA interface.",
     "kb_reference": "CAPEC-186",
     "evidence_chain": {
-      "exposure": "BLE OTA, UART interface (untrusted trust zone)",
+      "exposure": "firmware update mechanism without authentication",
       "matched_pattern": "CAPEC-186",
-      "applicability_reason": "The asset 'Firmware Image' exposes BLE OTA, UART interfaces in untrusted zone, allowing an adversary to execute CAPEC-186 via injection.",
-      "citation": "CAPEC-186: Malicious Software Update (CAPEC)"
+      "applicability_reason": "The firmware image lacks signature verification and rollback protection, making it vulnerable to unauthenticated updates.",
+      "citation": "CAPEC-186: Malicious Software Update (CAPEC v3.9)"
     },
     "confidence_score": 0.7631106062995665,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:42.372133Z",
+    "created_at": "2026-09-23T19:15:12.631286Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-FFD57D27-003",
+    "tid": "THR-PATH-722589F9-003",
     "asset_id": "AS-3",
     "stride_category": "ElevationOfPrivilege",
-    "attack_vector": "Exploitation of CWE-306 (Missing Authentication for Critical Function) via access control bypass targeting Firmware Image",
+    "attack_vector": "An attacker can send BLE commands to unlock the door due to missing authentication in the firmware.",
     "kb_reference": "CWE-306",
     "evidence_chain": {
-      "exposure": "BLE OTA, UART interface (untrusted trust zone)",
+      "exposure": "BLE OTA interface without authentication",
       "matched_pattern": "CWE-306",
-      "applicability_reason": "The asset 'Firmware Image' exposes BLE OTA, UART interfaces in untrusted zone, allowing an adversary to execute CWE-306 via access control bypass.",
-      "citation": "CWE-306: Missing Authentication for Critical Function (CWE)"
+      "applicability_reason": "The firmware lacks signature verification and authentication for critical functions like BLE commands, making it vulnerable to unauthorized control and manipulation.",
+      "citation": "CWE-306: Missing Authentication for Critical Function"
     },
     "confidence_score": 0.7478364260294188,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:42.689606Z",
+    "created_at": "2026-09-23T19:15:14.839671Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-E7175E65-004",
+    "tid": "THR-PATH-3E896AB3-004",
     "asset_id": "AS-3",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of STRIDE-S-001 (Spoofing Identity via BLE Device Impersonation) via replay targeting Firmware Image",
+    "attack_vector": "An attacker imitates a legitimate device's BLE MAC address to issue commands to the firmware.",
     "kb_reference": "STRIDE-S-001",
     "evidence_chain": {
-      "exposure": "BLE OTA, UART interface (untrusted trust zone)",
+      "exposure": "BLE OTA interface lacks cryptographic authentication",
       "matched_pattern": "STRIDE-S-001",
-      "applicability_reason": "The asset 'Firmware Image' exposes BLE OTA, UART interfaces in untrusted zone, allowing an adversary to execute STRIDE-S-001 via replay.",
-      "citation": "STRIDE-S-001: Spoofing Identity via BLE Device Impersonation (STRIDE)"
+      "applicability_reason": "The embedded firmware does not implement signature verification for updates over BLE, allowing spoofed devices to impersonate legitimate devices and send malicious commands.",
+      "citation": "CAPEC-185: Device Impersonation via MAC Address Spoofing (CAPEC v3.9)"
     },
     "confidence_score": 0.7408534591881364,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:42.934428Z",
+    "created_at": "2026-09-23T19:15:17.979894Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-E2A349BC-005",
+    "tid": "THR-PATH-154E8826-005",
     "asset_id": "AS-4",
-    "stride_category": "Repudiation",
-    "attack_vector": "An attacker deletes audit log entries to conceal unauthorized access events.",
+    "stride_category": "Tampering",
+    "attack_vector": "An attacker deletes audit log entries to hide unauthorized access events.",
     "kb_reference": "STRIDE-R-001",
     "evidence_chain": {
-      "exposure": "tamper_protection: none",
+      "exposure": "log deletion capability without authentication checks",
       "matched_pattern": "STRIDE-R-001",
-      "applicability_reason": "The audit log uses unprotected flash memory, allowing an attacker to erase logs without detection.",
-      "citation": "CAPEC-158: Log Tampering"
+      "applicability_reason": "The audit log is stored in unprotected flash memory, allowing an attacker to delete entries without any tamper protection or authentication.",
+      "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
     },
     "confidence_score": 0.7380115106092082,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:46.050256Z",
+    "created_at": "2026-09-23T19:15:20.902845Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-E25EFB61-006",
+    "tid": "THR-PATH-1BD901C8-006",
     "asset_id": "AS-6",
     "stride_category": "Tampering",
-    "attack_vector": "Exploitation of STRIDE-T-001 (Tampering with Firmware Parameters via Unprotected Storage) via injection targeting Cryptographic Keys",
+    "attack_vector": "An attacker modifies cryptographic keys stored in persistent memory via physical access.",
     "kb_reference": "STRIDE-T-001",
     "evidence_chain": {
-      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "exposure": "persistent key_storage with physical tampering vulnerability",
       "matched_pattern": "STRIDE-T-001",
-      "applicability_reason": "The asset 'Cryptographic Keys' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute STRIDE-T-001 via injection.",
-      "citation": "STRIDE-T-001: Tampering with Firmware Parameters via Unprotected Storage (STRIDE)"
+      "applicability_reason": "The persistent key storage can be easily accessed through physical tampering, enabling modification of cryptographic keys, vital to device security.",
+      "citation": "CAPEC-93: Firmware Modification (CAPEC v3.9)"
     },
     "confidence_score": 0.7238529391244931,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:46.465710Z",
+    "created_at": "2026-09-23T19:15:23.190843Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-51D47D6D-007",
+    "tid": "THR-PATH-60D33918-007",
     "asset_id": "AS-6",
     "stride_category": "Spoofing",
-    "attack_vector": "An attacker forges BLE pairing keys to impersonate the smart lock and unlock it remotely.",
+    "attack_vector": "An attacker forges BLE pairing keys to impersonate the legitimate lock owner and send unlock commands.",
     "kb_reference": "CAPEC-196",
     "evidence_chain": {
-      "exposure": "Weakness in BLE pairing key generation providing predictability.",
+      "exposure": "weak entropy or predictable structure of session credentials stored in firmware",
       "matched_pattern": "CAPEC-196",
-      "applicability_reason": "The cryptographic keys are stored persistently and use weak entropy, making them susceptible to forging.",
+      "applicability_reason": "This pattern applies because the cryptographic keys used for BLE pairing have weak security measures with potential exposure to forgery due to predictable structures.",
       "citation": "CAPEC-196: Session Credential Falsification via Forging (CAPEC v3.9)"
     },
     "confidence_score": 0.7222105645474632,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:50.266602Z",
+    "created_at": "2026-09-23T19:15:26.595674Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-C316DA30-008",
+    "tid": "THR-PATH-D5B0D465-008",
     "asset_id": "AS-6",
     "stride_category": "Tampering",
-    "attack_vector": "Exploitation of CAPEC-186 (Malicious Software Update) via injection targeting Cryptographic Keys",
+    "attack_vector": "An attacker substitutes legitimate firmware updates with malicious versions due to lack of secure update mechanisms.",
     "kb_reference": "CAPEC-186",
     "evidence_chain": {
-      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "exposure": "OTA firmware update channel lacks encryption and authentication.",
       "matched_pattern": "CAPEC-186",
-      "applicability_reason": "The asset 'Cryptographic Keys' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute CAPEC-186 via injection.",
-      "citation": "CAPEC-186: Malicious Software Update (CAPEC)"
+      "applicability_reason": "The asset has a cloud-based OTA update capability but does not employ secure mechanisms such as certificate pinning, allowing unauthorized firmware to be uploaded.",
+      "citation": "CAPEC-186: Malicious Software Update (CAPEC v3.9)"
     },
     "confidence_score": 0.7185167605126879,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:50.882472Z",
+    "created_at": "2026-09-23T19:15:29.146619Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-C2A23699-009",
+    "tid": "THR-PATH-98C1C560-009",
     "asset_id": "AS-3",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CWE-798 (Use of Hard-coded Credentials) via replay targeting Firmware Image",
+    "attack_vector": "An attacker exploits hard-coded credentials to authenticate and manipulate the firmware image.",
     "kb_reference": "CWE-798",
     "evidence_chain": {
-      "exposure": "BLE OTA, UART interface (untrusted trust zone)",
+      "exposure": "BLE OTA interface without signature verification",
       "matched_pattern": "CWE-798",
-      "applicability_reason": "The asset 'Firmware Image' exposes BLE OTA, UART interfaces in untrusted zone, allowing an adversary to execute CWE-798 via replay.",
-      "citation": "CWE-798: Use of Hard-coded Credentials (CWE)"
+      "applicability_reason": "The firmware does not implement signature verification, allowing an attacker to use hard-coded credentials to gain unauthorized access.",
+      "citation": "CWE-798: Use of Hard-coded Credentials"
     },
     "confidence_score": 0.7184969950618154,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:51.290030Z",
+    "created_at": "2026-09-23T19:15:31.040331Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-E8009608-010",
+    "tid": "THR-PATH-A2595680-010",
     "asset_id": "AS-1",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-94 (Adversary in the Middle (AiTM)) via replay targeting Unlock Command",
+    "attack_vector": "An attacker intercepts and modifies BLE unlock commands sent from a mobile app to the smart lock.",
     "kb_reference": "CAPEC-94",
     "evidence_chain": {
-      "exposure": "BLE 5.0, GATT, Cloud API interface (untrusted trust zone)",
+      "exposure": "unencrypted BLE advertisement channels and unauthenticated pairing",
       "matched_pattern": "CAPEC-94",
-      "applicability_reason": "The asset 'Unlock Command' exposes BLE 5.0, GATT, Cloud API interfaces in untrusted zone, allowing an adversary to execute CAPEC-94 via replay.",
-      "citation": "CAPEC-94: Adversary in the Middle (AiTM) (CAPEC)"
+      "applicability_reason": "This pattern applies due to the untrusted trust zone of the unlock command interface coupled with lack of encryption and insecure pairing modes, allowing for message interception.",
+      "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
     },
     "confidence_score": 0.7168229857894199,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:51.700554Z",
+    "created_at": "2026-09-23T19:15:34.655728Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-F53CD246-011",
+    "tid": "THR-PATH-38796DE8-011",
     "asset_id": "AS-3",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-94 (Adversary in the Middle (AiTM)) via replay targeting Firmware Image",
+    "attack_vector": "An attacker intercepts and modifies firmware update commands during the OTA process.",
     "kb_reference": "CAPEC-94",
     "evidence_chain": {
-      "exposure": "BLE OTA, UART interface (untrusted trust zone)",
+      "exposure": "BLE OTA interface is unencrypted allowing interception.",
       "matched_pattern": "CAPEC-94",
-      "applicability_reason": "The asset 'Firmware Image' exposes BLE OTA, UART interfaces in untrusted zone, allowing an adversary to execute CAPEC-94 via replay.",
-      "citation": "CAPEC-94: Adversary in the Middle (AiTM) (CAPEC)"
+      "applicability_reason": "The firmware image relies on the BLE OTA interface for updates, which lacks signature verification, making it susceptible to interception and spoofing.",
+      "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
     },
     "confidence_score": 0.7162221412393879,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:52.006730Z",
+    "created_at": "2026-09-23T19:15:38.176291Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-A2DF0917-012",
+    "tid": "THR-PATH-865F1D3D-012",
     "asset_id": "AS-3",
     "stride_category": "Tampering",
-    "attack_vector": "Exploitation of STRIDE-T-001 (Tampering with Firmware Parameters via Unprotected Storage) via injection targeting Firmware Image",
+    "attack_vector": "An attacker modifies firmware configuration parameters through an unauthenticated BLE OTA update.",
     "kb_reference": "STRIDE-T-001",
     "evidence_chain": {
-      "exposure": "BLE OTA, UART interface (untrusted trust zone)",
+      "exposure": "BLE OTA interface lacking signature verification",
       "matched_pattern": "STRIDE-T-001",
-      "applicability_reason": "The asset 'Firmware Image' exposes BLE OTA, UART interfaces in untrusted zone, allowing an adversary to execute STRIDE-T-001 via injection.",
-      "citation": "STRIDE-T-001: Tampering with Firmware Parameters via Unprotected Storage (STRIDE)"
+      "applicability_reason": "The firmware image has no signature verification, allowing unauthorized modifications through the BLE OTA interface.",
+      "citation": "CAPEC-163: Tampering with Configuration Data (CAPEC v3.9)"
     },
     "confidence_score": 0.7159636786005692,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:52.280986Z",
+    "created_at": "2026-09-23T19:15:41.360731Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-15C137E7-013",
+    "tid": "THR-PATH-D56DEECB-013",
     "asset_id": "AS-5",
     "stride_category": "InformationDisclosure",
-    "attack_vector": "Exploitation of CWE-311 (Missing Encryption of Sensitive Data) via unencrypted transmission targeting User PII (schedule, address)",
+    "attack_vector": "An attacker intercepts unencrypted user data transmitted over BLE or HTTPS.",
     "kb_reference": "CWE-311",
     "evidence_chain": {
-      "exposure": "BLE Broadcast, HTTPS, REST interface (external trust zone)",
+      "exposure": "BLE Broadcast, HTTPS",
       "matched_pattern": "CWE-311",
-      "applicability_reason": "The asset 'User PII (schedule, address)' exposes BLE Broadcast, HTTPS, REST interfaces in external zone, allowing an adversary to execute CWE-311 via unencrypted transmission.",
-      "citation": "CWE-311: Missing Encryption of Sensitive Data (CWE)"
+      "applicability_reason": "The asset has no encryption for PII data like schedules and addresses, making it vulnerable to interception.",
+      "citation": "CWE-311: Missing Encryption of Sensitive Data"
     },
     "confidence_score": 0.7157188057899475,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:52.564590Z",
+    "created_at": "2026-09-23T19:15:44.407923Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-565B26A1-014",
+    "tid": "THR-PATH-D5983BE4-014",
     "asset_id": "AS-1",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-196 (Session Credential Falsification via Forging) via replay targeting Unlock Command",
+    "attack_vector": "An attacker forges BLE pairing keys to impersonate a legitimate user and issue unlock commands.",
     "kb_reference": "CAPEC-196",
     "evidence_chain": {
-      "exposure": "BLE 5.0, GATT, Cloud API interface (untrusted trust zone)",
+      "exposure": "BLE 5.0 interface with unauthenticated pairing",
       "matched_pattern": "CAPEC-196",
-      "applicability_reason": "The asset 'Unlock Command' exposes BLE 5.0, GATT, Cloud API interfaces in untrusted zone, allowing an adversary to execute CAPEC-196 via replay.",
-      "citation": "CAPEC-196: Session Credential Falsification via Forging (CAPEC)"
+      "applicability_reason": "The BLE interface allows unauthenticated pairing, making it vulnerable to session credential forgery.",
+      "citation": "CAPEC-196: Session Credential Falsification via Forging (CAPEC v3.9)"
     },
     "confidence_score": 0.7146475357237416,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:52.860938Z",
+    "created_at": "2026-09-23T19:15:47.561948Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-EE89C091-015",
+    "tid": "THR-PATH-FCF15542-015",
     "asset_id": "AS-4",
     "stride_category": "Tampering",
-    "attack_vector": "Exploitation of STRIDE-T-001 (Tampering with Firmware Parameters via Unprotected Storage) via injection targeting Audit Log",
+    "attack_vector": "An attacker modifies the audit log entries stored in unprotected flash memory.",
     "kb_reference": "STRIDE-T-001",
     "evidence_chain": {
-      "exposure": "SPI Flash, Internal Bus interface (trusted trust zone)",
+      "exposure": "absence of tamper protection on flash memory",
       "matched_pattern": "STRIDE-T-001",
-      "applicability_reason": "The asset 'Audit Log' exposes SPI Flash, Internal Bus interfaces in trusted zone, allowing an adversary to execute STRIDE-T-001 via injection.",
-      "citation": "STRIDE-T-001: Tampering with Firmware Parameters via Unprotected Storage (STRIDE)"
+      "applicability_reason": "The audit log is stored in unprotected flash memory, making it vulnerable to physical access tampering.",
+      "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
     },
     "confidence_score": 0.7140568069185733,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:53.238087Z",
+    "created_at": "2026-09-23T19:15:51.091508Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-D09FDB6E-016",
+    "tid": "THR-PATH-17FB9FEF-016",
     "asset_id": "AS-3",
     "stride_category": "Tampering",
-    "attack_vector": "Exploitation of CAPEC-62 (Cross-Site Request Forgery via IMG Tag) via injection targeting Firmware Image",
+    "attack_vector": "An attacker exploits the absence of CSRF protection to initiate unauthorized firmware updates.",
     "kb_reference": "CAPEC-62",
     "evidence_chain": {
-      "exposure": "BLE OTA, UART interface (untrusted trust zone)",
+      "exposure": "Firmware Image's BLE OTA interface allows remote updates.",
       "matched_pattern": "CAPEC-62",
-      "applicability_reason": "The asset 'Firmware Image' exposes BLE OTA, UART interfaces in untrusted zone, allowing an adversary to execute CAPEC-62 via injection.",
-      "citation": "CAPEC-62: Cross-Site Request Forgery via IMG Tag (CAPEC)"
+      "applicability_reason": "The firmware image's OTA interface lacks session security controls, making it vulnerable to CSRF attacks, where an attacker could remotely manipulate the update process.",
+      "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
     },
     "confidence_score": 0.7135657604466161,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:53.530345Z",
+    "created_at": "2026-09-23T19:15:54.283898Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-1231B36C-017",
+    "tid": "THR-PATH-5E623835-017",
     "asset_id": "AS-1",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CWE-798 (Use of Hard-coded Credentials) via replay targeting Unlock Command",
+    "attack_vector": "An attacker exploits hard-coded BLE pairing keys to impersonate a legitimate user and unlock the door.",
     "kb_reference": "CWE-798",
     "evidence_chain": {
-      "exposure": "BLE 5.0, GATT, Cloud API interface (untrusted trust zone)",
+      "exposure": "BLE pairing configuration, which uses hard-coded credentials for authentication",
       "matched_pattern": "CWE-798",
-      "applicability_reason": "The asset 'Unlock Command' exposes BLE 5.0, GATT, Cloud API interfaces in untrusted zone, allowing an adversary to execute CWE-798 via replay.",
-      "citation": "CWE-798: Use of Hard-coded Credentials (CWE)"
+      "applicability_reason": "The lock's use of hard-coded BLE pairing keys allows an attacker to bypass authentication, as no secure authentication mechanism is used.",
+      "citation": "CWE-798: Use of Hard-coded Credentials"
     },
     "confidence_score": 0.707100900584406,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:53.774589Z",
+    "created_at": "2026-09-23T19:15:57.751458Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-E2D2713B-018",
+    "tid": "THR-PATH-29E605DA-018",
     "asset_id": "AS-6",
     "stride_category": "Spoofing",
-    "attack_vector": "An attacker exploits weak authentication mechanisms to gain unauthorized access to cryptographic key material.",
+    "attack_vector": "An attacker uses exhaustive attempts to guess cryptographic keys due to weak key management practices.",
     "kb_reference": "CAPEC-112",
     "evidence_chain": {
-      "exposure": "physical interface (I2C, SPI) susceptible to brute-force attacks on weak credentials",
+      "exposure": "short key lengths and absence of rate limiting on access attempts",
       "matched_pattern": "CAPEC-112",
-      "applicability_reason": "The smart door lock's reliance on cryptographic keys stored in a trusted zone makes it vulnerable if authentication methods are weak, allowing brute-force enumeration.",
+      "applicability_reason": "The cryptographic keys used in the smart door lock are at risk due to their exposure through interfaces like I2C and SPI, where missing protections allow brute force attempts.",
       "citation": "CAPEC-112: Brute Force (CAPEC v3.9)"
     },
     "confidence_score": 0.7066243080310738,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:56.205941Z",
+    "created_at": "2026-09-23T19:15:59.942331Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-5A81EBDE-019",
+    "tid": "THR-PATH-49A3AA9F-019",
     "asset_id": "AS-1",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-60 (Reusing Session IDs (Session Replay Attack)) via replay targeting Unlock Command",
+    "attack_vector": "An attacker captures and replays BLE pairing handshake packets to gain unauthorized access.",
     "kb_reference": "CAPEC-60",
     "evidence_chain": {
-      "exposure": "BLE 5.0, GATT, Cloud API interface (untrusted trust zone)",
+      "exposure": "BLE 5.0 interface with unauthenticated pairing.",
       "matched_pattern": "CAPEC-60",
-      "applicability_reason": "The asset 'Unlock Command' exposes BLE 5.0, GATT, Cloud API interfaces in untrusted zone, allowing an adversary to execute CAPEC-60 via replay.",
-      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack) (CAPEC)"
+      "applicability_reason": "The asset uses an unauthenticated pairing method and has no encryption, making it vulnerable to session replay attacks.",
+      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack)"
     },
     "confidence_score": 0.7046765292076433,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:56.716942Z",
+    "created_at": "2026-09-23T19:16:03.004685Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-5442517C-020",
+    "tid": "THR-PATH-D3483660-020",
     "asset_id": "AS-3",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-196 (Session Credential Falsification via Forging) via replay targeting Firmware Image",
+    "attack_vector": "An attacker forges BLE pairing keys to impersonate the device owner and send unauthorized unlock commands.",
     "kb_reference": "CAPEC-196",
     "evidence_chain": {
-      "exposure": "BLE OTA, UART interface (untrusted trust zone)",
+      "exposure": "BLE OTA interface with weak session token security",
       "matched_pattern": "CAPEC-196",
-      "applicability_reason": "The asset 'Firmware Image' exposes BLE OTA, UART interfaces in untrusted zone, allowing an adversary to execute CAPEC-196 via replay.",
-      "citation": "CAPEC-196: Session Credential Falsification via Forging (CAPEC)"
+      "applicability_reason": "The firmware does not implement signature verification, allowing an attacker to generate credentials through brute force or exploitation of predictable structures.",
+      "citation": "CAPEC-196: Session Credential Falsification via Forging (CAPEC v3.9)"
     },
     "confidence_score": 0.7037013824342033,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:57.128407Z",
+    "created_at": "2026-09-23T19:16:05.306069Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-C2E858F3-021",
+    "tid": "THR-PATH-B84ED9B5-021",
     "asset_id": "AS-1",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-112 (Brute Force) via replay targeting Unlock Command",
+    "attack_vector": "An attacker attempts to guess the unlock PIN through repeated attempts.",
     "kb_reference": "CAPEC-112",
     "evidence_chain": {
-      "exposure": "BLE 5.0, GATT, Cloud API interface (untrusted trust zone)",
+      "exposure": "PIN-only authentication without rate limiting",
       "matched_pattern": "CAPEC-112",
-      "applicability_reason": "The asset 'Unlock Command' exposes BLE 5.0, GATT, Cloud API interfaces in untrusted zone, allowing an adversary to execute CAPEC-112 via replay.",
-      "citation": "CAPEC-112: Brute Force (CAPEC)"
+      "applicability_reason": "The asset uses a PIN-only authentication method that lacks lockout policies or rate limiting, making it highly susceptible to brute force attacks.",
+      "citation": "CAPEC-112: Brute Force (CAPEC v3.9)"
     },
     "confidence_score": 0.7033423837015171,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:57.403634Z",
+    "created_at": "2026-09-23T19:16:08.367187Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-CFF06284-022",
+    "tid": "THR-PATH-91235225-022",
     "asset_id": "AS-1",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of STRIDE-S-001 (Spoofing Identity via BLE Device Impersonation) via replay targeting Unlock Command",
+    "attack_vector": "An attacker sends unlock commands by impersonating a legitimate BLE device.",
     "kb_reference": "STRIDE-S-001",
     "evidence_chain": {
-      "exposure": "BLE 5.0, GATT, Cloud API interface (untrusted trust zone)",
+      "exposure": "BLE 5.0 interface accepting unauthenticated commands",
       "matched_pattern": "STRIDE-S-001",
-      "applicability_reason": "The asset 'Unlock Command' exposes BLE 5.0, GATT, Cloud API interfaces in untrusted zone, allowing an adversary to execute STRIDE-S-001 via replay.",
-      "citation": "STRIDE-S-001: Spoofing Identity via BLE Device Impersonation (STRIDE)"
+      "applicability_reason": "The unlock command is sent via BLE without cryptographic pairing, making it vulnerable to MAC address spoofing.",
+      "citation": "CAPEC-169: Device Impersonation via MAC Address Spoofing"
     },
     "confidence_score": 0.7007558822181299,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:57.740877Z",
+    "created_at": "2026-09-23T19:16:11.651389Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-7297F659-023",
+    "tid": "THR-PATH-2AA0E45F-023",
     "asset_id": "AS-6",
     "stride_category": "InformationDisclosure",
-    "attack_vector": "Exploitation of STRIDE-I-001 (Information Disclosure via Cleartext Credential Transmission) via unencrypted transmission targeting Cryptographic Keys",
+    "attack_vector": "An attacker intercepts unencrypted transmission of cryptographic keys over BLE.",
     "kb_reference": "STRIDE-I-001",
     "evidence_chain": {
-      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "exposure": "BLE communication interface",
       "matched_pattern": "STRIDE-I-001",
-      "applicability_reason": "The asset 'Cryptographic Keys' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute STRIDE-I-001 via unencrypted transmission.",
-      "citation": "STRIDE-I-001: Information Disclosure via Cleartext Credential Transmission (STRIDE)"
+      "applicability_reason": "The device uses BLE for communication, which could transmit keys without proper encryption, making it vulnerable to interception.",
+      "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
     },
     "confidence_score": 0.6963373364109603,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:58.151903Z",
+    "created_at": "2026-09-23T19:16:14.108034Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-FA061DC5-024",
+    "tid": "THR-PATH-869D73D8-024",
     "asset_id": "AS-5",
     "stride_category": "InformationDisclosure",
-    "attack_vector": "Exploitation of STRIDE-I-001 (Information Disclosure via Cleartext Credential Transmission) via unencrypted transmission targeting User PII (schedule, address)",
+    "attack_vector": "An attacker intercepts BLE communications to capture unencrypted PII during transactions.",
     "kb_reference": "STRIDE-I-001",
     "evidence_chain": {
-      "exposure": "BLE Broadcast, HTTPS, REST interface (external trust zone)",
+      "exposure": "BLE Broadcast interface lacking encryption",
       "matched_pattern": "STRIDE-I-001",
-      "applicability_reason": "The asset 'User PII (schedule, address)' exposes BLE Broadcast, HTTPS, REST interfaces in external zone, allowing an adversary to execute STRIDE-I-001 via unencrypted transmission.",
-      "citation": "STRIDE-I-001: Information Disclosure via Cleartext Credential Transmission (STRIDE)"
+      "applicability_reason": "The asset transmits sensitive PII over BLE without encryption, making it vulnerable to eavesdropping.",
+      "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
     },
     "confidence_score": 0.6960946204605929,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:58.471609Z",
+    "created_at": "2026-09-23T19:16:17.347349Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-CD2B0EE5-025",
+    "tid": "THR-PATH-771C7789-025",
     "asset_id": "AS-3",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-60 (Reusing Session IDs (Session Replay Attack)) via replay targeting Firmware Image",
+    "attack_vector": "An attacker replays captured BLE pairing packets to gain unauthorized access.",
     "kb_reference": "CAPEC-60",
     "evidence_chain": {
-      "exposure": "BLE OTA, UART interface (untrusted trust zone)",
+      "exposure": "Lack of session token expiration and weak nonce generation in BLE authentication.",
       "matched_pattern": "CAPEC-60",
-      "applicability_reason": "The asset 'Firmware Image' exposes BLE OTA, UART interfaces in untrusted zone, allowing an adversary to execute CAPEC-60 via replay.",
-      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack) (CAPEC)"
+      "applicability_reason": "The firmware image uses BLE for OTA updates without proper session handling, making it vulnerable to replay attacks.",
+      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack)"
     },
     "confidence_score": 0.6958243017406104,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:58.740608Z",
+    "created_at": "2026-09-23T19:16:19.532431Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-9D086656-026",
+    "tid": "THR-PATH-0926E1F9-026",
     "asset_id": "AS-1",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of ATT&CK-T1078 (Valid Accounts) via replay targeting Unlock Command",
+    "attack_vector": "An attacker can use compromised valid credentials to issue unlock commands to the door lock.",
     "kb_reference": "ATT&CK-T1078",
     "evidence_chain": {
-      "exposure": "BLE 5.0, GATT, Cloud API interface (untrusted trust zone)",
+      "exposure": "PIN-only authentication on BLE interface",
       "matched_pattern": "ATT&CK-T1078",
-      "applicability_reason": "The asset 'Unlock Command' exposes BLE 5.0, GATT, Cloud API interfaces in untrusted zone, allowing an adversary to execute ATT&CK-T1078 via replay.",
-      "citation": "ATT&CK-T1078: Valid Accounts (ATT&CK)"
+      "applicability_reason": "The unlock command is vulnerable due to its PIN-only authentication mechanism, making it easy for attackers to exploit compromised credentials.",
+      "citation": "CAPEC-92: Credential Theft (CAPEC v3.9)"
     },
     "confidence_score": 0.6936377974260517,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:59.072941Z",
+    "created_at": "2026-09-23T19:16:21.706014Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-7789F39A-027",
+    "tid": "THR-PATH-E283C36B-027",
     "asset_id": "AS-6",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-60 (Reusing Session IDs (Session Replay Attack)) via replay targeting Cryptographic Keys",
+    "attack_vector": "An attacker reuses a captured pairing handshake packet to unlock the door lock as a legitimate user.",
     "kb_reference": "CAPEC-60",
     "evidence_chain": {
-      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "exposure": "BLE interface used for authentication",
       "matched_pattern": "CAPEC-60",
-      "applicability_reason": "The asset 'Cryptographic Keys' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute CAPEC-60 via replay.",
-      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack) (CAPEC)"
+      "applicability_reason": "The BLE interface is susceptible to session replay attacks due to a lack of session expiration and possible weak nonce generation.",
+      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack)"
     },
     "confidence_score": 0.6925039084999596,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:59.485107Z",
+    "created_at": "2026-09-23T19:16:23.778263Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-799D368B-028",
+    "tid": "THR-PATH-6EA6E759-028",
     "asset_id": "AS-6",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of STRIDE-S-001 (Spoofing Identity via BLE Device Impersonation) via replay targeting Cryptographic Keys",
+    "attack_vector": "An attacker impersonates the smart lock by spoofing its BLE MAC address, potentially unlocking the door.",
     "kb_reference": "STRIDE-S-001",
     "evidence_chain": {
-      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "exposure": "BLE interface relying on MAC address for authentication.",
       "matched_pattern": "STRIDE-S-001",
-      "applicability_reason": "The asset 'Cryptographic Keys' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute STRIDE-S-001 via replay.",
-      "citation": "STRIDE-S-001: Spoofing Identity via BLE Device Impersonation (STRIDE)"
+      "applicability_reason": "The asset relies on BLE for unlocking, and any device using MAC address for authentication can be vulnerable to impersonation.",
+      "citation": "CAPEC-50: Address Forwarding (CAPEC v3.9)"
     },
     "confidence_score": 0.6917388496321097,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:01:59.893236Z",
+    "created_at": "2026-09-23T19:16:28.511495Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-8AEB7BB1-029",
+    "tid": "THR-PATH-1C85DC6B-029",
     "asset_id": "AS-3",
     "stride_category": "InformationDisclosure",
-    "attack_vector": "Exploitation of ATT&CK-T1557 (Adversary-in-the-Middle) via unencrypted transmission targeting Firmware Image",
+    "attack_vector": "An attacker intercepts BLE firmware updates to manipulate device behavior.",
     "kb_reference": "ATT&CK-T1557",
     "evidence_chain": {
-      "exposure": "BLE OTA, UART interface (untrusted trust zone)",
+      "exposure": "BLE OTA interface",
       "matched_pattern": "ATT&CK-T1557",
-      "applicability_reason": "The asset 'Firmware Image' exposes BLE OTA, UART interfaces in untrusted zone, allowing an adversary to execute ATT&CK-T1557 via unencrypted transmission.",
-      "citation": "ATT&CK-T1557: Adversary-in-the-Middle (ATT&CK)"
+      "applicability_reason": "The firmware image's OTA update lacks signature verification, allowing interception by an untrusted entity.",
+      "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
     },
     "confidence_score": 0.690345756370335,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:00.215035Z",
+    "created_at": "2026-09-23T19:16:30.526613Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-04D05C50-030",
+    "tid": "THR-PATH-477B5E50-030",
     "asset_id": "AS-1",
     "stride_category": "InformationDisclosure",
-    "attack_vector": "Exploitation of STRIDE-I-001 (Information Disclosure via Cleartext Credential Transmission) via unencrypted transmission targeting Unlock Command",
+    "attack_vector": "An attacker intercepts BLE communication to capture unlock command data without encryption.",
     "kb_reference": "STRIDE-I-001",
     "evidence_chain": {
-      "exposure": "BLE 5.0, GATT, Cloud API interface (untrusted trust zone)",
+      "exposure": "BLE 5.0 communication with no encryption",
       "matched_pattern": "STRIDE-I-001",
-      "applicability_reason": "The asset 'Unlock Command' exposes BLE 5.0, GATT, Cloud API interfaces in untrusted zone, allowing an adversary to execute STRIDE-I-001 via unencrypted transmission.",
-      "citation": "STRIDE-I-001: Information Disclosure via Cleartext Credential Transmission (STRIDE)"
+      "applicability_reason": "The unlock command relies on BLE communication, which lacks encryption. This makes it vulnerable to eavesdropping, allowing attackers to capture sensitive commands.",
+      "citation": "CAPEC-149: Eavesdropping on Communication"
     },
     "confidence_score": 0.6871720031294819,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:00.500686Z",
+    "created_at": "2026-09-23T19:16:33.422288Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-0848C619-031",
+    "tid": "THR-PATH-23779A9E-031",
     "asset_id": "AS-6",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-94 (Adversary in the Middle (AiTM)) via replay targeting Cryptographic Keys",
+    "attack_vector": "An attacker intercepts and modifies communication between the mobile app and the smart lock to gain unauthorized access.",
     "kb_reference": "CAPEC-94",
     "evidence_chain": {
-      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "exposure": "BLE communication interface",
       "matched_pattern": "CAPEC-94",
-      "applicability_reason": "The asset 'Cryptographic Keys' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute CAPEC-94 via replay.",
-      "citation": "CAPEC-94: Adversary in the Middle (AiTM) (CAPEC)"
+      "applicability_reason": "The cryptographic keys are exchanged over BLE, which can be intercepted by an attacker using weak or no encryption, allowing them to spoof legitimate commands.",
+      "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
     },
     "confidence_score": 0.6870983038217342,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:00.803751Z",
+    "created_at": "2026-09-23T19:16:37.373373Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-C77CB23D-032",
+    "tid": "THR-PATH-C3CAAA7D-032",
     "asset_id": "AS-4",
     "stride_category": "Tampering",
-    "attack_vector": "Exploitation of CAPEC-186 (Malicious Software Update) via injection targeting Audit Log",
+    "attack_vector": "An attacker replaces legitimate firmware with malicious software during an update.",
     "kb_reference": "CAPEC-186",
     "evidence_chain": {
-      "exposure": "SPI Flash, Internal Bus interface (trusted trust zone)",
+      "exposure": "cloud management and OTA firmware update interface",
       "matched_pattern": "CAPEC-186",
-      "applicability_reason": "The asset 'Audit Log' exposes SPI Flash, Internal Bus interfaces in trusted zone, allowing an adversary to execute CAPEC-186 via injection.",
-      "citation": "CAPEC-186: Malicious Software Update (CAPEC)"
+      "applicability_reason": "The asset stores audit logs which may not be protected by tamper-evident mechanisms, making it susceptible to malicious updates that compromise integrity.",
+      "citation": "CAPEC-186: Malicious Software Update (CAPEC v3.9)"
     },
     "confidence_score": 0.6859277563181214,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:01.224517Z",
+    "created_at": "2026-09-23T19:16:39.778304Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-12757DAB-033",
+    "tid": "THR-PATH-F241CEFB-033",
     "asset_id": "AS-5",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-60 (Reusing Session IDs (Session Replay Attack)) via replay targeting User PII (schedule, address)",
+    "attack_vector": "An attacker intercepts and reuses a valid BLE session token to impersonate the user.",
     "kb_reference": "CAPEC-60",
     "evidence_chain": {
-      "exposure": "BLE Broadcast, HTTPS, REST interface (external trust zone)",
+      "exposure": "BLE Broadcast interface with weak nonce handling",
       "matched_pattern": "CAPEC-60",
-      "applicability_reason": "The asset 'User PII (schedule, address)' exposes BLE Broadcast, HTTPS, REST interfaces in external zone, allowing an adversary to execute CAPEC-60 via replay.",
-      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack) (CAPEC)"
+      "applicability_reason": "The asset relies on BLE for authentication, which may use static or weak nonces, making it vulnerable to replay attacks.",
+      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack)"
     },
     "confidence_score": 0.6792911482279811,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:01.525867Z",
+    "created_at": "2026-09-23T19:16:41.940019Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-0B824379-034",
+    "tid": "THR-PATH-D50F5885-034",
     "asset_id": "AS-2",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CWE-798 (Use of Hard-coded Credentials) via replay targeting E-Key Credential",
+    "attack_vector": "An attacker exploits hard-coded credentials to gain unauthorized access.",
     "kb_reference": "CWE-798",
     "evidence_chain": {
-      "exposure": "HTTPS, REST, OAuth 2.0 interface (external trust zone)",
+      "exposure": "Cloud database interface using JWT for authentication",
       "matched_pattern": "CWE-798",
-      "applicability_reason": "The asset 'E-Key Credential' exposes HTTPS, REST, OAuth 2.0 interfaces in external zone, allowing an adversary to execute CWE-798 via replay.",
-      "citation": "CWE-798: Use of Hard-coded Credentials (CWE)"
+      "applicability_reason": "The asset stores access credentials for authentication via JWT, and hard-coded credentials present a significant weakness in this context, allowing unauthorized users to bypass security measures.",
+      "citation": "CWE-798: Use of Hard-coded Credentials"
     },
     "confidence_score": 0.6777528673410416,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:01.888677Z",
+    "created_at": "2026-09-23T19:16:44.246401Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-82A714DF-035",
+    "tid": "THR-PATH-1B8F7F20-035",
     "asset_id": "AS-5",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CWE-798 (Use of Hard-coded Credentials) via replay targeting User PII (schedule, address)",
+    "attack_vector": "An attacker leverages hard-coded credentials to impersonate the user and access PII.",
     "kb_reference": "CWE-798",
     "evidence_chain": {
-      "exposure": "BLE Broadcast, HTTPS, REST interface (external trust zone)",
+      "exposure": "Hard-coded credentials in firmware for external communication.",
       "matched_pattern": "CWE-798",
-      "applicability_reason": "The asset 'User PII (schedule, address)' exposes BLE Broadcast, HTTPS, REST interfaces in external zone, allowing an adversary to execute CWE-798 via replay.",
-      "citation": "CWE-798: Use of Hard-coded Credentials (CWE)"
+      "applicability_reason": "The asset uses BLE and REST interfaces that may require authentication, making hard-coded credentials a significant risk for unauthorized access.",
+      "citation": "CWE-798: Use of Hard-coded Credentials"
     },
     "confidence_score": 0.6729753911495209,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:02.645012Z",
+    "created_at": "2026-09-23T19:16:47.644093Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-D706A7E2-036",
+    "tid": "THR-PATH-9F73DD9C-036",
     "asset_id": "AS-5",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of ATT&CK-T1078 (Valid Accounts) via replay targeting User PII (schedule, address)",
+    "attack_vector": "An attacker uses stolen credentials to access user PII without proper authorization.",
     "kb_reference": "ATT&CK-T1078",
     "evidence_chain": {
-      "exposure": "BLE Broadcast, HTTPS, REST interface (external trust zone)",
+      "exposure": "BLE Broadcast, HTTPS, REST interfaces open to external access",
       "matched_pattern": "ATT&CK-T1078",
-      "applicability_reason": "The asset 'User PII (schedule, address)' exposes BLE Broadcast, HTTPS, REST interfaces in external zone, allowing an adversary to execute ATT&CK-T1078 via replay.",
-      "citation": "ATT&CK-T1078: Valid Accounts (ATT&CK)"
+      "applicability_reason": "The asset has no encryption for user data and relies on BLE and REST interfaces, making it susceptible to credential theft and unauthorized access.",
+      "citation": "MITRE ATT&CK: Valid Accounts (ATT&CK v10)"
     },
     "confidence_score": 0.6726686558922725,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:04.103581Z",
+    "created_at": "2026-09-23T19:16:51.088663Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-28BF317D-037",
+    "tid": "THR-PATH-F10EC78F-037",
     "asset_id": "AS-5",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of STRIDE-S-001 (Spoofing Identity via BLE Device Impersonation) via replay targeting User PII (schedule, address)",
+    "attack_vector": "An attacker impersonates a legitimate device to send unauthorized BLE unlock commands.",
     "kb_reference": "STRIDE-S-001",
     "evidence_chain": {
-      "exposure": "BLE Broadcast, HTTPS, REST interface (external trust zone)",
+      "exposure": "BLE Broadcast interface susceptible to MAC address spoofing.",
       "matched_pattern": "STRIDE-S-001",
-      "applicability_reason": "The asset 'User PII (schedule, address)' exposes BLE Broadcast, HTTPS, REST interfaces in external zone, allowing an adversary to execute STRIDE-S-001 via replay.",
-      "citation": "STRIDE-S-001: Spoofing Identity via BLE Device Impersonation (STRIDE)"
+      "applicability_reason": "The system relies on BLE for authentication without cryptographic pairing, allowing MAC spoofing for access.",
+      "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
     },
     "confidence_score": 0.6690030246973038,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:04.499714Z",
+    "created_at": "2026-09-23T19:16:53.949810Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-D75AE720-038",
+    "tid": "THR-PATH-B8A85C55-038",
     "asset_id": "AS-6",
-    "stride_category": "Repudiation",
-    "attack_vector": "Exploitation of STRIDE-R-001 (Repudiation via Audit Log Deletion) via audit bypass targeting Cryptographic Keys",
+    "stride_category": "Tampering",
+    "attack_vector": "An attacker deletes or modifies audit log entries without proper authentication checks.",
     "kb_reference": "STRIDE-R-001",
     "evidence_chain": {
-      "exposure": "I2C, SPI interface (trusted trust zone)",
+      "exposure": "audit log access without authentication",
       "matched_pattern": "STRIDE-R-001",
-      "applicability_reason": "The asset 'Cryptographic Keys' exposes I2C, SPI interfaces in trusted zone, allowing an adversary to execute STRIDE-R-001 via audit bypass.",
-      "citation": "STRIDE-R-001: Repudiation via Audit Log Deletion (STRIDE)"
+      "applicability_reason": "The asset stores sensitive audit logs which can be tampered with due to the lack of authentication, risking concealment of unauthorized actions.",
+      "citation": "CAPEC-165: Log Tampering (CAPEC v3.9)"
     },
     "confidence_score": 0.6668090174553097,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:04.838211Z",
+    "created_at": "2026-09-23T19:16:57.760257Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-81848041-039",
+    "tid": "THR-PATH-FC64C814-039",
     "asset_id": "AS-1",
     "stride_category": "InformationDisclosure",
-    "attack_vector": "Exploitation of CWE-311 (Missing Encryption of Sensitive Data) via unencrypted transmission targeting Unlock Command",
+    "attack_vector": "An attacker intercepts unlock commands transmitted in cleartext over BLE.",
     "kb_reference": "CWE-311",
     "evidence_chain": {
-      "exposure": "BLE 5.0, GATT, Cloud API interface (untrusted trust zone)",
+      "exposure": "unencrypted BLE communication for unlock commands",
       "matched_pattern": "CWE-311",
-      "applicability_reason": "The asset 'Unlock Command' exposes BLE 5.0, GATT, Cloud API interfaces in untrusted zone, allowing an adversary to execute CWE-311 via unencrypted transmission.",
-      "citation": "CWE-311: Missing Encryption of Sensitive Data (CWE)"
+      "applicability_reason": "This asset transmits commands over BLE without encryption, making it susceptible to eavesdropping.",
+      "citation": "CWE-311: Missing Encryption of Sensitive Data"
     },
     "confidence_score": 0.6656387498594079,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:05.108066Z",
+    "created_at": "2026-09-23T19:17:00.962078Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-34112FE0-040",
+    "tid": "THR-PATH-9EE48D68-040",
     "asset_id": "AS-5",
     "stride_category": "ElevationOfPrivilege",
-    "attack_vector": "Exploitation of CWE-306 (Missing Authentication for Critical Function) via access control bypass targeting User PII (schedule, address)",
+    "attack_vector": "An attacker exploits unauthenticated BLE commands to access user PII.",
     "kb_reference": "CWE-306",
     "evidence_chain": {
-      "exposure": "BLE Broadcast, HTTPS, REST interface (external trust zone)",
+      "exposure": "BLE Broadcast interface lacking authentication.",
       "matched_pattern": "CWE-306",
-      "applicability_reason": "The asset 'User PII (schedule, address)' exposes BLE Broadcast, HTTPS, REST interfaces in external zone, allowing an adversary to execute CWE-306 via access control bypass.",
-      "citation": "CWE-306: Missing Authentication for Critical Function (CWE)"
+      "applicability_reason": "The BLE interface does not require authentication, allowing unauthorized access to user data stored on the smart door lock.",
+      "citation": "CWE-306: Missing Authentication for Critical Function"
     },
     "confidence_score": 0.6649932563304901,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:05.478967Z",
+    "created_at": "2026-09-23T19:17:04.011748Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-757EB484-041",
+    "tid": "THR-PATH-E686DB8E-041",
     "asset_id": "AS-4",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-196 (Session Credential Falsification via Forging) via replay targeting Audit Log",
+    "attack_vector": "An attacker forges credentials to gain unauthorized access to audit logs.",
     "kb_reference": "CAPEC-196",
     "evidence_chain": {
-      "exposure": "SPI Flash, Internal Bus interface (trusted trust zone)",
+      "exposure": "Session tokens with weak security mechanisms stored in flash memory.",
       "matched_pattern": "CAPEC-196",
-      "applicability_reason": "The asset 'Audit Log' exposes SPI Flash, Internal Bus interfaces in trusted zone, allowing an adversary to execute CAPEC-196 via replay.",
-      "citation": "CAPEC-196: Session Credential Falsification via Forging (CAPEC)"
+      "applicability_reason": "This pattern applies as the audit log relies on session credentials, and the trust zone has weak tamper protection, allowing forgery.",
+      "citation": "CAPEC-196: Session Credential Falsification via Forging (CAPEC v3.9)"
     },
     "confidence_score": 0.6605566250614374,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:05.766938Z",
+    "created_at": "2026-09-23T19:17:07.422797Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-945E8E82-042",
+    "tid": "THR-PATH-C77324E7-042",
     "asset_id": "AS-5",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-196 (Session Credential Falsification via Forging) via replay targeting User PII (schedule, address)",
+    "attack_vector": "An attacker forges BLE pairing keys to impersonate the legitimate user and unlock the door remotely.",
     "kb_reference": "CAPEC-196",
     "evidence_chain": {
-      "exposure": "BLE Broadcast, HTTPS, REST interface (external trust zone)",
+      "exposure": "BLE Broadcast interface with weak encryption.",
       "matched_pattern": "CAPEC-196",
-      "applicability_reason": "The asset 'User PII (schedule, address)' exposes BLE Broadcast, HTTPS, REST interfaces in external zone, allowing an adversary to execute CAPEC-196 via replay.",
-      "citation": "CAPEC-196: Session Credential Falsification via Forging (CAPEC)"
+      "applicability_reason": "This asset utilizes BLE for unlocking, where weak encryption may enable the attacker to generate or guess session credentials easily.",
+      "citation": "CAPEC-196: Session Credential Falsification via Forging (CAPEC v3.9)"
     },
     "confidence_score": 0.6572134997121397,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:06.137310Z",
+    "created_at": "2026-09-23T19:17:09.981584Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-0849FE87-043",
+    "tid": "THR-PATH-078E52A5-043",
     "asset_id": "AS-5",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-94 (Adversary in the Middle (AiTM)) via replay targeting User PII (schedule, address)",
+    "attack_vector": "An attacker intercepts and modifies unlock commands to gain unauthorized access to user PII.",
     "kb_reference": "CAPEC-94",
     "evidence_chain": {
-      "exposure": "BLE Broadcast, HTTPS, REST interface (external trust zone)",
+      "exposure": "BLE Broadcast",
       "matched_pattern": "CAPEC-94",
-      "applicability_reason": "The asset 'User PII (schedule, address)' exposes BLE Broadcast, HTTPS, REST interfaces in external zone, allowing an adversary to execute CAPEC-94 via replay.",
-      "citation": "CAPEC-94: Adversary in the Middle (AiTM) (CAPEC)"
+      "applicability_reason": "The unencrypted BLE Broadcast interface allows an attacker to intercept communication, making it vulnerable to spoofing attacks that exploit session hijacking.",
+      "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
     },
     "confidence_score": 0.6566251721009513,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:06.546935Z",
+    "created_at": "2026-09-23T19:17:12.938034Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-135D9AD0-044",
+    "tid": "THR-PATH-B0AB0230-044",
     "asset_id": "AS-2",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-196 (Session Credential Falsification via Forging) via replay targeting E-Key Credential",
+    "attack_vector": "An attacker forges the session token to gain unauthorized access to the smart lock.",
     "kb_reference": "CAPEC-196",
     "evidence_chain": {
-      "exposure": "HTTPS, REST, OAuth 2.0 interface (external trust zone)",
+      "exposure": "JWT authentication mechanism utilized for access control.",
       "matched_pattern": "CAPEC-196",
-      "applicability_reason": "The asset 'E-Key Credential' exposes HTTPS, REST, OAuth 2.0 interfaces in external zone, allowing an adversary to execute CAPEC-196 via replay.",
-      "citation": "CAPEC-196: Session Credential Falsification via Forging (CAPEC)"
+      "applicability_reason": "The asset uses JWT for authentication, which, if predictable or weak, can be easily forged, allowing impersonation of legitimate users.",
+      "citation": "CAPEC-196: Session Credential Falsification via Forging (CAPEC v3.9)"
     },
     "confidence_score": 0.6553466227444043,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:06.854155Z",
+    "created_at": "2026-09-23T19:17:15.461699Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-E6AB3B4A-045",
+    "tid": "THR-PATH-DF2AA3FB-045",
     "asset_id": "AS-5",
     "stride_category": "InformationDisclosure",
-    "attack_vector": "Exploitation of ATT&CK-T1557 (Adversary-in-the-Middle) via unencrypted transmission targeting User PII (schedule, address)",
+    "attack_vector": "An attacker intercepts Bluetooth Low Energy (BLE) communications to capture user PII such as schedule and address data.",
     "kb_reference": "ATT&CK-T1557",
     "evidence_chain": {
-      "exposure": "BLE Broadcast, HTTPS, REST interface (external trust zone)",
+      "exposure": "BLE Broadcast interface which lacks encryption.",
       "matched_pattern": "ATT&CK-T1557",
-      "applicability_reason": "The asset 'User PII (schedule, address)' exposes BLE Broadcast, HTTPS, REST interfaces in external zone, allowing an adversary to execute ATT&CK-T1557 via unencrypted transmission.",
-      "citation": "ATT&CK-T1557: Adversary-in-the-Middle (ATT&CK)"
+      "applicability_reason": "The asset has a BLE interface that broadcasts data without encryption, making it vulnerable to interception.",
+      "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
     },
     "confidence_score": 0.6524832157800667,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:07.233758Z",
+    "created_at": "2026-09-23T19:17:19.108636Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-5D112003-046",
+    "tid": "THR-PATH-37145378-046",
     "asset_id": "AS-2",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of ATT&CK-T1078 (Valid Accounts) via replay targeting E-Key Credential",
+    "attack_vector": "An attacker uses stolen JWT tokens to simulate legitimate access to cloud-managed door lock features.",
     "kb_reference": "ATT&CK-T1078",
     "evidence_chain": {
-      "exposure": "HTTPS, REST, OAuth 2.0 interface (external trust zone)",
+      "exposure": "OAuth 2.0 authentication mechanism accepting bearer tokens.",
       "matched_pattern": "ATT&CK-T1078",
-      "applicability_reason": "The asset 'E-Key Credential' exposes HTTPS, REST, OAuth 2.0 interfaces in external zone, allowing an adversary to execute ATT&CK-T1078 via replay.",
-      "citation": "ATT&CK-T1078: Valid Accounts (ATT&CK)"
+      "applicability_reason": "The E-Key Credential relies on OAuth 2.0 with JWT for authentication, exposing it to credential theft and misuse, especially if default or weak credentials are in use.",
+      "citation": "CAPEC-137: Credential Dumping (CAPEC v3.9)"
     },
     "confidence_score": 0.6450778289162467,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:07.572441Z",
+    "created_at": "2026-09-23T19:17:34.674992Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-A8DAFA0F-047",
+    "tid": "THR-PATH-F634878D-047",
     "asset_id": "AS-4",
     "stride_category": "Tampering",
-    "attack_vector": "Exploitation of CAPEC-62 (Cross-Site Request Forgery via IMG Tag) via injection targeting Audit Log",
+    "attack_vector": "An attacker issues unauthorized commands that modify audit log entries via CSRF exploitation.",
     "kb_reference": "CAPEC-62",
     "evidence_chain": {
-      "exposure": "SPI Flash, Internal Bus interface (trusted trust zone)",
+      "exposure": "trust_zone 'trusted' interface with session-based authentication.",
       "matched_pattern": "CAPEC-62",
-      "applicability_reason": "The asset 'Audit Log' exposes SPI Flash, Internal Bus interfaces in trusted zone, allowing an adversary to execute CAPEC-62 via injection.",
-      "citation": "CAPEC-62: Cross-Site Request Forgery via IMG Tag (CAPEC)"
+      "applicability_reason": "The asset has a trust zone that should protect the audit log, but CSRF allows unauthorized manipulation of logs since it exploits session handling vulnerabilities.",
+      "citation": "CAPEC-62: Cross-Site Request Forgery via IMG Tag (CAPEC v3.9)"
     },
     "confidence_score": 0.6380164880151609,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:07.884610Z",
+    "created_at": "2026-09-23T19:17:37.809573Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-8228BBC5-048",
+    "tid": "THR-PATH-FF78125F-048",
     "asset_id": "AS-4",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-60 (Reusing Session IDs (Session Replay Attack)) via replay targeting Audit Log",
+    "attack_vector": "An attacker replays a valid BLE unlock command to gain unauthorized access to the lock.",
     "kb_reference": "CAPEC-60",
     "evidence_chain": {
-      "exposure": "SPI Flash, Internal Bus interface (trusted trust zone)",
+      "exposure": "Weakly randomized nonces in GATT authentication exchange",
       "matched_pattern": "CAPEC-60",
-      "applicability_reason": "The asset 'Audit Log' exposes SPI Flash, Internal Bus interfaces in trusted zone, allowing an adversary to execute CAPEC-60 via replay.",
-      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack) (CAPEC)"
+      "applicability_reason": "The audit log records BLE unlock commands, making it crucial to identify session reuse in the event logs for security.",
+      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack)"
     },
     "confidence_score": 0.6368923620113895,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:08.289336Z",
+    "created_at": "2026-09-23T19:17:40.120023Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-E6DB2A98-049",
+    "tid": "THR-PATH-240197DC-049",
     "asset_id": "AS-4",
     "stride_category": "Spoofing",
-    "attack_vector": "An attacker impersonates a legitimate device by cloning its BLE address to send unauthorized unlock commands.",
+    "attack_vector": "An attacker impersonates a legitimate device by spoofing its BLE MAC address to access commands intended for the smart door lock.",
     "kb_reference": "STRIDE-S-001",
     "evidence_chain": {
-      "exposure": "BLE interface with no cryptographic pairing",
+      "exposure": "Trust zone reliant on MAC address without cryptographic measures.",
       "matched_pattern": "STRIDE-S-001",
-      "applicability_reason": "The audit log lacks tamper protection and records events based on commands sent over BLE, making it susceptible to spoofing attacks where the attacker can issue unlock commands without detection.",
-      "citation": "CAPEC-44: Impersonate a User"
+      "applicability_reason": "The BLE unlock mechanism relies on MAC address authentication, making it vulnerable to device impersonation, particularly in an environment lacking cryptographic pairing.",
+      "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
     },
     "confidence_score": 0.6341532686857423,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:10.542241Z",
+    "created_at": "2026-09-23T19:17:42.764264Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-D16A3159-050",
+    "tid": "THR-PATH-1F22EF82-050",
     "asset_id": "AS-4",
     "stride_category": "Spoofing",
-    "attack_vector": "An attacker exploits the lack of rate limiting in the BLE interface to brute-force unlock the door lock using trial and error.",
+    "attack_vector": "An attacker brute forces access to the audit log by guessing credentials.",
     "kb_reference": "CAPEC-112",
     "evidence_chain": {
-      "exposure": "BLE interface with no rate limiting and short PIN length",
+      "exposure": "Short PIN length and lack of rate limiting on log access.",
       "matched_pattern": "CAPEC-112",
-      "applicability_reason": "The door lock utilizes a BLE interface for unlocking, which is prone to brute-force attacks due to the absence of rate limiting and weak authentication mechanisms.",
+      "applicability_reason": "The audit log's access control may rely on weak credentials, making it vulnerable to brute force attacks due to limited lockout mechanisms.",
       "citation": "CAPEC-112: Brute Force (CAPEC v3.9)"
     },
     "confidence_score": 0.6335691352404195,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:14.117490Z",
+    "created_at": "2026-09-23T19:17:45.690608Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-550E06AC-051",
+    "tid": "THR-PATH-A079BCBC-051",
     "asset_id": "AS-4",
-    "stride_category": "Tampering",
-    "attack_vector": "An attacker exploits the absence of tamper protection in the audit log to erase or modify log entries without detection.",
+    "stride_category": "ElevationOfPrivilege",
+    "attack_vector": "An attacker bypasses authentication to manipulate or clear sensitive audit log entries.",
     "kb_reference": "STRIDE-E-001",
     "evidence_chain": {
-      "exposure": "tamper_protection",
+      "exposure": "firmware web management interface opening unauthorized access paths",
       "matched_pattern": "STRIDE-E-001",
-      "applicability_reason": "The audit log lacks tamper protection mechanisms, allowing unauthorized modification, which directly relates to the path traversal vulnerability that can compromise system integrity.",
-      "citation": "CAPEC-205: File Manipulation"
+      "applicability_reason": "The audit log is vulnerable because it relies on the integrity of the firmware web interface, which can be exploited for unauthorized access to sensitive logs.",
+      "citation": "CAPEC-216: Path Traversal"
     },
     "confidence_score": 0.6295995077610168,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:17.709419Z",
+    "created_at": "2026-09-23T19:17:49.773592Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-90537957-052",
+    "tid": "THR-PATH-41CB48F5-052",
     "asset_id": "AS-2",
     "stride_category": "ElevationOfPrivilege",
-    "attack_vector": "An attacker can exploit unauthenticated BLE accesses for critical functions to gain unauthorized control over the door lock.",
+    "attack_vector": "An attacker exploits unauthenticated BLE commands to gain control over the lock's state.",
     "kb_reference": "CWE-306",
     "evidence_chain": {
       "exposure": "unauthenticated BLE GATT characteristics",
       "matched_pattern": "CWE-306",
-      "applicability_reason": "The asset exposes critical functionalities like lock/unlock via BLE without proper authentication, making it susceptible to unauthorized access.",
-      "citation": "CWE-306: Missing Authentication for Critical Function"
+      "applicability_reason": "The lack of authentication for BLE commands allows any nearby device to control the lock, making it vulnerable to unauthorized access.",
+      "citation": "CAPEC-151: Bluetooth Low Energy Command Injection"
     },
     "confidence_score": 0.6237871944904327,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:21.615062Z",
+    "created_at": "2026-09-23T19:17:52.189749Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-0C7ADC9F-053",
+    "tid": "THR-PATH-5293BDB0-053",
     "asset_id": "AS-4",
-    "stride_category": "ElevationOfPrivilege",
-    "attack_vector": "An attacker exploits a buffer overflow in the audit log processing to execute arbitrary code and escalate privileges.",
+    "stride_category": "Tampering",
+    "attack_vector": "An attacker overwrites audit log entries with malicious data via buffer overflow.",
     "kb_reference": "CAPEC-100",
     "evidence_chain": {
-      "exposure": "SPI Flash interface susceptible to buffer overflow.",
+      "exposure": "Internal Bus interface that handles data transfer to audit logs.",
       "matched_pattern": "CAPEC-100",
-      "applicability_reason": "The audit log is processed in an embedded context where buffers may be improperly managed, leading to potential elevation via a buffer overflow.",
+      "applicability_reason": "The Internal Bus is susceptible to buffer overflow attacks that can lead to tampering of the audit log, as it does not have protections against excessive data input.",
       "citation": "CAPEC-100: Overflow Buffers (CAPEC v3.9)"
     },
     "confidence_score": 0.6211485941828974,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:23.751780Z",
+    "created_at": "2026-09-23T19:17:55.450009Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-0E78797A-054",
+    "tid": "THR-PATH-8AC3D66E-054",
     "asset_id": "AS-6",
     "stride_category": "Tampering",
-    "attack_vector": "An adversary exploits a CSRF vulnerability to alter stored cryptographic keys, compromising the entire IoT locking mechanism.",
+    "attack_vector": "An attacker exploits a web management interface without CSRF protection to modify cryptographic keys.",
     "kb_reference": "CAPEC-62",
     "evidence_chain": {
-      "exposure": "session-based authentication without CSRF protections",
+      "exposure": "lack of CSRF protection in web interface",
       "matched_pattern": "CAPEC-62",
-      "applicability_reason": "The asset is vulnerable due to lack of CSRF tokens, allowing malicious HTTP requests to modify cryptographic keys without user consent.",
+      "applicability_reason": "The asset's management interface does not implement CSRF tokens, exposing cryptographic keys to unauthorized modifications.",
       "citation": "CAPEC-62: Cross-Site Request Forgery via IMG Tag (CAPEC v3.9)"
     },
     "confidence_score": 0.6204590049659613,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:26.003161Z",
+    "created_at": "2026-09-23T19:17:58.308154Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-DD25A39F-055",
+    "tid": "THR-PATH-D1A7E563-055",
     "asset_id": "AS-2",
     "stride_category": "InformationDisclosure",
-    "attack_vector": "An attacker intercepts unencrypted BLE communication to capture authentication tokens.",
+    "attack_vector": "An attacker intercepts unencrypted authentication tokens transmitted over unsecure connections.",
     "kb_reference": "CWE-311",
     "evidence_chain": {
-      "exposure": "the lack of encryption for BLE communication",
+      "exposure": "REST interface transmitting JWT tokens without encryption",
       "matched_pattern": "CWE-311",
-      "applicability_reason": "The E-Key Credential transmits sensitive data like authentication tokens over BLE without encryption, making it vulnerable to interception.",
+      "applicability_reason": "The asset\u2019s REST interface transmits JWT tokens, which can be captured by eavesdroppers if not encrypted.",
       "citation": "CWE-311: Missing Encryption of Sensitive Data"
     },
     "confidence_score": 0.6192387342453003,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:28.093204Z",
+    "created_at": "2026-09-23T19:18:00.722870Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-7A628459-056",
+    "tid": "THR-PATH-B7ED11C5-056",
     "asset_id": "AS-2",
     "stride_category": "Spoofing",
-    "attack_vector": "An adversary reuses a captured e-key credential to gain unauthorized access as the legitimate user.",
+    "attack_vector": "An attacker reuses a previously captured session token to gain unauthorized access.",
     "kb_reference": "CAPEC-60",
     "evidence_chain": {
-      "exposure": "OAuth 2.0 authentication mechanism",
+      "exposure": "JWT authentication mechanism with potential for session ID reuse.",
       "matched_pattern": "CAPEC-60",
-      "applicability_reason": "The asset employs OAuth 2.0 for authentication, which is susceptible to replay attacks if session tokens are not properly managed or expire, making it a target for session hijacking.",
-      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack)"
+      "applicability_reason": "The asset relies on JWT for authentication, which can be vulnerable to replay attacks if session tokens are captured and reused without proper expiry.",
+      "citation": "CAPEC-60: Reusing Session IDs (Session Replay Attack) (CAPEC v3.9)"
     },
     "confidence_score": 0.6162860622235502,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:30.406298Z",
+    "created_at": "2026-09-23T19:18:03.533676Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-1FFFE212-057",
+    "tid": "THR-PATH-F5D86138-057",
     "asset_id": "AS-2",
     "stride_category": "InformationDisclosure",
-    "attack_vector": "An attacker intercepts unencrypted authentication tokens transmitted over the network to gain unauthorized access.",
+    "attack_vector": "An attacker captures authentication tokens transmitted over an unsecured channel.",
     "kb_reference": "STRIDE-I-001",
     "evidence_chain": {
-      "exposure": "REST interface with cloud_db using HTTPS",
+      "exposure": "BLE transmit channel vulnerability due to lack of encryption",
       "matched_pattern": "STRIDE-I-001",
-      "applicability_reason": "The asset uses a REST interface with cloud_db where sensitive tokens can be exposed if transmitted over unencrypted channels.",
+      "applicability_reason": "The smart door lock's BLE interface transmits e-key credentials without adequate encryption, exposing them to interception in the external trust zone.",
       "citation": "CAPEC-94: Adversary in the Middle (CAPEC v3.9)"
     },
     "confidence_score": 0.6090729022578657,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:32.157956Z",
+    "created_at": "2026-09-23T19:18:06.770402Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-315E1A26-058",
+    "tid": "THR-PATH-D1AD0BD3-058",
     "asset_id": "AS-2",
     "stride_category": "Tampering",
-    "attack_vector": "An attacker exploits the insecure OTA update mechanism to deliver malicious firmware, enabling unauthorized control of the door lock.",
+    "attack_vector": "Exploitation of insecure OTA update channel allowing malicious firmware installation.",
     "kb_reference": "CAPEC-186",
     "evidence_chain": {
-      "exposure": "OTA firmware update mechanism",
+      "exposure": "OTA firmware update mechanism lacking authentication",
       "matched_pattern": "CAPEC-186",
-      "applicability_reason": "The asset uses a cloud management system for OTA updates, which could be vulnerable if update packages are not signed or the update channel is unencrypted.",
+      "applicability_reason": "The E-Key Credential relies on OTA updates for firmware, making it susceptible to unauthorized modifications if the update process lacks proper verification.",
       "citation": "CAPEC-186: Malicious Software Update (CAPEC v3.9)"
     },
     "confidence_score": 0.5837263415022886,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:34.157436Z",
+    "created_at": "2026-09-23T19:18:08.692734Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-29346960-059",
+    "tid": "THR-PATH-59EA2E4B-059",
     "asset_id": "AS-2",
     "stride_category": "Spoofing",
-    "attack_vector": "Exploitation of CAPEC-112 (Brute Force) via replay targeting E-Key Credential",
+    "attack_vector": "A perpetrator systematically attempts to guess the JWT authentication tokens to gain unauthorized access.",
     "kb_reference": "CAPEC-112",
     "evidence_chain": {
-      "exposure": "HTTPS, REST, OAuth 2.0 interface (external trust zone)",
+      "exposure": "The use of JWT with weak token validation mechanisms creates an attack surface.",
       "matched_pattern": "CAPEC-112",
-      "applicability_reason": "The asset 'E-Key Credential' exposes HTTPS, REST, OAuth 2.0 interfaces in external zone, allowing an adversary to execute CAPEC-112 via replay.",
-      "citation": "CAPEC-112: Brute Force (CAPEC)"
+      "applicability_reason": "The asset employs JWT for authentication, which, if not properly secured, may be vulnerable to brute force attacks due to insufficient token complexity.",
+      "citation": "CAPEC-112: Brute Force (CAPEC v3.9)"
     },
     "confidence_score": 0.5712679209549476,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:34.656126Z",
+    "created_at": "2026-09-23T19:18:12.402418Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   },
   {
-    "tid": "THR-PATH-7964A9C5-060",
+    "tid": "THR-PATH-D6DAC94A-060",
     "asset_id": "AS-2",
     "stride_category": "ElevationOfPrivilege",
-    "attack_vector": "Exploitation of STRIDE-E-001 (Elevation of Privilege via Path Traversal in Firmware Web Interface) via access control bypass targeting E-Key Credential",
+    "attack_vector": "An attacker exploits path traversal to access unauthorized data and potentially gain access to E-Key credentials.",
     "kb_reference": "STRIDE-E-001",
     "evidence_chain": {
-      "exposure": "HTTPS, REST, OAuth 2.0 interface (external trust zone)",
+      "exposure": "REST interface with cloud storage and JWT authentication",
       "matched_pattern": "STRIDE-E-001",
-      "applicability_reason": "The asset 'E-Key Credential' exposes HTTPS, REST, OAuth 2.0 interfaces in external zone, allowing an adversary to execute STRIDE-E-001 via access control bypass.",
-      "citation": "STRIDE-E-001: Elevation of Privilege via Path Traversal in Firmware Web Interface (STRIDE)"
+      "applicability_reason": "The asset uses a REST interface for credential management which can be targeted through path traversal, allowing data exposure and privilege elevation.",
+      "citation": "STRIDE/STRIDE-E-001: Elevation of Privilege via Path Traversal in Firmware Web Interface"
     },
     "confidence_score": 0.5696637353200834,
     "status": "pending_test",
-    "created_at": "2026-09-21T06:02:34.935157Z",
+    "created_at": "2026-09-23T19:18:15.421103Z",
     "run_id": "RUN-SDL-E2E-001",
     "validation_status": "escalated_after_retries"
   }
