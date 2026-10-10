@@ -16,6 +16,8 @@ import re
 import sys
 from pathlib import Path
 
+SEED_DB = "trc_engine"  # the 24-entry seed KB used by tests; never overwritten here
+
 
 def _db_name(url: str) -> str:
     return re.search(r"/([^/?]+)(\?.*)?$", url).group(1)  # type: ignore[union-attr]
@@ -33,8 +35,8 @@ def main() -> None:
     from config.settings import Settings, get_settings
 
     base = Settings().DATABASE_URL
-    if args.database_name == _db_name(base):
-        sys.exit(f"[ABORT] refusing to write into baseline DB '{_db_name(base)}'.")
+    if args.database_name == SEED_DB:
+        sys.exit(f"[ABORT] refusing to write into the seed DB '{SEED_DB}'.")
     os.environ["DATABASE_URL"] = re.sub(r"/[^/?]+(\?.*)?$", rf"/{args.database_name}\1", base)
     get_settings.cache_clear()
     effective = _db_name(get_settings().DATABASE_URL)

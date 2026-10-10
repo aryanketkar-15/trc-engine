@@ -26,7 +26,9 @@ Environment variable reference
     MAX_RETRY_COUNT       — Optional.  Max LLM retry attempts (capped at 3
                             by the ValidationResult schema).  Defaults to 3.
     DATABASE_URL          — Optional.  PostgreSQL connection string for pgvector.
-                            Defaults to postgresql://trc_user:trc_password@localhost:5432/trc_engine.
+                            Defaults to the FULL knowledge base database
+                            (.../trc_engine_fullkb).  The 24-entry seed KB lives in
+                            ".../trc_engine" and is used by the unit/integration tests.
     EMBEDDING_MODEL_NAME  — Optional.  Sentence-transformers model for pgvector
                             embeddings.  Defaults to "all-MiniLM-L6-v2".
     KB_SNAPSHOT_VERSION   — Optional.  Version tag of the KB snapshot in use.
@@ -108,7 +110,7 @@ class Settings(BaseSettings):
     DATABASE_URL: Annotated[
         str,
         Field(
-            default="postgresql://trc_user:trc_password@localhost:5432/trc_engine",
+            default="postgresql://trc_user:trc_password@localhost:5432/trc_engine_fullkb",
             description="PostgreSQL connection string.",
         ),
     ]

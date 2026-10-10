@@ -19,6 +19,8 @@ import re
 import sys
 from pathlib import Path
 
+SEED_DB = "trc_engine"  # the 24-entry seed KB used by tests; never overwritten here
+
 
 def _db_name(url: str) -> str:
     return re.search(r"/([^/?]+)(\?.*)?$", url).group(1)  # type: ignore[union-attr]
@@ -41,11 +43,9 @@ def main() -> None:
     parser.add_argument("--model", default="all-MiniLM-L6-v2")
     args = parser.parse_args()
 
-    from config.settings import Settings
 
-    baseline_db = _db_name(Settings().DATABASE_URL)
-    if args.database_name == baseline_db:
-        sys.exit(f"[ABORT] refusing to write the full KB into baseline DB '{baseline_db}'.")
+    if args.database_name == SEED_DB:
+        sys.exit(f"[ABORT] refusing to write the full KB into the seed DB '{SEED_DB}'.")
     os.environ["DATABASE_URL"] = _full_db_url(args.database_name)
     from config.settings import get_settings
 

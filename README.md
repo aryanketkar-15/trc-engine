@@ -100,3 +100,11 @@ ruff format .
 ## License
 
 Academic — TRC Engine, Phase 1. All rights reserved.
+
+## Knowledge base selection
+
+The application uses the **full knowledge base** by default (`DATABASE_URL=…/trc_engine_fullkb`:
+CAPEC, ATT&CK, CWE, STRIDE plus standards chunks).  The 24-entry seed KB (`…/trc_engine`) is used by
+the automated tests only (`tests/conftest.py` points them there; override with
+`TRC_TEST_DATABASE_URL`).  `python -m kb.scripts.build_index` builds the seed KB and refuses to run
+against the full-KB database; `build_full_index` / `build_standards_index` refuse the seed database.

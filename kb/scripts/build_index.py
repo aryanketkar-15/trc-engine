@@ -263,4 +263,12 @@ def build(
 
 if __name__ == "__main__":
     args = _parse_args()
+    from config.settings import get_settings
+
+    _target = get_settings().DATABASE_URL.rsplit("/", 1)[-1].split("?")[0]
+    if "fullkb" in _target:
+        sys.exit(
+            f"[ABORT] build_index loads the 24 SEED entries; DATABASE_URL points at the full KB "
+            f"'{_target}'.  Point DATABASE_URL at the seed DB (…/trc_engine) to build it."
+        )
     build(data_dir=args.data_dir, model_name=args.model)
