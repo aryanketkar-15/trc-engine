@@ -111,6 +111,11 @@ _DEFAULT_TIMEOUT_SECONDS = 30.0
 _DEFAULT_MAX_TOKENS = 4096
 _MAX_ATTEMPTS = 3
 _BACKOFF_BASE_SECONDS = 1.0  # doubles on each retry: 1s, 2s, 4s
+# Rate limits (HTTP 429) are waited out separately: free tiers throttle per minute,
+# so a 1-4 s backoff just burns attempts.  Honour Retry-After, else wait ~15 s.
+_MAX_RATE_LIMIT_RETRIES = 8
+_RATE_LIMIT_DEFAULT_WAIT_SECONDS = 15.0
+_RATE_LIMIT_MAX_WAIT_SECONDS = 60.0
 
 # HTTP status codes that warrant a retry (transient failures)
 _RETRYABLE_STATUS_CODES: frozenset[int] = frozenset({429, 500, 502, 503, 504})
@@ -183,7 +188,9 @@ def chat_completion(
 
     last_exc: Exception | None = None
 
-    for attempt in range(1, _MAX_ATTEMPTS + 1):
+    other_failures = 0
+    rate_limit_retries = 0
+    for attempt in range(1, _MAX_ATTEMPTS + _MAX_RATE_LIMIT_RETRIES + 1):
         try:
             response = _call_api(
                 client, resolved_model, system_prompt, user_prompt, max_tokens=max_tokens
@@ -221,7 +228,13 @@ def chat_completion(
 
         except openai.APIStatusError as exc:
             status_code: int = exc.status_code
-            if status_code not in _RETRYABLE_STATUS_CODES or attempt == _MAX_ATTEMPTS:
+            if status_code == 429:
+                rate_limit_retries += 1
+                exhausted = rate_limit_retries > _MAX_RATE_LIMIT_RETRIES
+            else:
+                other_failures += 1
+                exhausted = other_failures >= _MAX_ATTEMPTS
+            if status_code not in _RETRYABLE_STATUS_CODES or exhausted:
                 log_step(
                     logger,
                     "ERROR",
@@ -243,7 +256,10 @@ def chat_completion(
                 ) from exc
 
             # Transient — back off and retry
-            backoff = _BACKOFF_BASE_SECONDS * (2 ** (attempt - 1))
+            if status_code == 429:
+                backoff = _rate_limit_wait(exc)
+            else:
+                backoff = _BACKOFF_BASE_SECONDS * (2 ** (other_failures - 1))
             log_step(
                 logger,
                 "WARNING",
@@ -262,7 +278,8 @@ def chat_completion(
         except openai.APIConnectionError as exc:
             # Dropped / refused connection: transient, so back off and retry
             # (a timeout is handled above and is deliberately not retried).
-            if attempt == _MAX_ATTEMPTS:
+            other_failures += 1
+            if other_failures >= _MAX_ATTEMPTS:
                 log_step(
                     logger,
                     "ERROR",
@@ -281,7 +298,7 @@ def chat_completion(
                     ),
                     openai_error=exc,
                 ) from exc
-            backoff = _BACKOFF_BASE_SECONDS * (2 ** (attempt - 1))
+            backoff = _BACKOFF_BASE_SECONDS * (2 ** (other_failures - 1))
             log_step(
                 logger,
                 "WARNING",
@@ -329,6 +346,16 @@ def chat_completion(
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
+
+
+def _rate_limit_wait(exc: openai.APIStatusError) -> float:
+    """Seconds to wait after a 429: the server's Retry-After if given, else a default."""
+    try:
+        raw = exc.response.headers.get("retry-after")
+        wait = float(raw) if raw is not None else _RATE_LIMIT_DEFAULT_WAIT_SECONDS
+    except (AttributeError, TypeError, ValueError):
+        wait = _RATE_LIMIT_DEFAULT_WAIT_SECONDS
+    return min(max(wait, 1.0), _RATE_LIMIT_MAX_WAIT_SECONDS)
 
 
 def _call_api(

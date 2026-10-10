@@ -103,3 +103,29 @@ class TestConnectionRetry:
         ):
             out = llm_client.chat_completion("s", "u", model="m", run_id="R", prompt_version="v")
         assert out == "ok" and calls["n"] == 3
+
+    def test_rate_limit_waits_out_the_limit_instead_of_failing(self) -> None:
+        import httpx
+        import openai
+
+        from common import llm_client
+
+        resp = httpx.Response(
+            429, headers={"retry-after": "7"},
+            request=httpx.Request("POST", "https://example.invalid/x"),
+        )
+        calls = {"n": 0}
+
+        def throttled(*_a: object, **_k: object) -> str:
+            calls["n"] += 1
+            if calls["n"] <= 5:  # more than the 3 ordinary attempts
+                raise openai.RateLimitError("slow down", response=resp, body=None)
+            return "ok"
+
+        with (
+            patch.object(llm_client, "_call_api", side_effect=throttled),
+            patch.object(llm_client.time, "sleep") as sleep,
+        ):
+            out = llm_client.chat_completion("s", "u", model="m", run_id="R", prompt_version="v")
+        assert out == "ok" and calls["n"] == 6
+        assert all(c.args[0] == 7.0 for c in sleep.call_args_list)
