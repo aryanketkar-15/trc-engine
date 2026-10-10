@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-10-10T13:10:38.731873+00:00",
+  "total_expert_threats": 6,
+  "total_generated_scenarios": 60,
+  "true_positives_tp": 1,
+  "false_negatives_fn": 5,
+  "false_positives_fp": 59,
+  "precision": 0.0167,
+  "recall": 0.1667,
+  "f1": 0.0303,
+  "threshold": 0.75,
+  "tp_threat_ids": [
+    "T3"
+  ],
+  "fn_threat_ids": [
+    "T1",
+    "T2",
+    "T4",
+    "T5",
+    "T6"
+  ],
+  "matched_details": {
+    "T1": [],
+    "T2": [],
+    "T3": [
+      {
+        "scenario_tid": "THR-PATH-CB88D340-002",
+        "asset_id": "AS-3",
+        "stride_category": "Tampering",
+        "kb_reference": "CAPEC-186",
+        "attack_vector": "Upload malicious firmware through the unauthenticated BLE OTA channel",
+        "cosine_similarity": 0.7939
+      }
+    ],
+    "T4": [],
+    "T5": [],
+    "T6": []
+  },
+  "highest_sim_per_threat": {
+    "T1": {
+      "cosine_similarity": 0.702,
+      "scenario_tid": "THR-PATH-3F81AD32-022",
+      "asset_id": "AS-1",
+      "stride_category": "Spoofing",
+      "kb_reference": "STRIDE-S-001",
+      "attack_vector": "Exploitation of STRIDE-S-001 (Spoofing Identity via BLE Device Impersonation) via replay targeting Unlock Command"
+    },
+    "T2": {
+      "cosine_similarity": 0.4812,
+      "scenario_tid": "THR-PATH-D3643263-046",
+      "asset_id": "AS-2",
+      "stride_category": "Spoofing",
+      "kb_reference": "ATT&CK-T1078",
+      "attack_vector": "Compromise of a JWT bearer token via credential stuffing on the cloud HTTPS REST API, allowing the attacker to impersonate a legitimate user and obtain or clone an e\u2011key credential."
+    },
+    "T3": {
+      "cosine_similarity": 0.7965,
+      "scenario_tid": "THR-PATH-C650E053-008",
+      "asset_id": "AS-6",
+      "stride_category": "Tampering",
+      "kb_reference": "CAPEC-186",
+      "attack_vector": "Deliver malicious firmware via the unauthenticated OTA update channel that reads the persistent keys through the I2C/SPI interfaces"
+    },
+    "T4": {
+      "cosine_similarity": 0.5481,
+      "scenario_tid": "THR-PATH-6E18AFF9-023",
+      "asset_id": "AS-6",
+      "stride_category": "InformationDisclosure",
+      "kb_reference": "STRIDE-I-001",
+      "attack_vector": "Exploitation of STRIDE-I-001 (Information Disclosure via Cleartext Credential Transmission) via unencrypted transmission targeting Cryptographic Keys"
+    },
+    "T5": {
+      "cosine_similarity": 0.3171,
+      "scenario_tid": "THR-PATH-C85D569B-053",
+      "asset_id": "AS-4",
+      "stride_category": "ElevationOfPrivilege",
+      "kb_reference": "CAPEC-100",
+      "attack_vector": "Exploitation of CAPEC-100 (Overflow Buffers) via access control bypass targeting Audit Log"
+    },
+    "T6": {
+      "cosine_similarity": 0.4337,
+      "scenario_tid": "THR-PATH-CE0E56F7-017",
+      "asset_id": "AS-1",
+      "stride_category": "Spoofing",
+      "kb_reference": "CWE-798",
+      "attack_vector": "Attacker extracts the hard\u2011coded BLE pairing key from the lock\u2019s firmware and uses it to craft a forged unlock command over the BLE GATT interface"
+    }
+  }
+}
