@@ -24,6 +24,7 @@ from __future__ import annotations
 from agents.threat_agent.attack_chain import build_paths, build_single_step_path
 from agents.threat_agent.exceptions import KBStoreUnreachableError
 from agents.threat_agent.generator import generate_scenarios
+from agents.threat_agent.grounding import GroundingFailure, check_grounding, path_id_from_tid
 from agents.threat_agent.retrieval import build_retrieval_plan, fetch_candidates
 from agents.threat_agent.schemas import (
     AttackPath,
@@ -96,6 +97,42 @@ def _execute_retrieval_and_chaining(
     return paths
 
 
+def _merge_retried(
+    current: list[ThreatScenario],
+    new: list[ThreatScenario],
+    retry_paths: list[AttackPath],
+) -> list[ThreatScenario]:
+    """Replace the scenarios of the retried paths, keeping order and stable tids."""
+    retried = {p.path_id for p in retry_paths}
+    fresh: dict[str, list[ThreatScenario]] = {}
+    for s in new:
+        pid = path_id_from_tid(s.tid)
+        if pid is not None:
+            fresh.setdefault(pid, []).append(s)
+    old_tids: dict[str, list[str]] = {}
+    for s in current:
+        pid = path_id_from_tid(s.tid)
+        if pid in retried:
+            old_tids.setdefault(pid, []).append(s.tid)
+
+    merged: list[ThreatScenario] = []
+    done: set[str] = set()
+    for s in current:
+        pid = path_id_from_tid(s.tid)
+        if pid not in retried:
+            merged.append(s)
+        elif pid not in done:
+            done.add(pid)
+            replacements = fresh.get(pid)
+            if not replacements:  # generator returned nothing for this path: keep the old one
+                merged.extend(x for x in current if path_id_from_tid(x.tid) == pid)
+                continue
+            for i, ns in enumerate(replacements):
+                tid = old_tids[pid][i] if i < len(old_tids[pid]) else ns.tid
+                merged.append(ns.model_copy(update={"tid": tid}))
+    return merged
+
+
 def generate_and_validate_with_retry(
     agent_input: ThreatAgentInput,
     paths: list[AttackPath] | None = None,
@@ -103,11 +140,18 @@ def generate_and_validate_with_retry(
     max_attempts: int = MAX_VALIDATION_ATTEMPTS,
     initial_failure_details: list[str] | None = None,
 ) -> tuple[list[ThreatScenario], int, str]:
-    """Execute scenario generation and invariant validation with automated retries.
+    """Execute scenario generation and validation with automated retries.
+
+    Every scenario must pass the Protocol Invariant Validator AND the grounding
+    checks (agents/threat_agent/grounding.py).  When failing scenarios can be
+    traced to their attack path, only those paths are regenerated (no new
+    retrieval, a fraction of the LLM calls); otherwise the whole batch is
+    regenerated as before.  Each scenario is stamped individually: ``passed`` or
+    ``escalated_after_retries``.
 
     Args:
         agent_input:  The validated ThreatAgentInput system model.
-        paths:        Optional pre-built AttackPaths. If None or on retry,
+        paths:        Optional pre-built AttackPaths. If None or on a full retry,
                       re-invokes retrieval and attack chaining.
         validator:    Optional Validator instance (defaults to Validator()).
         max_attempts: Maximum generation + validation attempts (default 3).
@@ -117,7 +161,7 @@ def generate_and_validate_with_retry(
         tuple of:
           - scenarios: List of generated (and scored) ThreatScenario objects.
           - validator_retry_count: Number of automated retries performed (0-3).
-          - validation_status: "passed" if clean, or "escalated_after_retries".
+          - validation_status: "passed" if all clean, else "escalated_after_retries".
     """
     val = validator or Validator()
     run_id = agent_input.run_id
@@ -126,46 +170,97 @@ def generate_and_validate_with_retry(
         list(initial_failure_details) if initial_failure_details else None
     )
     last_scenarios: list[ThreatScenario] = []
+    retry_paths: list[AttackPath] | None = None  # set -> regenerate only these paths
+    paths_by_id: dict[str, AttackPath] = {}
+    outcomes: dict[str, ValidationResult] = {}
+
+    def _stamp(scenarios: list[ThreatScenario]) -> list[ThreatScenario]:
+        return [
+            s.model_copy(
+                update={
+                    "validation_status": (
+                        "passed" if outcomes[s.tid].passed else "escalated_after_retries"
+                    )
+                }
+            )
+            if hasattr(s, "model_copy")
+            else s
+            for s in scenarios
+        ]
 
     for attempt in range(1, max_attempts + 1):
-        # 1. Retrieval & Attack Chaining
-        # On attempt 1, use pre-existing paths if provided. On retries (or if None),
-        # re-invoke retrieval and attack chaining to re-evaluate evidence context.
-        if attempt > 1 or paths is None:
+        # 1. Retrieval & Attack Chaining (skipped when only some paths are retried)
+        if retry_paths is not None:
+            current_paths = retry_paths
+        elif attempt > 1 or paths is None:
             current_paths = _execute_retrieval_and_chaining(agent_input, failure_details)
         else:
             current_paths = paths
+        for p in current_paths:
+            if getattr(p, "path_id", None):
+                paths_by_id[p.path_id] = p
 
         # 2. Generation step (passes validation_failure_context on retry)
-        scenarios = generate_scenarios(
+        generated = generate_scenarios(
             current_paths,
             agent_input,
             validation_failure_context=failure_details,
         )
+        if retry_paths is not None:
+            scenarios = _merge_retried(last_scenarios, generated, retry_paths)
+            retried_ids = {p.path_id for p in retry_paths}
+            needs_check = {
+                s.tid for s in scenarios if path_id_from_tid(s.tid) in retried_ids
+            }
+        else:
+            scenarios = generated
+            outcomes = {}
+            needs_check = {s.tid for s in scenarios}
         last_scenarios = scenarios
 
-        # 3. Validation step across all scenarios
-        all_passed = True
-        failed_checks_for_attempt: list[FailedCheck] = []
-        first_failed_scenario: ThreatScenario | None = None
-        first_failed_result: ValidationResult | None = None
-
+        # 3. Validation + grounding of the scenarios that have no verdict yet
+        grounding_failed: list[GroundingFailure] = []
         for scenario in scenarios:
+            if scenario.tid not in needs_check:
+                continue
             v_result = val.validate(scenario)
-            if not v_result.passed:
-                all_passed = False
-                failed_checks_for_attempt.extend(v_result.failed_checks)
-                if first_failed_scenario is None:
-                    first_failed_scenario = scenario
-                    first_failed_result = v_result
+            pid = path_id_from_tid(scenario.tid)
+            g_fails = (
+                check_grounding(scenario, paths_by_id[pid], agent_input.assets)
+                if pid in paths_by_id
+                else []
+            )
+            if g_fails:
+                grounding_failed.extend(g_fails)
+                v_result = ValidationResult(
+                    passed=False,
+                    failed_checks=[
+                        *v_result.failed_checks,
+                        *[
+                            FailedCheck(check_id=g.check_id, affected_tid=g.tid, detail=g.detail)
+                            for g in g_fails
+                        ],
+                    ],
+                    retry_count=v_result.retry_count,
+                )
+            outcomes[scenario.tid] = v_result
 
-        # Success path: all generated scenarios passed protocol invariant checks
-        if all_passed:
-            annotated_scenarios = [
-                s.model_copy(update={"validation_status": "passed"})
-                if hasattr(s, "model_copy") else s
-                for s in scenarios
-            ]
+        if grounding_failed:
+            log_step(
+                logger,
+                "WARNING",
+                "grounding_check_failed",
+                run_id,
+                {
+                    "attempt": attempt,
+                    "failures": [{"tid": g.tid, "check_id": g.check_id} for g in grounding_failed],
+                },
+            )
+
+        failed = [s for s in scenarios if not outcomes[s.tid].passed]
+
+        # Success path: every scenario passed the invariants and grounding
+        if not failed:
             log_step(
                 logger,
                 "INFO",
@@ -177,21 +272,39 @@ def generate_and_validate_with_retry(
                     "scenario_count": len(scenarios),
                 },
             )
-            return annotated_scenarios, validator_retry_count, "passed"
+            return _stamp(scenarios), validator_retry_count, "passed"
 
-        # Failure path: evaluate retry feasibility
-        assert first_failed_scenario is not None
-        assert first_failed_result is not None
+        first_failed_scenario = failed[0]
+        first_failed_result = outcomes[first_failed_scenario.tid]
+
+        # Can the failures be retried path-by-path?  Needs every failed scenario to be
+        # traceable to an attack path we hold.
+        failed_path_ids = [path_id_from_tid(s.tid) for s in failed]
+        subset_ok = all(pid is not None and pid in paths_by_id for pid in failed_path_ids)
 
         if attempt < max_attempts:
-            # Trigger retry using existing retry_with_context orchestration
             _action, _ctx = val.retry_with_context(
                 first_failed_scenario,
                 first_failed_result,
                 retry_count=validator_retry_count,
             )
             validator_retry_count += 1
-            failure_details = [fc.detail for fc in first_failed_result.failed_checks]
+            if subset_ok:
+                seen_pids: list[str] = []
+                for pid in failed_path_ids:
+                    if pid is not None and pid not in seen_pids:
+                        seen_pids.append(pid)
+                retry_paths = [paths_by_id[pid] for pid in seen_pids]
+                failure_details = list(
+                    dict.fromkeys(
+                        f"[{s.tid}] {fc.detail}"
+                        for s in failed
+                        for fc in outcomes[s.tid].failed_checks
+                    )
+                )[:12]
+            else:
+                retry_paths = None
+                failure_details = [fc.detail for fc in first_failed_result.failed_checks]
 
             log_step(
                 logger,
@@ -202,6 +315,8 @@ def generate_and_validate_with_retry(
                     "failed_attempt": attempt,
                     "next_attempt": attempt + 1,
                     "retry_count": validator_retry_count,
+                    "mode": "subset" if retry_paths is not None else "full",
+                    "retried_paths": len(retry_paths) if retry_paths is not None else None,
                     "failed_check_ids": [fc.check_id for fc in first_failed_result.failed_checks],
                 },
             )
@@ -223,18 +338,11 @@ def generate_and_validate_with_retry(
                 {
                     "attempts": max_attempts,
                     "scenario_count": len(scenarios),
-                    "failed_checks": [
-                        fc.model_dump() for fc in first_failed_result.failed_checks
-                    ],
+                    "failed_scenarios": len(failed),
+                    "failed_checks": [fc.model_dump() for fc in first_failed_result.failed_checks],
                 },
             )
-
-            annotated_scenarios = [
-                s.model_copy(update={"validation_status": "escalated_after_retries"})
-                if hasattr(s, "model_copy") else s
-                for s in scenarios
-            ]
-            return annotated_scenarios, validator_retry_count, "escalated_after_retries"
+            return _stamp(scenarios), validator_retry_count, "escalated_after_retries"
     return last_scenarios, validator_retry_count, "escalated_after_retries"
 
 
