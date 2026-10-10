@@ -98,9 +98,25 @@ def expand(seeds: list[str], graph: dict[str, set[str]]) -> dict[str, int]:
     return rel
 
 
-def _asset(aid: str, name: str, typ: str, ifaces: list[str], zone: str, cfg: dict[str, str]) -> dict:
+_ATTR_NAMES = {"C": "confidentiality", "I": "integrity", "A": "availability", "Auth": "authenticity"}
+
+
+def _attrs(*keys: str) -> dict[str, bool]:
+    return {name: key in keys for key, name in _ATTR_NAMES.items()}
+
+
+# Security attributes per dev query (inputs only; authored from the asset's role, not from labels).
+_DEV_ATTRS = {
+    "SDL-Q1": _attrs("I", "A", "Auth"), "SDL-Q2": _attrs("C", "I"),
+    "SDL-Q3": _attrs("C", "I", "A", "Auth"), "SDL-Q4": _attrs("C", "I", "Auth"),
+    "INF-Q1": _attrs("I", "A", "Auth"), "INF-Q2": _attrs("C", "I", "A", "Auth"),
+}
+
+
+def _asset(aid: str, name: str, typ: str, ifaces: list[str], zone: str, cfg: dict[str, str],
+           attrs: dict[str, bool] | None = None) -> dict:
     return {"asset_id": aid, "name": name, "asset_type": typ, "interfaces": ifaces,
-            "trust_zone": zone, "device_config": cfg}
+            "trust_zone": zone, "device_config": cfg, "security_attributes": attrs or {}}
 
 
 def queries() -> list[dict]:
@@ -113,7 +129,8 @@ def queries() -> list[dict]:
         q.append({
             "query_id": item["query_id"], "split": "dev", "fixture": item["fixture"],
             "asset": _asset(item["asset_id"], item["asset_name"], item["asset_type"],
-                            item["interfaces"], item["trust_zone"], item.get("device_config", {})),
+                            item["interfaces"], item["trust_zone"], item.get("device_config", {}),
+                            _DEV_ATTRS[item["query_id"]]),
             "seeds": list(item["relevant_patterns"]),
         })
 
@@ -136,29 +153,36 @@ def queries() -> list[dict]:
             "query_id": f"CO-{aid}", "split": "company", "fixture": "Smart Door Lock (company doc)",
             "threat_ids": tids,
             "asset": _asset(aid, a["name"], a["asset_type"], a["dfd_context"]["interfaces"],
-                            a["dfd_context"]["trust_zone"], a["device_config"]),
+                            a["dfd_context"]["trust_zone"], a["device_config"],
+                            a["security_attributes"]),
             "seeds": strict + alt, "strict_seeds": strict,
         })
 
     # ---- heldout: two systems not used in development
     held = [
         ("VE-AS1", "Vehicle gateway ECU", _asset("AS-1", "Gateway ECU Firmware", "embedded firmware",
-            ["CAN bus", "OBD-II", "LTE"], "untrusted", {"secure_boot": "none", "can_authentication": "none"}),
+            ["CAN bus", "OBD-II", "LTE"], "untrusted", {"secure_boot": "none", "can_authentication": "none"},
+            _attrs("I", "A", "Auth")),
          ["CAPEC-186", "CWE-347", "CWE-345", "CWE-1277", "ATT&CK-T1693", "ATT&CK-T0800"]),
         ("VE-AS2", "Vehicle gateway ECU", _asset("AS-2", "Diagnostic Session", "diagnostic service",
-            ["UDS over CAN", "OBD-II"], "external", {"seed_key": "static", "session_timeout": "none"}),
+            ["UDS over CAN", "OBD-II"], "external", {"seed_key": "static", "session_timeout": "none"},
+            _attrs("C", "I", "Auth")),
          ["CWE-798", "CWE-294", "CAPEC-60", "CAPEC-112", "CWE-306", "CWE-307"]),
         ("VE-AS3", "Vehicle gateway ECU", _asset("AS-3", "Telematics Backend API", "REST API",
-            ["HTTPS", "MQTT"], "external", {"auth": "api-key", "rate_limit": "none"}),
+            ["HTTPS", "MQTT"], "external", {"auth": "api-key", "rate_limit": "none"},
+            _attrs("C", "A", "Auth")),
          ["CWE-306", "CWE-770", "CWE-799", "CAPEC-125", "CWE-287", "ATT&CK-T1078"]),
         ("PLC-AS1", "Industrial PLC", _asset("AS-1", "Modbus/TCP Control Channel", "control protocol",
-            ["Modbus/TCP", "Ethernet"], "internal", {"authentication": "none", "encryption": "none"}),
+            ["Modbus/TCP", "Ethernet"], "internal", {"authentication": "none", "encryption": "none"},
+            _attrs("I", "A", "Auth")),
          ["CWE-306", "CWE-319", "CAPEC-94", "CAPEC-117", "CWE-294", "ATT&CK-T0836"]),
         ("PLC-AS2", "Industrial PLC", _asset("AS-2", "PLC Logic Program", "controller firmware program",
-            ["Engineering port", "Ethernet"], "trusted", {"program_signing": "none", "change_audit": "none"}),
+            ["Engineering port", "Ethernet"], "trusted", {"program_signing": "none", "change_audit": "none"},
+            _attrs("I", "Auth")),
          ["CWE-345", "CWE-494", "ATT&CK-T0889", "ATT&CK-T0821", "CWE-306"]),
         ("PLC-AS3", "Industrial PLC", _asset("AS-3", "Engineering Workstation Credentials", "access credential",
-            ["RDP", "SMB"], "internal", {"password_policy": "weak", "mfa": "none"}),
+            ["RDP", "SMB"], "internal", {"password_policy": "weak", "mfa": "none"},
+            _attrs("C", "Auth")),
          ["ATT&CK-T1078", "ATT&CK-T1110", "CWE-798", "CWE-521", "CAPEC-112"]),
     ]
     for qid, fixture, asset, seeds in held:
