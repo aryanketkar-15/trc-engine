@@ -79,3 +79,27 @@ class TestSecretMasking:
 
     def test_name_of_the_setting_is_kept(self) -> None:
         assert redact_pii("token=abcdef123456") == "token=[REDACTED_SECRET]"
+
+
+class TestConnectionRetry:
+    def test_dropped_connection_is_retried_then_succeeds(self) -> None:
+        import httpx
+        import openai
+
+        from common import llm_client
+
+        req = httpx.Request("POST", "https://example.invalid/v1/chat/completions")
+        calls = {"n": 0}
+
+        def flaky(*_a: object, **_k: object) -> str:
+            calls["n"] += 1
+            if calls["n"] < 3:
+                raise openai.APIConnectionError(request=req)
+            return "ok"
+
+        with (
+            patch.object(llm_client, "_call_api", side_effect=flaky),
+            patch.object(llm_client.time, "sleep"),
+        ):
+            out = llm_client.chat_completion("s", "u", model="m", run_id="R", prompt_version="v")
+        assert out == "ok" and calls["n"] == 3

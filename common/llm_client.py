@@ -259,6 +259,44 @@ def chat_completion(
             last_exc = exc
             time.sleep(backoff)
 
+        except openai.APIConnectionError as exc:
+            # Dropped / refused connection: transient, so back off and retry
+            # (a timeout is handled above and is deliberately not retried).
+            if attempt == _MAX_ATTEMPTS:
+                log_step(
+                    logger,
+                    "ERROR",
+                    "llm_call_failed",
+                    run_id,
+                    {
+                        "model": resolved_model,
+                        "attempt": attempt,
+                        "error": type(exc).__name__,
+                    },
+                )
+                raise LLMAPIError(
+                    message=(
+                        f"OpenAI API error on model '{resolved_model}' "
+                        f"after {attempt} attempt(s): {exc}"
+                    ),
+                    openai_error=exc,
+                ) from exc
+            backoff = _BACKOFF_BASE_SECONDS * (2 ** (attempt - 1))
+            log_step(
+                logger,
+                "WARNING",
+                "llm_call_retry",
+                run_id,
+                {
+                    "model": resolved_model,
+                    "attempt": attempt,
+                    "error": type(exc).__name__,
+                    "backoff_seconds": backoff,
+                },
+            )
+            last_exc = exc
+            time.sleep(backoff)
+
         except openai.APIError as exc:
             # Non-status API errors (connection error, malformed response, etc.)
             log_step(
