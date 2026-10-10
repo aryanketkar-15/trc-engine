@@ -81,6 +81,15 @@ class TestGroundingRules:
         ids = [f.check_id for f in check_grounding(bad_matched, _path("AAAA1111"), agent_input.assets)]
         assert "CITATION_MISMATCH" in ids
 
+    def test_citation_may_name_another_pattern_from_the_same_path(
+        self, agent_input: ThreatAgentInput
+    ) -> None:
+        path = _path("AAAA1111", "CWE-306")
+        extra = path.steps[0].model_copy(update={"pattern_id": "CAPEC-94"})
+        path = path.model_copy(update={"steps": [path.steps[0], extra]})
+        sc = _sc("AAAA1111", ref="CWE-306", citation="CAPEC-94: Adversary in the Middle")
+        assert check_grounding(sc, path, agent_input.assets) == []
+
     def test_url_citation_with_the_same_id_is_accepted(self, agent_input: ThreatAgentInput) -> None:
         sc = _sc("AAAA1111", citation="https://cwe.mitre.org/data/definitions/306.html")
         assert check_grounding(sc, _path("AAAA1111"), agent_input.assets) == []
