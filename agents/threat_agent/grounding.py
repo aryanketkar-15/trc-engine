@@ -7,7 +7,8 @@ that the *narrative* is technically right, which is why a human still approves):
     CITATION_NOT_RETRIEVED  kb_reference is not one of the patterns on the attack
                             path this scenario was generated from
     ASSET_NOT_IN_INPUT      asset_id is not an asset of the input system model
-    CITATION_MISMATCH       citation text / matched_pattern do not agree with kb_reference
+    CITATION_MISMATCH       matched_pattern differs from kb_reference, or the citation names
+                            neither kb_reference nor any pattern retrieved for the path
     EXPOSURE_NOT_GROUNDED   the exposure shares no meaningful word with the asset's
                             name, type, location, interfaces or configuration
 
@@ -63,7 +64,7 @@ def _words(text: str) -> set[str]:
 
 def _asset_vocabulary(asset: AssetModel) -> set[str]:
     parts = [asset.name, asset.asset_type, asset.location, asset.dfd_context.trust_zone,
-             *asset.dfd_context.interfaces, *asset.dfd_context.data_flows]
+             asset.damage_scenario, *asset.dfd_context.interfaces, *asset.dfd_context.data_flows]
     for key, value in asset.device_config.items():
         parts.extend((key.replace("_", " "), value))
     return _words(" ".join(parts))
@@ -105,7 +106,17 @@ def check_grounding(
     core = _core(scenario.kb_reference)
     citation_has_id = re.search(rf"(?<![A-Z0-9]){re.escape(core)}(?![A-Z0-9])",
                                 ev.citation.upper()) is not None
-    if not _ref_matches(ev.matched_pattern, scenario.kb_reference) or not citation_has_id:
+    # The citation may name kb_reference or another pattern retrieved for the same path
+    # (e.g. a STRIDE rule backed by its CAPEC); it may never name something not retrieved.
+    cited_ok = citation_has_id or (
+        path is not None
+        and any(
+            re.search(rf"(?<![A-Z0-9]){re.escape(_core(step.pattern_id))}(?![A-Z0-9])",
+                      ev.citation.upper())
+            for step in path.steps
+        )
+    )
+    if not _ref_matches(ev.matched_pattern, scenario.kb_reference) or not cited_ok:
         fails.append(GroundingFailure(
             "CITATION_MISMATCH", tid,
             f"matched_pattern '{ev.matched_pattern}' and citation must name the same pattern "
