@@ -1,25 +1,18 @@
 # ruff: noqa: ANN401
-"""SCRP Phase 1 - Threat Agent demonstration (company walkthrough).
+"""SCRP Threat Agent - interactive command line.
 
-Runs the real Phase 1 pipeline end to end and shows each stage:
+Pick a project, generate threat scenarios, then approve or reject each one.
+A rejected scenario asks for your reason and is regenerated; this repeats until
+you approve it or the rejection limit is reached. Approved scenarios are written
+to the shared state (SCRS) together with an audit trail.
 
-    1 Perceive      input model, assets, secret / PII redaction
-    2 Knowledge     the knowledge base in use, retrieval plan, retrieved patterns
-    3 Attack paths  one path per retrieved pattern (multi-step chaining is planned)
-    4 Generation    threat scenarios (live model or recorded real model output)
-    5 Validation    4 protocol invariants + grounding rules, retry-only-failed
-    6 Review        STRIDE coverage, scenario details, traceability fields
-    7 Human gate    approve / reject-with-feedback / prune / add expert scenario
-    8 SCRS + audit  approved scenarios written to the shared state, full audit trail
+    python scripts/scrp_demo.py                       # choose a project from the menu
+    python scripts/scrp_demo.py --project 1           # skip the menu
+    python scripts/scrp_demo.py --input my_project.json
+    python scripts/scrp_demo.py --mode live           # always call the language model
+    python scripts/scrp_demo.py --auto                # scripted run for rehearsal
 
-Examples
---------
-    python scripts/scrp_demo.py                 # recorded model output, no network needed
-    python scripts/scrp_demo.py --mode live     # calls the model configured in .env
-    python scripts/scrp_demo.py --auto          # scripted walkthrough, no typing
-    python scripts/scrp_demo.py --fixture pump --mode live
-
-Everything the demo writes goes to ./demo_output (never to the real SCRS file).
+Output goes to ./demo_output (the real SCRS_state.json is never touched).
 """
 
 from __future__ import annotations
@@ -50,18 +43,16 @@ from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
-from rich.rule import Rule
 from rich.table import Table
-from rich.text import Text
 
 console = Console(highlight=False)
 
-FIXTURES = {
-    "lock": ("Smart Door Lock (BLE + cloud + OTA)", "smart_door_lock"),
-    "pump": ("Medical Infusion Pump", "infusion_pump"),
-}
+FIXTURE_DIR = _ROOT / "tests" / "threat_agent" / "e2e" / "fixtures"
+PROJECT_DIR = _ROOT / "projects"
 REPLAY_FILE = _ROOT / "docs" / "research" / "final_fullkb_scenarios_raw_live.json"
+REPLAY_PROJECTS = {"smart_door_lock"}
 OUT_DIR = _ROOT / "demo_output"
+MAX_REJECTIONS = 3
 STRIDE_SHORT = {
     "Spoofing": "S",
     "Tampering": "T",
@@ -72,238 +63,123 @@ STRIDE_SHORT = {
 }
 
 
-# --------------------------------------------------------------------------- helpers
-
-
-def stage(number: int, title: str, subtitle: str = "") -> None:
-    console.print()
-    console.print(Rule(f"[bold cyan]STAGE {number}  |  {title}[/bold cyan]", style="cyan"))
-    if subtitle:
-        console.print(f"[dim]{subtitle}[/dim]")
+# ------------------------------------------------------------------ small helpers
 
 
 def ok(msg: str) -> None:
-    console.print(f"  [bold green]OK[/bold green]  {msg}")
-
-
-def info(msg: str) -> None:
-    console.print(f"  [cyan]..[/cyan]  {msg}")
+    console.print(f"[green]ok[/green]  {msg}")
 
 
 def warn(msg: str) -> None:
-    console.print(f"  [bold yellow]!![/bold yellow]  {msg}")
+    console.print(f"[yellow]!![/yellow]  {msg}")
 
 
-def fail(msg: str) -> None:
-    console.print(f"  [bold red]XX[/bold red]  {msg}")
-
-
-class Pacer:
-    """Pauses between stages so a presenter can talk; disabled with --no-pause / --auto."""
-
-    def __init__(self, enabled: bool) -> None:
-        self.enabled = enabled
-
-    def wait(self, text: str = "Press Enter to continue") -> None:
-        if self.enabled:
-            Prompt.ask(f"\n[dim]{text}[/dim]", default="", show_default=False)
+def err(msg: str) -> None:
+    console.print(f"[red]error[/red]  {msg}")
 
 
 def short(text: str, n: int = 70) -> str:
     text = " ".join(text.split())
-    return text if len(text) <= n else text[: n - 1] + "..."
+    return text if len(text) <= n else text[: n - 3] + "..."
 
 
-def stride_letter(value: Any) -> str:
-    return STRIDE_SHORT.get(getattr(value, "value", str(value)), "?")
+def stride_name(value: Any) -> str:
+    return str(getattr(value, "value", value))
 
 
-# --------------------------------------------------------------------------- stages
+def ask(prompt: str, default: str | None = None) -> str:
+    return (
+        Prompt.ask(prompt, default=default, show_default=False)
+        if default is not None
+        else Prompt.ask(prompt)
+    )
 
 
-def load_input(fixture: str) -> Any:
+# --------------------------------------------------------------------- projects
+
+
+def discover_projects() -> list[tuple[str, Path]]:
+    """Every project JSON we can offer: bundled fixtures plus anything in ./projects."""
+    found: list[tuple[str, Path]] = []
+    if FIXTURE_DIR.is_dir():
+        for folder in sorted(FIXTURE_DIR.iterdir()):
+            f = folder / "input.json"
+            if f.is_file():
+                found.append((folder.name.replace("_", " ").title(), f))
+    if PROJECT_DIR.is_dir():
+        for f in sorted(PROJECT_DIR.glob("*.json")):
+            found.append((f.stem.replace("_", " ").title(), f))
+    found.sort(key=lambda item: (item[1].parent.name != "smart_door_lock", item[0]))
+    return found
+
+
+def load_project(path: Path) -> Any:
     from agents.threat_agent.schemas import ThreatAgentInput
 
-    folder = FIXTURES[fixture][1]
-    path = _ROOT / "tests" / "threat_agent" / "e2e" / "fixtures" / folder / "input.json"
-    return ThreatAgentInput.model_validate_json(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    agent_input = ThreatAgentInput.model_validate(data)
+    return agent_input.model_copy(update={"run_id": f"RUN-{uuid.uuid4().hex[:6].upper()}"})
 
 
-def banner(args: argparse.Namespace, settings: Any) -> None:
-    db = settings.DATABASE_URL.rsplit("/", 1)[-1].split("?")[0]
-    body = Text()
-    body.append("SCRP - State-Aware Cybersecurity Reasoning Protocol\n", style="bold white")
-    body.append("Phase 1: Threat Agent  |  Group TY-A9, VIT Pune\n", style="cyan")
-    body.append("Industry partner: Infineon  |  Guide: Dr. Vidya Gaikwad\n\n", style="dim")
-    body.append(f"Mode            {args.mode.upper()}", style="white")
-    body.append(
-        "  (recorded real model output; no network)\n"
-        if args.mode == "replay"
-        else f"  (model: {settings.OPENAI_MODEL})\n",
-        style="dim",
-    )
-    body.append(f"Knowledge base  {db}\n", style="white")
-    body.append(f"Fixture         {FIXTURES[args.fixture][0]}\n", style="white")
-    body.append(
-        "AI output is a recommendation only: a human approves every scenario.",
-        style="italic yellow",
-    )
-    console.print(
-        Panel(body, title="[bold]Demonstration[/bold]", border_style="cyan", padding=(1, 2))
-    )
+def choose_project(args: argparse.Namespace) -> tuple[str, Path]:
+    if args.input:
+        p = Path(args.input).expanduser().resolve()
+        if not p.is_file():
+            sys.exit(f"Input file not found: {p}")
+        return p.stem.replace("_", " ").title(), p
+    projects = discover_projects()
+    if not projects:
+        sys.exit("No project JSON files found.")
+    table = Table(box=box.SIMPLE_HEAD, header_style="bold")
+    table.add_column("#", justify="right")
+    table.add_column("Project")
+    table.add_column("Assets", justify="right")
+    table.add_column("File")
+    rows = []
+    for i, (name, path) in enumerate(projects, 1):
+        try:
+            n_assets = len(json.loads(path.read_text(encoding="utf-8")).get("assets", []))
+        except (OSError, ValueError):
+            n_assets = 0
+        rel = path.relative_to(_ROOT) if path.is_relative_to(_ROOT) else path
+        table.add_row(str(i), name, str(n_assets), str(rel))
+        rows.append((name, path))
+    console.print("Available projects:")
+    console.print(table)
+    choice = args.project or ask(f"Select a project (1-{len(rows)}, default 1)", "1")
+    if not choice.isdigit() or not 1 <= int(choice) <= len(rows):
+        sys.exit(f"Invalid selection '{choice}'.")
+    return rows[int(choice) - 1]
 
 
-def stage_perceive(agent_input: Any) -> None:
-    from common.pii_redaction import redact_pii_with_count
-
-    stage(1, "PERCEIVE", "Validated input model, assets and outbound redaction (company 3.4)")
-    console.print(f"  Run id        [bold]{agent_input.run_id}[/bold]")
-    console.print(f"  Use case      {short(agent_input.use_case, 100)}")
-    t = Table(box=box.SIMPLE_HEAD, header_style="bold")
-    for col in ("Asset", "Name", "Type", "Location", "Security attributes (C/I/A)"):
-        t.add_column(col)
-    for a in agent_input.assets:
-        sa = a.security_attributes
-        attrs = " ".join(
-            f"{k[0].upper()}:{v}" for k, v in sa.model_dump().items() if isinstance(v, str)
-        )
-        t.add_row(a.asset_id, a.name, a.asset_type, short(a.location, 28), attrs or "-")
-    console.print(t)
-
-    sample = (
-        "Debug build uses api_key=sk-demo-1234567890abcdef, admin password: Hunter22, "
-        "contact ops@example.com from 192.168.10.4."
-    )
-    masked, count = redact_pii_with_count(sample)
-    console.print("  [bold]Redaction before anything is sent to the model[/bold]")
-    console.print(f"    before  [red]{sample}[/red]")
-    console.print(f"    after   [green]{masked}[/green]   ({count} item(s) masked)")
+# ----------------------------------------------------------------------- replay
 
 
-def stage_knowledge(agent_input: Any, settings: Any) -> list[Any]:
-    from agents.threat_agent.retrieval import build_retrieval_plan, fetch_candidates
-    from common.db import get_db_connection
+class Replay:
+    """Stands in for the language model by replaying recorded real model output."""
 
-    stage(
-        2,
-        "KNOWLEDGE BASE AND RETRIEVAL",
-        "Semantic search (pgvector, all-MiniLM-L6-v2) with domain-tag rerank",
-    )
-    try:
-        with get_db_connection() as conn, conn.cursor() as cur:
-            cur.execute(
-                "SELECT source, COUNT(*) FROM threat_patterns GROUP BY source ORDER BY 2 DESC"
-            )
-            rows = cur.fetchall()
-            try:
-                cur.execute("SELECT COUNT(*) FROM standards_chunks")
-                chunks = cur.fetchone()[0]  # type: ignore[index]
-            except Exception:
-                chunks = None
-    except Exception as exc:
-        fail(f"Knowledge base unreachable: {exc}. Start it with `docker compose up -d`.")
-        sys.exit(1)
+    def __init__(self) -> None:
+        from agents.threat_agent.schemas import ThreatScenario
 
-    kb = Table(box=box.SIMPLE_HEAD, header_style="bold", title="Knowledge base content")
-    kb.add_column("Source")
-    kb.add_column("Entries", justify="right")
-    total = 0
-    for src, n in rows:
-        kb.add_row(str(src), f"{n:,}")
-        total += n
-    kb.add_row("[bold]Total patterns[/bold]", f"[bold]{total:,}[/bold]")
-    if chunks is not None:
-        kb.add_row("Standards chunks (CC/CEM/JIL/CRA)", f"{chunks:,}")
-    console.print(kb)
+        self.saved = [
+            ThreatScenario.model_validate(x) for x in json.loads(REPLAY_FILE.read_text("utf-8"))
+        ]
+        self.used: set[str] = set()
 
-    plan = build_retrieval_plan(agent_input)
-    info(f"Retrieval plan: {len(plan.queries)} queries, one per asset attribute")
-    t0 = time.time()
-    with console.status(
-        "[cyan]Loading the embedding model and searching the knowledge base...[/cyan]"
-    ):
-        candidates = fetch_candidates(plan)
-    ok(f"{len(candidates)} candidate patterns retrieved in {time.time() - t0:.1f}s")
-
-    by_asset: dict[str, list[Any]] = {}
-    for c in candidates:
-        by_asset.setdefault(c.asset_id, []).append(c)
-    t = Table(box=box.SIMPLE_HEAD, header_style="bold", title="Top retrieved patterns per asset")
-    for col in ("Asset", "Pattern", "Source", "Score", "Title"):
-        t.add_column(col)
-    for asset in agent_input.assets:
-        for c in sorted(by_asset.get(asset.asset_id, []), key=lambda x: -x.retrieval_score)[:3]:
-            t.add_row(
-                asset.asset_id,
-                c.pattern_id,
-                c.source.value,
-                f"{c.retrieval_score:.3f}",
-                short(c.title, 46),
-            )
-    console.print(t)
-    return candidates
-
-
-def stage_chaining(candidates: list[Any], agent_input: Any, max_paths: int) -> list[Any]:
-    from agents.threat_agent.attack_chain import build_paths, build_single_step_path
-
-    stage(
-        3,
-        "ATTACK PATHS",
-        "Each retrieved pattern becomes an attack path to be turned into a scenario",
-    )
-    try:
-        paths = build_paths(candidates, agent_input)
-        ok(f"{len(paths)} attack paths built by kill-chain ordering")
-    except NotImplementedError:
-        paths = [build_single_step_path(c) for c in candidates]
-        ok(f"{len(paths)} single-step attack paths (one per retrieved pattern)")
-        warn(
-            "Multi-step kill-chain ordering (linking patterns into longer chains) is a "
-            "planned extension and is not part of this demonstration."
-        )
-
-    # Take a balanced sample across assets so the demo stays short but representative.
-    per_asset: dict[str, list[Any]] = {}
-    for p in sorted(paths, key=lambda x: -x.chain_confidence):
-        per_asset.setdefault(p.target_asset_ids[0] if p.target_asset_ids else "?", []).append(p)
-    chosen: list[Any] = []
-    while len(chosen) < max_paths and any(per_asset.values()):
-        for lst in per_asset.values():
-            if lst and len(chosen) < max_paths:
-                chosen.append(lst.pop(0))
-    info(f"Demonstrating {len(chosen)} paths (balanced across assets; use --max-paths to change)")
-    t = Table(box=box.SIMPLE_HEAD, header_style="bold")
-    for col in ("Path", "Asset", "Chain", "Confidence"):
-        t.add_column(col)
-    for p in chosen:
-        t.add_row(
-            p.path_id,
-            ",".join(p.target_asset_ids),
-            " -> ".join(s.pattern_id for s in p.steps),
-            f"{p.chain_confidence:.2f}",
-        )
-    console.print(t)
-    return chosen
-
-
-def _replay_generator(agent_input: Any) -> Any:
-    """Return a generate_scenarios() stand-in that replays recorded REAL model output."""
-    from agents.threat_agent.schemas import ThreatScenario
-
-    saved = [ThreatScenario.model_validate(x) for x in json.loads(REPLAY_FILE.read_text("utf-8"))]
-    used: set[str] = set()
-
-    def replay(
-        paths: list[Any], context: Any, *, validation_failure_context: Any = None
+    def generate(
+        self,
+        paths: list[Any],
+        context: Any,
+        *,
+        validation_failure_context: Any = None,
     ) -> list[Any]:
         out = []
         for seq, path in enumerate(paths):
             ref = path.steps[0].pattern_id
             asset = path.target_asset_ids[0] if path.target_asset_ids else ""
-            for s in saved:
-                if s.tid not in used and s.asset_id == asset and s.kb_reference == ref:
-                    used.add(s.tid)
+            for s in self.saved:
+                if s.tid not in self.used and s.asset_id == asset and s.kb_reference == ref:
+                    self.used.add(s.tid)
                     out.append(
                         s.model_copy(
                             update={
@@ -315,547 +191,441 @@ def _replay_generator(agent_input: Any) -> Any:
                     break
         return out
 
-    return replay
-
-
-def stage_generation_and_validation(
-    agent_input: Any, paths: list[Any], mode: str
-) -> tuple[list[Any], int, str]:
-    from unittest.mock import patch
-
-    from agents.threat_agent import orchestrator
-    from agents.threat_agent.orchestrator import generate_and_validate_with_retry
-
-    stage(4, "GENERATION", "One scenario per attack path, each citing a retrieved KB pattern")
-    if mode == "replay":
-        info("Replay mode: using recorded output of a real model run (no network needed)")
-        gen_patch = patch.object(orchestrator, "generate_scenarios", _replay_generator(agent_input))
-    else:
-        info("Live mode: calling the configured language model")
-        gen_patch = patch.object(
-            orchestrator, "generate_scenarios", orchestrator.generate_scenarios
+    def has_unused(self, asset_id: str, ref: str) -> bool:
+        return any(
+            s.tid not in self.used and s.asset_id == asset_id and s.kb_reference == ref
+            for s in self.saved
         )
 
-    t0 = time.time()
-    with gen_patch, console.status("[cyan]Generating, validating and grounding...[/cyan]"):
-        scenarios, retries, status = generate_and_validate_with_retry(agent_input, paths=paths)
-    retry_note = "n/a for recorded output" if mode == "replay" else str(retries)
-    ok(
-        f"{len(scenarios)} scenarios produced in {time.time() - t0:.1f}s "
-        f"(automatic retries used: {retry_note})"
-    )
-    return scenarios, retries, status
+
+# ---------------------------------------------------------------------- session
 
 
-def stage_validation(agent_input: Any, scenarios: list[Any], paths: list[Any]) -> None:
-    from agents.threat_agent.grounding import check_grounding, path_id_from_tid
-    from agents.threat_agent.validator import Validator
+class Session:
+    def __init__(self, agent_input: Any, mode: str, scrs_path: Path, max_paths: int) -> None:
+        from scrp.state_manager import StateManager
 
-    stage(
-        5,
-        "VALIDATION",
-        "4 frozen protocol invariants (FAR 15.38%, FRR 8.33%) + deterministic grounding rules",
-    )
-    by_path = {p.path_id: p for p in paths}
-    val = Validator()
-    rows = []
-    passed = 0
-    for s in scenarios:
-        v = val.validate(s)
-        pid = path_id_from_tid(s.tid)
-        g = check_grounding(s, by_path.get(pid or ""), agent_input.assets)
-        failed = [fc.check_id for fc in v.failed_checks] + [x.check_id for x in g]
-        passed += not failed
-        rows.append((s, failed))
+        self.agent_input = agent_input
+        self.mode = mode
+        self.max_paths = max_paths
+        self.replay = Replay() if mode == "replay" else None
+        self.sm = StateManager(scrs_path)
+        self.candidates: list[Any] = []
+        self.paths: dict[str, Any] = {}
+        self.scenarios: list[Any] = []
 
-    t = Table(box=box.SIMPLE_HEAD, header_style="bold")
-    for col in ("#", "Scenario", "Asset", "KB ref", "Invariants+grounding", "Final status"):
-        t.add_column(col)
-    for i, (s, failed) in enumerate(rows, 1):
-        mark = (
-            "[green]all pass[/green]"
-            if not failed
-            else f"[red]{', '.join(sorted(set(failed)))}[/red]"
+    # -- generation -------------------------------------------------------
+    def _generate(self, paths: list[Any], feedback: list[str] | None = None) -> list[Any]:
+        from unittest.mock import patch
+
+        from agents.threat_agent import orchestrator
+
+        target = self.replay.generate if self.replay else orchestrator.generate_scenarios
+        with patch.object(orchestrator, "generate_scenarios", target):
+            scenarios, _retries, _status = orchestrator.generate_and_validate_with_retry(
+                self.agent_input, paths=paths, initial_failure_details=feedback
+            )
+        return list(scenarios)
+
+    def run_pipeline(self) -> None:
+        from agents.threat_agent.attack_chain import build_paths, build_single_step_path
+        from agents.threat_agent.retrieval import build_retrieval_plan, fetch_candidates
+
+        t0 = time.time()
+        plan = build_retrieval_plan(self.agent_input)
+        with console.status("Searching the knowledge base..."):
+            self.candidates = fetch_candidates(plan)
+        ok(f"Retrieved {len(self.candidates)} candidate patterns ({time.time() - t0:.0f}s)")
+
+        try:
+            paths = build_paths(self.candidates, self.agent_input)
+        except NotImplementedError:
+            paths = [build_single_step_path(c) for c in self.candidates]
+        per_asset: dict[str, list[Any]] = {}
+        for p in sorted(paths, key=lambda x: -x.chain_confidence):
+            per_asset.setdefault(p.target_asset_ids[0] if p.target_asset_ids else "?", []).append(p)
+        chosen: list[Any] = []
+        while len(chosen) < self.max_paths and any(per_asset.values()):
+            for lst in per_asset.values():
+                if lst and len(chosen) < self.max_paths:
+                    chosen.append(lst.pop(0))
+        self.paths = {p.path_id: p for p in chosen}
+        ok(f"Built {len(chosen)} attack paths")
+
+        t0 = time.time()
+        with console.status("Generating and validating threat scenarios..."):
+            self.scenarios = self._generate(chosen)
+        flagged = sum(1 for s in self.scenarios if s.validation_status != "passed")
+        ok(
+            f"Generated {len(self.scenarios)} scenarios ({time.time() - t0:.0f}s): "
+            f"{len(self.scenarios) - flagged} passed validation, {flagged} flagged for review"
         )
-        status = s.validation_status or "-"
-        style = "green" if status == "passed" else "yellow"
-        t.add_row(
-            str(i),
-            short(s.tid, 24),
-            s.asset_id,
-            s.kb_reference,
-            mark,
-            f"[{style}]{status}[/{style}]",
-        )
-    console.print(t)
-    ok(f"{passed}/{len(scenarios)} scenarios satisfy every check")
-    info(
-        "Scenarios that exhaust automatic retries are flagged 'escalated_after_retries' "
-        "for the human reviewer. Only failing paths are regenerated."
-    )
-    info("Citations are verified in code: a scenario can only cite a pattern retrieval gave it.")
+
+    # -- regeneration after a rejection --------------------------------------
+    def regenerate(self, old: Any, feedback: str) -> Any | None:
+        from agents.threat_agent.attack_chain import build_single_step_path
+        from agents.threat_agent.grounding import path_id_from_tid
+
+        if self.replay is None:
+            path = self.paths.get(path_id_from_tid(old.tid) or "")
+            if path is None:
+                return None
+            with console.status("Regenerating with your feedback..."):
+                new = self._generate([path], [feedback])
+        else:
+            # Recorded mode cannot use the feedback; show the next recorded alternative
+            # for the same asset (its pattern was retrieved, so it is still grounded).
+            alt = next(
+                (
+                    c
+                    for c in sorted(self.candidates, key=lambda x: -x.retrieval_score)
+                    if c.asset_id == old.asset_id
+                    and c.pattern_id != old.kb_reference
+                    and self.replay.has_unused(old.asset_id, c.pattern_id)
+                ),
+                None,
+            )
+            if alt is None:
+                return None
+            path = build_single_step_path(alt)
+            self.paths[path.path_id] = path
+            new = self._generate([path])
+        return new[0].model_copy(update={"tid": old.tid}) if new else None
 
 
-def stage_review(scenarios: list[Any], agent_input: Any, detail: int) -> None:
-    stage(6, "SCENARIO REVIEW", "Coverage, evidence and traceability for the human reviewer")
-    letters = list(STRIDE_SHORT.values())
-    t = Table(
-        box=box.SIMPLE_HEAD, header_style="bold", title="STRIDE coverage (scenarios per asset)"
-    )
-    t.add_column("Asset")
-    for letter in letters:
-        t.add_column(letter, justify="center")
-    t.add_column("Total", justify="right")
-    for a in agent_input.assets:
-        cnt = Counter(
-            stride_letter(s.stride_category) for s in scenarios if s.asset_id == a.asset_id
-        )
-        t.add_row(
-            f"{a.asset_id} {short(a.name, 20)}",
-            *[str(cnt[x]) if cnt[x] else "[dim].[/dim]" for x in letters],
-            str(sum(cnt.values())),
-        )
-    console.print(t)
-    src = Counter(s.kb_reference.split("-")[0] for s in scenarios)
-    info("Evidence sources cited: " + ", ".join(f"{k} x{v}" for k, v in src.most_common()))
-    for s in scenarios[:detail]:
-        show_scenario(s)
+# --------------------------------------------------------------------- display
 
 
-def show_scenario(s: Any, title: str | None = None) -> None:
+def show_card(s: Any, index: int, total: int, title: str | None = None) -> None:
     e = s.evidence_chain
-    body = (
-        f"[bold]Asset[/bold] {s.asset_id}   [bold]STRIDE[/bold] {s.stride_category.value}   "
-        f"[bold]Confidence[/bold] {s.confidence_score:.2f}   "
-        f"[bold]Status[/bold] {s.validation_status}\n"
-        f"[bold]Attack vector[/bold]  {s.attack_vector}\n"
-        f"[bold]KB reference[/bold]   {s.kb_reference}\n\n"
-        f"[bold]Evidence chain[/bold]\n"
-        f"  exposure      {e.exposure}\n"
-        f"  matched       {e.matched_pattern}\n"
-        f"  why it applies {e.applicability_reason}\n"
-        f"  citation      {e.citation}\n\n"
-        f"[dim]Traceability: use case {s.use_case_id}  |  asset version {s.asset_version}  |  "
-        f"KB snapshot {s.kb_snapshot_version}  |  run {s.run_id}[/dim]"
+    flagged = (s.validation_status or "") != "passed"
+    status = (
+        "[yellow]flagged: needs careful review[/yellow]" if flagged else "[green]passed[/green]"
     )
-    console.print(Panel(body, title=title or s.tid, border_style="green", padding=(0, 1)))
-
-
-def scenario_table(scenarios: list[Any]) -> None:
-    t = Table(box=box.SIMPLE_HEAD, header_style="bold")
-    for col in ("#", "Asset", "S", "KB ref", "Conf", "Status"):
-        t.add_column(col, no_wrap=True)
-    t.add_column("Attack vector", no_wrap=True, overflow="ellipsis", max_width=46)
-    for i, s in enumerate(scenarios, 1):
-        status = (
-            "ESCALATED"
-            if (s.validation_status or "").startswith("escalated")
-            else (s.validation_status or "-")
+    lines = [
+        f"[bold]Asset[/bold]       {s.asset_id}",
+        f"[bold]STRIDE[/bold]      {stride_name(s.stride_category)}"
+        f"      [bold]Confidence[/bold] {s.confidence_score:.2f}"
+        f"      [bold]Validation[/bold] {status}",
+        f"[bold]Pattern[/bold]     {s.kb_reference}",
+        f"[bold]Attack[/bold]      {s.attack_vector}",
+        f"[bold]Exposure[/bold]    {e.exposure}",
+        f"[bold]Why[/bold]         {e.applicability_reason}",
+        f"[bold]Citation[/bold]    {e.citation}",
+    ]
+    console.print(
+        Panel(
+            "\n".join(lines),
+            title=title or f"Scenario {index} of {total}   {s.tid}",
+            title_align="left",
+            border_style="yellow" if flagged else "cyan",
+            padding=(0, 1),
         )
+    )
+
+
+def show_summary_table(scenarios: list[Any]) -> None:
+    t = Table(box=box.SIMPLE_HEAD, header_style="bold")
+    t.add_column("#", justify="right")
+    t.add_column("Asset")
+    t.add_column("STRIDE")
+    t.add_column("Pattern")
+    t.add_column("Conf", justify="right")
+    t.add_column("Validation")
+    t.add_column("Attack", no_wrap=True, overflow="ellipsis", max_width=44)
+    for i, s in enumerate(scenarios, 1):
+        passed = s.validation_status == "passed"
         t.add_row(
             str(i),
             s.asset_id,
-            stride_letter(s.stride_category),
+            stride_name(s.stride_category),
             s.kb_reference,
             f"{s.confidence_score:.2f}",
-            status,
+            "[green]passed[/green]" if passed else "[yellow]flagged[/yellow]",
             s.attack_vector,
         )
     console.print(t)
 
 
-# ------------------------------------------------------------------------ human gate
+# ----------------------------------------------------------------------- review
 
 
-class Review:
-    """State of the human review session (kept so the audit trail is complete)."""
-
-    def __init__(
-        self, agent_input: Any, scenarios: list[Any], paths: list[Any], mode: str, state_mgr: Any
-    ) -> None:
-        self.agent_input = agent_input
-        self.scenarios = list(scenarios)
-        self.paths = {p.path_id: p for p in paths}
-        self.mode = mode
-        self.sm = state_mgr
-        self.events: list[str] = []
-
-    def reject(self, idx: int, feedback: str) -> None:
-        from agents.threat_agent.grounding import path_id_from_tid
-        from agents.threat_agent.orchestrator import generate_and_validate_with_retry
-
-        old = self.scenarios[idx]
-        self.sm.log_rejection(self.agent_input.run_id, feedback, [old])
-        self.events.append(f"rejected {old.tid}: {feedback}")
-        warn(f"Rejected {old.tid} - feedback recorded in SCRS history")
-        if self.mode == "replay":
-            warn(
-                "Replay mode cannot call the model, so the rejected scenario stays in the list. "
-                "Run with --mode live to watch it regenerate from your feedback."
-            )
-            return
-        pid = path_id_from_tid(old.tid)
-        path = self.paths.get(pid or "")
-        if path is None:
-            warn("No attack path found for this scenario; cannot regenerate it.")
-            return
-        with console.status("[cyan]Regenerating this scenario with your feedback...[/cyan]"):
-            new, retries, _ = generate_and_validate_with_retry(
-                self.agent_input, paths=[path], initial_failure_details=[feedback]
-            )
-        if not new:
-            warn("The model returned nothing; keeping the original.")
-            return
-        replacement = new[0].model_copy(update={"tid": old.tid})
-        self.scenarios[idx] = replacement
-        ok(f"Regenerated (retries: {retries}); revised scenario below")
-        show_scenario(replacement, title="Revised scenario (after your feedback)")
-
-    def prune(self, idx: int, reason: str) -> None:
-        old = self.scenarios.pop(idx)
-        self.sm.log_edit(
-            self.agent_input.run_id, old.tid, "prune", reason, old.model_dump(mode="json")
-        )
-        self.events.append(f"pruned {old.tid}: {reason}")
-        ok(f"Pruned {old.tid} (kept in the audit trail with your reason)")
-
-    def add(self, fields: dict[str, str]) -> bool:
-        from agents.threat_agent.retrieval import kb_reference_exists
-        from agents.threat_agent.schemas import (
-            EvidenceChain,
-            STRIDECategory,
-            ThreatScenario,
-            ThreatStatus,
-        )
-        from agents.threat_agent.validator import Validator
-
-        known = {a.asset_id for a in self.agent_input.assets}
-        if fields["asset_id"] not in known:
-            fail(f"Unknown asset '{fields['asset_id']}' (known: {', '.join(sorted(known))})")
-            return False
-        try:
-            stride = STRIDECategory(fields["stride"])
-        except ValueError:
-            fail(f"'{fields['stride']}' is not a STRIDE category")
-            return False
-        if kb_reference_exists(fields["kb_ref"]) is False:
-            fail(f"'{fields['kb_ref']}' does not exist in the knowledge base")
-            return False
-        try:
-            sc = ThreatScenario(
-                tid=f"THR-EXP-{uuid.uuid4().hex[:8].upper()}",
-                run_id=self.agent_input.run_id,
-                asset_id=fields["asset_id"],
-                stride_category=stride,
-                attack_vector=fields["vector"],
-                kb_reference=fields["kb_ref"],
-                evidence_chain=EvidenceChain(
-                    exposure=fields["exposure"],
-                    matched_pattern=fields["kb_ref"],
-                    applicability_reason=fields["why"],
-                    citation=fields["citation"],
-                ),
-                confidence_score=1.0,
-                status=ThreatStatus.PENDING_TEST,
-                validation_status="expert_added",
-                use_case_id=self.scenarios[0].use_case_id if self.scenarios else None,
-                asset_version=next(
-                    (a.version for a in self.agent_input.assets
-                     if a.asset_id == fields["asset_id"]),
-                    None,
-                ),
-                kb_snapshot_version=self.agent_input.kb_snapshot_version,
-            )
-        except Exception as exc:
-            fail(f"Invalid scenario: {short(str(exc), 120)}")
-            return False
-        result = Validator().validate(sc)
-        if not result.passed:
-            for fc in result.failed_checks:
-                fail(f"Validator {fc.check_id}: {fc.detail}")
-            return False
-        self.sm.log_edit(
-            self.agent_input.run_id,
-            sc.tid,
-            "add",
-            fields["justification"],
-            sc.model_dump(mode="json"),
-        )
-        self.scenarios.append(sc)
-        self.events.append(f"added {sc.tid}: {fields['justification']}")
-        ok(f"Expert scenario {sc.tid} added: validated, KB reference verified, audit-logged")
-        show_scenario(sc, title="Expert-added scenario")
-        return True
-
-    def approve_all(self) -> int:
-        from agents.threat_agent.schemas import ThreatStatus
-
-        approved = [s.model_copy(update={"status": ThreatStatus.APPROVED}) for s in self.scenarios]
-        return int(self.sm.commit_approved_run(self.agent_input.run_id, approved))
-
-
-def _ask_add(agent_input: Any) -> dict[str, str]:
-    known = ", ".join(a.asset_id for a in agent_input.assets)
-    return {
-        "asset_id": Prompt.ask(f"  Asset id ({known})"),
-        "stride": Prompt.ask(
-            "  STRIDE (Spoofing, Tampering, Repudiation, InformationDisclosure, "
-            "DenialOfService, ElevationOfPrivilege)"
-        ),
-        "kb_ref": Prompt.ask("  KB reference (e.g. CAPEC-94, CWE-306)"),
-        "vector": Prompt.ask("  Attack vector"),
-        "exposure": Prompt.ask("  Exposure (the asset property that is exposed)"),
-        "why": Prompt.ask("  Why it applies to this asset"),
-        "citation": Prompt.ask("  Citation text (must name the KB reference)"),
-        "justification": Prompt.ask("  Justification for adding", default="Expert knowledge"),
-    }
-
-
-def stage_human_gate(review: Review, auto: bool) -> bool:
-    stage(
-        7,
-        "HUMAN-IN-THE-LOOP GATE",
-        "Nothing reaches the shared state without a human decision (company 3.4)",
+def add_expert_scenario(session: Session) -> Any | None:
+    from agents.threat_agent.retrieval import kb_reference_exists
+    from agents.threat_agent.schemas import (
+        EvidenceChain,
+        STRIDECategory,
+        ThreatScenario,
+        ThreatStatus,
     )
-    if auto:
-        return _scripted_gate(review)
-    help_text = (
-        "  [bold]v N[/bold] view scenario N    "
-        "[bold]r N[/bold] reject N with feedback (regenerates)\n"
-        "  [bold]p N[/bold] prune N with reason  [bold]a[/bold] add an expert scenario\n"
-        "  [bold]l[/bold] list scenarios         "
-        "[bold]ok[/bold] approve all remaining and write to SCRS\n"
-        "  [bold]q[/bold] quit without writing"
-    )
-    console.print(Panel(help_text, title="Reviewer commands", border_style="yellow"))
-    scenario_table(review.scenarios)
+    from agents.threat_agent.validator import Validator
+
+    ai = session.agent_input
+    ids = ", ".join(a.asset_id for a in ai.assets)
+    asset_id = ask(f"Asset ({ids})")
+    if asset_id not in {a.asset_id for a in ai.assets}:
+        err(f"Unknown asset '{asset_id}'")
+        return None
+    try:
+        stride = STRIDECategory(
+            ask("STRIDE category (e.g. Spoofing, Tampering, InformationDisclosure)")
+        )
+    except ValueError:
+        err("Not a valid STRIDE category")
+        return None
+    ref = ask("Pattern id (e.g. CAPEC-94, CWE-306)")
+    if kb_reference_exists(ref) is False:
+        err(f"'{ref}' does not exist in the knowledge base")
+        return None
+    vector = ask("Attack description")
+    exposure = ask("What is exposed on the asset")
+    why = ask("Why it applies")
+    citation = ask("Citation text (must name the pattern id)", ref)
+    justification = ask("Why are you adding it", "Expert knowledge")
+    try:
+        sc = ThreatScenario(
+            tid=f"THR-EXP-{uuid.uuid4().hex[:8].upper()}",
+            run_id=ai.run_id,
+            asset_id=asset_id,
+            stride_category=stride,
+            attack_vector=vector,
+            kb_reference=ref,
+            evidence_chain=EvidenceChain(
+                exposure=exposure, matched_pattern=ref, applicability_reason=why, citation=citation
+            ),
+            confidence_score=1.0,
+            status=ThreatStatus.PENDING_TEST,
+            validation_status="passed",
+            use_case_id=session.scenarios[0].use_case_id if session.scenarios else None,
+            asset_version=next((a.version for a in ai.assets if a.asset_id == asset_id), None),
+            kb_snapshot_version=ai.kb_snapshot_version,
+        )
+    except Exception as exc:
+        err(short(str(exc), 160))
+        return None
+    result = Validator().validate(sc)
+    if not result.passed:
+        for fc in result.failed_checks:
+            err(f"{fc.check_id}: {short(fc.detail, 200)}")
+        return None
+    session.sm.log_edit(ai.run_id, sc.tid, "add", justification, sc.model_dump(mode="json"))
+    ok(f"Added {sc.tid}")
+    return sc
+
+
+def review_one(session: Session, idx: int, total: int, auto: bool) -> tuple[str, Any]:
+    """Review one scenario; returns (decision, scenario)."""
+    s = session.scenarios[idx]
+    rejections = 0
+    first = True
     while True:
-        raw = Prompt.ask("\n[bold yellow]review>[/bold yellow]", default="ok").strip().lower()
-        cmd, _, arg = raw.partition(" ")
-        idx = int(arg) - 1 if arg.strip().isdigit() else -1
-        valid = 0 <= idx < len(review.scenarios)
-        if cmd == "ok":
-            return True
-        if cmd == "q":
-            return False
-        if cmd == "l":
-            scenario_table(review.scenarios)
-        elif cmd == "v" and valid:
-            show_scenario(review.scenarios[idx])
-        elif cmd == "r" and valid:
-            review.reject(idx, Prompt.ask("  Feedback for the model") or "Please revise.")
-        elif cmd == "p" and valid:
-            reason = Prompt.ask("  Reason for pruning (required)")
-            if reason.strip():
-                review.prune(idx, reason)
-            else:
-                fail("A reason is required")
-        elif cmd == "a":
-            review.add(_ask_add(review.agent_input))
+        show_card(s, idx + 1, total, None if first else f"Revised scenario {idx + 1} of {total}")
+        first = False
+        if auto:
+            answer = "n" if (idx == 0 and rejections == 0) else "y"
+            console.print(f"Approve this scenario? (y/n): [bold]{answer}[/bold]  (scripted)")
         else:
-            fail("Unknown command or number; type l to list scenarios")
+            answer = ask(
+                "Approve this scenario? (y=yes, n=no, x=discard, a=all, q=quit; default y)",
+                "y",
+            )
+        answer = answer.strip().lower()
+
+        if answer in {"y", "yes"}:
+            return "approved", s
+        if answer in {"a", "all"}:
+            return "all", s
+        if answer in {"q", "quit"}:
+            return "quit", s
+        if answer in {"x", "discard"}:
+            reason = "Out of scope (scripted)." if auto else ask("Reason for discarding")
+            session.sm.log_edit(
+                session.agent_input.run_id,
+                s.tid,
+                "prune",
+                reason or "Discarded",
+                s.model_dump(mode="json"),
+            )
+            ok("Discarded and logged")
+            return "discarded", s
+        if answer in {"n", "no"}:
+            rejections += 1
+            if auto:
+                reason = "Be specific to this asset's interface and say why existing controls fail."
+                console.print(f"Reason for rejection: [bold]{reason}[/bold] (scripted)")
+            else:
+                reason = ask("Reason for rejection") or "No reason given"
+            session.sm.log_rejection(session.agent_input.run_id, reason, [s])
+            if rejections >= MAX_REJECTIONS:
+                warn(f"Rejected {MAX_REJECTIONS} times; marked rejected, not written.")
+                return "rejected", s
+            if session.replay is not None:
+                warn(
+                    "Recorded mode: showing the next recorded alternative for this asset "
+                    "(use --mode live to regenerate from your reason)."
+                )
+            new = session.regenerate(s, reason)
+            if new is None:
+                warn("No new version could be produced.")
+                return "rejected", s
+            ok(f"Regenerated (attempt {rejections + 1} of {MAX_REJECTIONS})")
+            s = new
+            session.scenarios[idx] = new
+            continue
+        err("Please answer y, n, x, a or q")
 
 
-def _scripted_gate(review: Review) -> bool:
-    console.print("  [dim]Scripted walkthrough (--auto): the reviewer acts as follows.[/dim]")
-    scenario_table(review.scenarios)
-    review.reject(
-        0,
-        "Make the attack vector more specific to this asset's interface and "
-        "explain why the existing countermeasures do not stop it.",
-    )
-    if len(review.scenarios) > 1:
-        review.prune(
-            len(review.scenarios) - 1,
-            "Out of scope for the current product variant (reviewer judgement).",
-        )
-    asset = review.agent_input.assets[0]
-    console.print(
-        "  [dim]Reviewer first tries an inconsistent entry; the validator must stop it.[/dim]"
-    )
-    review.add(
-        {
-            "asset_id": asset.asset_id,
-            "stride": "Spoofing",
-            "kb_ref": "CWE-306",
-            "vector": "Heavy rainfall damages the enclosure",
-            "exposure": f"{asset.name} interface accepts requests without authentication",
-            "why": "Placeholder reasoning that does not match the chosen STRIDE class at all.",
-            "citation": "CWE-306: Missing Authentication for Critical Function",
-            "justification": "Deliberately wrong example for the demonstration.",
-        }
-    )
-    console.print("  [dim]Then enters a correct one.[/dim]")
-    review.add(
-        {
-            "asset_id": asset.asset_id,
-            "stride": "Spoofing",
-            "kb_ref": "CWE-306",
-            "vector": f"Impersonation of a legitimate caller to {asset.name} through an "
-            "unauthenticated "
-            "management interface (identity spoofing)",
-            "exposure": f"{asset.name} interface accepts requests without caller authentication",
-            "why": f"{asset.name} is reachable over its interface and no caller authentication is "
-            "enforced before the critical function runs.",
-            "citation": "CWE-306: Missing Authentication for Critical Function",
-            "justification": "Known weakness class for this product family (expert experience).",
-        }
-    )
-    return True
+def review_all(session: Session, auto: bool) -> tuple[list[Any], dict[str, int]]:
+    approved: list[Any] = []
+    counts: Counter[str] = Counter()
+    total = len(session.scenarios)
+    approve_rest = False
+    i = 0
+    while i < len(session.scenarios):
+        if approve_rest:
+            approved.append(session.scenarios[i])
+            counts["approved"] += 1
+            i += 1
+            continue
+        decision, s = review_one(session, i, total, auto)
+        if decision in {"approved", "all"}:
+            approved.append(s)
+            counts["approved"] += 1
+            approve_rest = decision == "all"
+        elif decision == "quit":
+            warn("Review stopped; unreviewed scenarios are not written.")
+            break
+        else:
+            counts[decision] += 1
+        i += 1
+    if (
+        not auto
+        and counts
+        and Prompt.ask("\nAdd a scenario of your own? (y/n)", default="n", show_default=False)
+        == "y"
+    ):
+        sc = add_expert_scenario(session)
+        if sc is not None:
+            show_card(sc, 0, 0, f"Expert scenario {sc.tid}")
+            approved.append(sc)
+            counts["added"] += 1
+    return approved, dict(counts)
 
 
-def stage_scrs(
-    review: Review, approved_count: int, scrs_path: Path, report_path: Path, mode: str
+# ------------------------------------------------------------------------ finish
+
+
+def write_results(
+    session: Session, approved: list[Any], scrs_path: Path, report_path: Path
 ) -> None:
-    from scrp.state_manager import StateManager
+    from agents.threat_agent.schemas import ThreatStatus
 
-    stage(
-        8,
-        "SHARED STATE (SCRS) AND AUDIT TRAIL",
-        "Approved scenarios are persisted; every human decision is logged",
-    )
-    ok(f"{approved_count} approved scenarios written to {scrs_path.relative_to(_ROOT)}")
-    sm = StateManager(scrs_path)
-    log = sm.get_audit_log()
-    counts = Counter(e.action for e in log)
-    t = Table(box=box.SIMPLE_HEAD, header_style="bold", title="Audit log summary")
-    t.add_column("Action")
-    t.add_column("Entries", justify="right")
-    for action in ("write", "approve", "reject", "revise", "prune", "add"):
-        if counts[action]:
-            t.add_row(action, str(counts[action]))
-    console.print(t)
-    hist = sm.get_revision_history(review.agent_input.run_id)
-    info(
-        f"Revision history rounds kept for this run: {len(hist)} "
-        "(rejected and pruned content is never deleted)"
-    )
-    shown = [e for e in log if e.action in {"reject", "prune", "add"}]
-    for e in shown[:6]:
-        console.print(
-            f"    [dim]{e.timestamp:%H:%M:%S}[/dim]  {e.action:<7} {e.tid}  "
-            f"[dim]{short(e.reason or '', 70)}[/dim]"
-        )
-
-    report = {
-        "run_id": review.agent_input.run_id,
-        "mode": mode,
-        "scenarios_approved": approved_count,
-        "human_events": review.events,
-        "audit_counts": dict(counts),
-        "scenarios": [s.model_dump(mode="json") for s in review.scenarios],
-    }
-    report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
-    ok(f"Run report saved to {report_path.relative_to(_ROOT)}")
-
-
-def summary(args: argparse.Namespace) -> None:
-    stage(9, "WHAT PHASE 1 DELIVERS")
-    t = Table(box=box.SIMPLE_HEAD, header_style="bold")
-    t.add_column("Capability")
-    t.add_column("Status")
-    done = [
-        "Structured asset input, validated against a schema",
-        "Outbound redaction of PII and secrets",
-        "Retrieval over CAPEC, ATT&CK, CWE and STRIDE (2,300+ patterns, free sources)",
-        "Per-pattern attack paths and scenario generation with cited evidence",
-        "Protocol invariant validator plus grounding rules (no invented citations)",
-        "Automatic retries on failed paths only (token-saving)",
-        "Human gate: approve, reject-and-regenerate, prune, add expert scenario",
-        "Shared state (SCRS) with audit log, non-overwrite history and traceability fields",
-        "REST API with the same workflow, and 300+ automated tests",
-    ]
-    for d in done:
-        t.add_row(d, "[green]complete[/green]")
-    pending = [
-        ("Team 1 asset-table adapter", "waiting for 4 fields from Team 1"),
-        ("Expert relevance judgments / company internal patterns", "needs the company expert"),
-        ("ISO/SAE 21434 and SESIP catalogues", "paid or unclear licence"),
-        ("Multi-step attack chaining (kill-chain ordering)", "planned extension"),
-        ("Phase 2: Risk Agent", "next phase"),
-    ]
-    for name, why in pending:
-        t.add_row(name, f"[yellow]{why}[/yellow]")
-    console.print(t)
-    console.print("\n  Files written: [bold]demo_output/[/bold] (SCRS_demo.json, run_report.json)")
+    if not approved:
+        warn("Nothing approved, so nothing was written to the shared state.")
+        return
+    final = [s.model_copy(update={"status": ThreatStatus.APPROVED}) for s in approved]
+    n = session.sm.commit_approved_run(session.agent_input.run_id, final)
+    log = session.sm.get_audit_log()
+    actions = Counter(e.action for e in log)
+    ok(f"{n} approved scenarios written to {scrs_path.relative_to(_ROOT)}")
     console.print(
-        "  [dim]Re-run with --mode live to use the model, --auto for a scripted run.[/dim]"
+        "    audit log: "
+        + ", ".join(
+            f"{actions[a]} {a}"
+            for a in ("write", "approve", "reject", "prune", "add")
+            if actions[a]
+        )
+    )
+    report_path.write_text(
+        json.dumps(
+            {
+                "run_id": session.agent_input.run_id,
+                "mode": session.mode,
+                "approved": [s.model_dump(mode="json") for s in approved],
+                "audit_counts": dict(actions),
+            },
+            indent=2,
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    ok(f"Report saved to {report_path.relative_to(_ROOT)}")
+
+
+def run_once(args: argparse.Namespace, settings: Any) -> bool:
+    name, path = choose_project(args)
+    args.project = None
+    args.input = None
+    agent_input = load_project(path)
+    folder = path.parent.name
+    mode = args.mode
+    if mode == "auto":
+        mode = "replay" if folder in REPLAY_PROJECTS else "live"
+    if mode == "replay" and folder not in REPLAY_PROJECTS:
+        sys.exit("No recorded output for this project; use --mode live.")
+
+    shutil.rmtree(OUT_DIR, ignore_errors=True)
+    OUT_DIR.mkdir(parents=True)
+    scrs_path, report_path = OUT_DIR / "SCRS_demo.json", OUT_DIR / "run_report.json"
+
+    db = settings.DATABASE_URL.rsplit("/", 1)[-1].split("?")[0]
+    source = "recorded model output" if mode == "replay" else f"model {settings.OPENAI_MODEL}"
+    console.print(
+        f"\nProject [bold]{name}[/bold]   {len(agent_input.assets)} assets   "
+        f"knowledge base {db}   {source}\n"
     )
 
+    session = Session(agent_input, mode, scrs_path, args.max_paths)
+    session.run_pipeline()
+    if not session.scenarios:
+        err("No scenarios were produced.")
+        return False
 
-# --------------------------------------------------------------------------------- main
+    console.print()
+    show_summary_table(session.scenarios)
+    console.print("Review each scenario. Nothing is saved until you approve it.\n")
+    approved, counts = review_all(session, args.auto)
+
+    console.print()
+    parts = [f"{v} {k}" for k, v in counts.items()]
+    console.print("[bold]Review finished:[/bold] " + (", ".join(parts) or "nothing reviewed"))
+    write_results(session, approved, scrs_path, report_path)
+    return True
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
+    parser.add_argument("--project", help="project number from the menu")
+    parser.add_argument("--input", help="path to a project JSON file")
     parser.add_argument(
         "--mode",
-        choices=["replay", "live"],
-        default="replay",
-        help="replay = recorded real model output (default); live = call the model",
+        choices=["auto", "replay", "live"],
+        default="auto",
+        help="auto: recorded output when available, else the model; live: always the model",
     )
-    parser.add_argument("--fixture", choices=list(FIXTURES), default="lock")
-    parser.add_argument("--auto", action="store_true", help="scripted walkthrough, no typing")
-    parser.add_argument("--no-pause", action="store_true", help="do not wait between stages")
+    parser.add_argument("--auto", action="store_true", help="scripted answers for rehearsal")
     parser.add_argument(
-        "--max-paths",
-        type=int,
-        default=12,
-        help="attack paths to take through generation (default 12)",
+        "--max-paths", type=int, default=6, help="scenarios to generate (default 6)"
     )
-    parser.add_argument("--detail", type=int, default=2, help="scenarios shown in full (default 2)")
     parser.add_argument("--verbose", action="store_true", help="show internal JSON logs")
     args = parser.parse_args()
-
     if not args.verbose:
         logging.disable(logging.CRITICAL)
-    if args.mode == "replay" and args.fixture != "lock":
-        sys.exit("Replay data exists for the smart-door-lock fixture only; use --mode live.")
 
     from config.settings import get_settings
 
     settings = get_settings()
-    if args.mode == "live" and not settings.OPENAI_API_KEY.get_secret_value():
-        sys.exit("No OPENAI_API_KEY configured in .env; use the default --mode replay.")
-
-    shutil.rmtree(OUT_DIR, ignore_errors=True)
-    OUT_DIR.mkdir(parents=True)
-    scrs_path = OUT_DIR / "SCRS_demo.json"
-    report_path = OUT_DIR / "run_report.json"
-    pacer = Pacer(enabled=not (args.no_pause or args.auto))
-
-    banner(args, settings)
-    agent_input = load_input(args.fixture)
-    agent_input = agent_input.model_copy(update={"run_id": f"DEMO-{uuid.uuid4().hex[:6].upper()}"})
-    pacer.wait("Press Enter to start")
-
-    stage_perceive(agent_input)
-    pacer.wait()
-    candidates = stage_knowledge(agent_input, settings)
-    pacer.wait()
-    paths = stage_chaining(candidates, agent_input, args.max_paths)
-    pacer.wait()
-    scenarios, _retries, _status = stage_generation_and_validation(agent_input, paths, args.mode)
-    if not scenarios:
-        fail("No scenarios were produced; nothing to review.")
-        sys.exit(1)
-    pacer.wait()
-    stage_validation(agent_input, scenarios, paths)
-    pacer.wait()
-    stage_review(scenarios, agent_input, args.detail)
-    pacer.wait()
-
-    from scrp.state_manager import StateManager
-
-    review = Review(agent_input, scenarios, paths, args.mode, StateManager(scrs_path))
-    if not stage_human_gate(review, args.auto):
-        warn("Review ended without approval: nothing was written to the shared state.")
-        return
-    approved = review.approve_all()
-    stage_scrs(review, approved, scrs_path, report_path, args.mode)
-    summary(args)
+    console.print("[bold cyan]SCRP Threat Agent[/bold cyan]  Phase 1\n")
+    while True:
+        if not run_once(args, settings) or args.auto:
+            break
+        if (
+            Prompt.ask("\nRun another project? (y/n)", default="n", show_default=False).lower()
+            != "y"
+        ):
+            break
 
 
 if __name__ == "__main__":
@@ -863,13 +633,12 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        console.print("\n[dim]Interrupted.[/dim]")
+        console.print("\nInterrupted.")
         code = 130
     except SystemExit as exc:
         code = exc.code if isinstance(exc.code, int) else (1 if exc.code else 0)
         if isinstance(exc.code, str):
             console.print(exc.code)
     sys.stdout.flush()
-    # Exit without waiting for the database connection pool's background threads,
-    # which otherwise print a harmless but untidy traceback on interpreter shutdown.
+    # Skip waiting for the database pool's background threads (untidy shutdown traceback).
     os._exit(code)
