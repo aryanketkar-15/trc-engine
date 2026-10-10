@@ -9,7 +9,7 @@ Everything it writes goes to `demo_output/` (never to the real `SCRS_state.json`
 
 ```bash
 docker compose up -d                       # PostgreSQL + pgvector (container trc-postgres)
-pip install -r requirements.txt            # if not already installed
+pip install -e .                           # if not already installed (uses pyproject.toml)
 ```
 
 `.env` must point `DATABASE_URL` at the full knowledge base (`.../trc_engine_fullkb`; the default).
