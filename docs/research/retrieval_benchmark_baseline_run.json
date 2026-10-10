@@ -1,0 +1,392 @@
+{
+  "timestamp": "2026-10-09T06:15:42.479796+00:00",
+  "dataset_name": "TRC Engine Knowledge Base Retrieval Benchmark",
+  "dataset_version": "v1.0.0",
+  "kb_snapshot": "pgvector_24_patterns",
+  "top_k": 5,
+  "overall": {
+    "query_count": 6,
+    "total_pairs": 40,
+    "mean_precision_at_5": 0.5667,
+    "mean_recall_at_5": 0.4286,
+    "hit_rate_at_5": 0.8333,
+    "mrr": 0.7222,
+    "pair_hit_rate_at_5": 0.425,
+    "latency_p50_ms": 54.15,
+    "latency_p95_ms": 68.69,
+    "latency_mean_ms": 55.43
+  },
+  "smart_door_lock": {
+    "query_count": 4,
+    "total_pairs": 25,
+    "mean_precision_at_5": 0.5,
+    "mean_recall_at_5": 0.4062,
+    "hit_rate_at_5": 0.75,
+    "mrr": 0.75,
+    "pair_hit_rate_at_5": 0.4,
+    "latency_p50_ms": 54.15,
+    "latency_p95_ms": 68.69,
+    "latency_mean_ms": 56.64
+  },
+  "infusion_pump": {
+    "query_count": 2,
+    "total_pairs": 15,
+    "mean_precision_at_5": 0.7,
+    "mean_recall_at_5": 0.4732,
+    "hit_rate_at_5": 1.0,
+    "mrr": 0.6666,
+    "pair_hit_rate_at_5": 0.4667,
+    "latency_p50_ms": 53.01,
+    "latency_p95_ms": 57.46,
+    "latency_mean_ms": 53.01
+  },
+  "query_results": [
+    {
+      "query_id": "SDL-Q1",
+      "fixture": "Smart Door Lock",
+      "asset_name": "BLE Controller",
+      "asset_id": "AS-1",
+      "latency_ms": 68.69,
+      "retrieved_patterns": [
+        "CWE-306",
+        "CAPEC-94",
+        "STRIDE-S-001",
+        "CAPEC-60",
+        "CWE-798"
+      ],
+      "relevant_patterns": [
+        "CAPEC-94",
+        "CAPEC-60",
+        "STRIDE-S-001",
+        "CAPEC-196",
+        "CWE-306",
+        "CAPEC-112",
+        "STRIDE-D-001",
+        "CWE-798"
+      ],
+      "hits": [
+        "CWE-306",
+        "CAPEC-94",
+        "STRIDE-S-001",
+        "CAPEC-60",
+        "CWE-798"
+      ],
+      "precision_at_k": 1.0,
+      "recall_at_k": 0.625,
+      "hit_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "pair_rankings": {
+        "CAPEC-94": 2,
+        "CAPEC-60": 4,
+        "STRIDE-S-001": 3,
+        "CAPEC-196": null,
+        "CWE-306": 1,
+        "CAPEC-112": null,
+        "STRIDE-D-001": null,
+        "CWE-798": 5
+      }
+    },
+    {
+      "query_id": "SDL-Q2",
+      "fixture": "Smart Door Lock",
+      "asset_name": "Secure Element",
+      "asset_id": "AS-2",
+      "latency_ms": 57.12,
+      "retrieved_patterns": [
+        "STRIDE-T-001",
+        "CAPEC-186",
+        "CAPEC-196",
+        "CAPEC-112",
+        "STRIDE-S-001"
+      ],
+      "relevant_patterns": [
+        "CWE-798",
+        "CWE-311",
+        "STRIDE-T-001",
+        "CAPEC-196",
+        "ATT&CK-T1078"
+      ],
+      "hits": [
+        "STRIDE-T-001",
+        "CAPEC-196"
+      ],
+      "precision_at_k": 0.4,
+      "recall_at_k": 0.4,
+      "hit_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "pair_rankings": {
+        "CWE-798": null,
+        "CWE-311": null,
+        "STRIDE-T-001": 1,
+        "CAPEC-196": 3,
+        "ATT&CK-T1078": null
+      }
+    },
+    {
+      "query_id": "SDL-Q3",
+      "fixture": "Smart Door Lock",
+      "asset_name": "Cloud Backend",
+      "asset_id": "AS-3",
+      "latency_ms": 49.56,
+      "retrieved_patterns": [
+        "CWE-306",
+        "CAPEC-196",
+        "CAPEC-60",
+        "CWE-311",
+        "CWE-798"
+      ],
+      "relevant_patterns": [
+        "ATT&CK-T1190",
+        "CAPEC-186",
+        "CAPEC-125",
+        "ATT&CK-T1498",
+        "ATT&CK-T1078",
+        "STRIDE-R-001",
+        "CAPEC-62"
+      ],
+      "hits": [],
+      "precision_at_k": 0.0,
+      "recall_at_k": 0.0,
+      "hit_at_k": 0.0,
+      "reciprocal_rank": 0.0,
+      "pair_rankings": {
+        "ATT&CK-T1190": null,
+        "CAPEC-186": null,
+        "CAPEC-125": null,
+        "ATT&CK-T1498": null,
+        "ATT&CK-T1078": null,
+        "STRIDE-R-001": null,
+        "CAPEC-62": null
+      }
+    },
+    {
+      "query_id": "SDL-Q4",
+      "fixture": "Smart Door Lock",
+      "asset_name": "Mobile Companion App",
+      "asset_id": "AS-4",
+      "latency_ms": 51.18,
+      "retrieved_patterns": [
+        "CWE-311",
+        "CAPEC-60",
+        "CWE-306",
+        "STRIDE-S-001",
+        "CAPEC-94"
+      ],
+      "relevant_patterns": [
+        "CAPEC-94",
+        "ATT&CK-T1557",
+        "STRIDE-I-001",
+        "CWE-311",
+        "CAPEC-60"
+      ],
+      "hits": [
+        "CWE-311",
+        "CAPEC-60",
+        "CAPEC-94"
+      ],
+      "precision_at_k": 0.6,
+      "recall_at_k": 0.6,
+      "hit_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "pair_rankings": {
+        "CAPEC-94": 5,
+        "ATT&CK-T1557": null,
+        "STRIDE-I-001": null,
+        "CWE-311": 1,
+        "CAPEC-60": 2
+      }
+    },
+    {
+      "query_id": "INF-Q1",
+      "fixture": "Medical Infusion Pump",
+      "asset_name": "Dosage Control Firmware",
+      "asset_id": "AS-1",
+      "latency_ms": 57.46,
+      "retrieved_patterns": [
+        "CAPEC-186",
+        "STRIDE-T-001",
+        "CWE-306",
+        "STRIDE-E-001",
+        "CAPEC-196"
+      ],
+      "relevant_patterns": [
+        "CAPEC-186",
+        "CAPEC-100",
+        "CWE-787",
+        "STRIDE-T-001",
+        "CWE-306",
+        "CWE-798",
+        "STRIDE-E-001"
+      ],
+      "hits": [
+        "CAPEC-186",
+        "STRIDE-T-001",
+        "CWE-306",
+        "STRIDE-E-001"
+      ],
+      "precision_at_k": 0.8,
+      "recall_at_k": 0.5714,
+      "hit_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "pair_rankings": {
+        "CAPEC-186": 1,
+        "CAPEC-100": null,
+        "CWE-787": null,
+        "STRIDE-T-001": 2,
+        "CWE-306": 3,
+        "CWE-798": null,
+        "STRIDE-E-001": 4
+      }
+    },
+    {
+      "query_id": "INF-Q2",
+      "fixture": "Medical Infusion Pump",
+      "asset_name": "Hospital Network Interface",
+      "asset_id": "AS-2",
+      "latency_ms": 48.56,
+      "retrieved_patterns": [
+        "CWE-798",
+        "ATT&CK-T1078",
+        "ATT&CK-T1557",
+        "CWE-306",
+        "ATT&CK-T1190"
+      ],
+      "relevant_patterns": [
+        "ATT&CK-T1190",
+        "ATT&CK-T1040",
+        "ATT&CK-T1557",
+        "STRIDE-I-001",
+        "CWE-306",
+        "CAPEC-125",
+        "ATT&CK-T1498",
+        "CAPEC-62"
+      ],
+      "hits": [
+        "ATT&CK-T1557",
+        "CWE-306",
+        "ATT&CK-T1190"
+      ],
+      "precision_at_k": 0.6,
+      "recall_at_k": 0.375,
+      "hit_at_k": 1.0,
+      "reciprocal_rank": 0.3333,
+      "pair_rankings": {
+        "ATT&CK-T1190": 5,
+        "ATT&CK-T1040": null,
+        "ATT&CK-T1557": 3,
+        "STRIDE-I-001": null,
+        "CWE-306": 4,
+        "CAPEC-125": null,
+        "ATT&CK-T1498": null,
+        "CAPEC-62": null
+      }
+    }
+  ],
+  "smart_door_lock_top10": {
+    "AS-3": [
+      {
+        "id": "CAPEC-186",
+        "title": "Malicious Software Update",
+        "score": 0.7631
+      },
+      {
+        "id": "CWE-306",
+        "title": "Missing Authentication for Critical Function",
+        "score": 0.7478
+      },
+      {
+        "id": "STRIDE-S-001",
+        "title": "Spoofing Identity via BLE Device Impersonation",
+        "score": 0.7409
+      },
+      {
+        "id": "CWE-798",
+        "title": "Use of Hard-coded Credentials",
+        "score": 0.7185
+      },
+      {
+        "id": "CAPEC-94",
+        "title": "Adversary in the Middle (AiTM)",
+        "score": 0.7162
+      },
+      {
+        "id": "STRIDE-T-001",
+        "title": "Tampering with Firmware Parameters via Unprotected Storage",
+        "score": 0.716
+      },
+      {
+        "id": "CAPEC-62",
+        "title": "Cross-Site Request Forgery via IMG Tag",
+        "score": 0.7136
+      },
+      {
+        "id": "CAPEC-196",
+        "title": "Session Credential Falsification via Forging",
+        "score": 0.7037
+      },
+      {
+        "id": "CAPEC-60",
+        "title": "Reusing Session IDs (Session Replay Attack)",
+        "score": 0.6958
+      },
+      {
+        "id": "ATT&CK-T1557",
+        "title": "Adversary-in-the-Middle",
+        "score": 0.6903
+      }
+    ],
+    "AS-6": [
+      {
+        "id": "STRIDE-T-001",
+        "title": "Tampering with Firmware Parameters via Unprotected Storage",
+        "score": 0.7239
+      },
+      {
+        "id": "CAPEC-196",
+        "title": "Session Credential Falsification via Forging",
+        "score": 0.7222
+      },
+      {
+        "id": "CAPEC-186",
+        "title": "Malicious Software Update",
+        "score": 0.7185
+      },
+      {
+        "id": "CAPEC-112",
+        "title": "Brute Force",
+        "score": 0.7066
+      },
+      {
+        "id": "STRIDE-I-001",
+        "title": "Information Disclosure via Cleartext Credential Transmission",
+        "score": 0.6963
+      },
+      {
+        "id": "CAPEC-60",
+        "title": "Reusing Session IDs (Session Replay Attack)",
+        "score": 0.6925
+      },
+      {
+        "id": "STRIDE-S-001",
+        "title": "Spoofing Identity via BLE Device Impersonation",
+        "score": 0.6917
+      },
+      {
+        "id": "CAPEC-94",
+        "title": "Adversary in the Middle (AiTM)",
+        "score": 0.6871
+      },
+      {
+        "id": "STRIDE-R-001",
+        "title": "Repudiation via Audit Log Deletion",
+        "score": 0.6668
+      },
+      {
+        "id": "CAPEC-62",
+        "title": "Cross-Site Request Forgery via IMG Tag",
+        "score": 0.6205
+      }
+    ]
+  },
+  "kb": "baseline"
+}

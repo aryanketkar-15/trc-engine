@@ -40,3 +40,7 @@ htmlcov/
 # ── OS artefacts ─────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# Full MITRE KB source files (fetched by kb/scripts/fetch_full_kb.py)
+kb/data/full/
+kb/data/standards/
