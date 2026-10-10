@@ -178,6 +178,7 @@
   {
    "tag_boost": 0.0,
    "hardware_penalty": 0.0,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.5833,
    "ndcg": 0.179,
@@ -204,7 +205,92 @@
   },
   {
    "tag_boost": 0.0,
+   "hardware_penalty": 0.0,
+   "stride_slots": 1,
+   "hit": 0.8333,
+   "mrr": 0.5833,
+   "ndcg": 0.179,
+   "p10": 0.15,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0733,
+    "ndcg": 0.0367,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3071,
+    "ndcg": 0.1043,
+    "p10": 0.1167,
+    "p5": 0.1333,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.0,
+   "hardware_penalty": 0.0,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.6,
+   "ndcg": 0.1912,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0733,
+    "ndcg": 0.0367,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.5,
+    "mrr": 0.2833,
+    "ndcg": 0.0831,
+    "p10": 0.0833,
+    "p5": 0.1333,
+    "seed_rec": 0.0556
+   }
+  },
+  {
+   "tag_boost": 0.0,
+   "hardware_penalty": 0.0,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.4667,
+   "ndcg": 0.1746,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0833,
+    "ndcg": 0.0382,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.5,
+    "mrr": 0.3333,
+    "ndcg": 0.0956,
+    "p10": 0.0833,
+    "p5": 0.1667,
+    "seed_rec": 0.0556
+   }
+  },
+  {
+   "tag_boost": 0.0,
    "hardware_penalty": 0.03,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.5833,
    "ndcg": 0.179,
@@ -231,7 +317,204 @@
   },
   {
    "tag_boost": 0.0,
+   "hardware_penalty": 0.03,
+   "stride_slots": 1,
+   "hit": 0.8333,
+   "mrr": 0.5833,
+   "ndcg": 0.179,
+   "p10": 0.15,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0733,
+    "ndcg": 0.0367,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3071,
+    "ndcg": 0.1047,
+    "p10": 0.1167,
+    "p5": 0.1333,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.0,
+   "hardware_penalty": 0.03,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.6,
+   "ndcg": 0.1912,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0733,
+    "ndcg": 0.0367,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.5,
+    "mrr": 0.2833,
+    "ndcg": 0.0835,
+    "p10": 0.0833,
+    "p5": 0.1333,
+    "seed_rec": 0.0556
+   }
+  },
+  {
+   "tag_boost": 0.0,
+   "hardware_penalty": 0.03,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.4667,
+   "ndcg": 0.1746,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0833,
+    "ndcg": 0.0382,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.5,
+    "mrr": 0.3333,
+    "ndcg": 0.103,
+    "p10": 0.1,
+    "p5": 0.1667,
+    "seed_rec": 0.0556
+   }
+  },
+  {
+   "tag_boost": 0.0,
    "hardware_penalty": 0.06,
+   "stride_slots": 0,
+   "hit": 0.8333,
+   "mrr": 0.5833,
+   "ndcg": 0.179,
+   "p10": 0.15,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0733,
+    "ndcg": 0.0461,
+    "p10": 0.06,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3111,
+    "ndcg": 0.1252,
+    "p10": 0.1667,
+    "p5": 0.1333,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.0,
+   "hardware_penalty": 0.06,
+   "stride_slots": 1,
+   "hit": 0.8333,
+   "mrr": 0.5833,
+   "ndcg": 0.179,
+   "p10": 0.15,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0733,
+    "ndcg": 0.0367,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3111,
+    "ndcg": 0.1124,
+    "p10": 0.1333,
+    "p5": 0.1333,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.0,
+   "hardware_penalty": 0.06,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.6,
+   "ndcg": 0.1912,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0733,
+    "ndcg": 0.0367,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3111,
+    "ndcg": 0.0986,
+    "p10": 0.1,
+    "p5": 0.1333,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.0,
+   "hardware_penalty": 0.06,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.4667,
+   "ndcg": 0.1746,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0833,
+    "ndcg": 0.0382,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.375,
+    "ndcg": 0.1213,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.0,
+   "hardware_penalty": 0.1,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.5833,
    "ndcg": 0.179,
@@ -259,6 +542,91 @@
   {
    "tag_boost": 0.0,
    "hardware_penalty": 0.1,
+   "stride_slots": 1,
+   "hit": 0.8333,
+   "mrr": 0.5833,
+   "ndcg": 0.179,
+   "p10": 0.15,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0733,
+    "ndcg": 0.0367,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3111,
+    "ndcg": 0.1124,
+    "p10": 0.1333,
+    "p5": 0.1333,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.0,
+   "hardware_penalty": 0.1,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.6,
+   "ndcg": 0.1912,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0733,
+    "ndcg": 0.0367,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3111,
+    "ndcg": 0.0986,
+    "p10": 0.1,
+    "p5": 0.1333,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.0,
+   "hardware_penalty": 0.1,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.4667,
+   "ndcg": 0.1746,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0833,
+    "ndcg": 0.0382,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.375,
+    "ndcg": 0.1213,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.0,
+   "hardware_penalty": 0.2,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.5833,
    "ndcg": 0.179,
@@ -286,6 +654,7 @@
   {
    "tag_boost": 0.0,
    "hardware_penalty": 0.2,
+   "stride_slots": 1,
    "hit": 0.8333,
    "mrr": 0.5833,
    "ndcg": 0.179,
@@ -295,8 +664,8 @@
    "company": {
     "hit": 0.4,
     "mrr": 0.0733,
-    "ndcg": 0.0461,
-    "p10": 0.06,
+    "ndcg": 0.0367,
+    "p10": 0.04,
     "p5": 0.04,
     "seed_rec": 0.1,
     "strict": 0.0
@@ -304,15 +673,72 @@
    "heldout": {
     "hit": 0.6667,
     "mrr": 0.3111,
-    "ndcg": 0.1252,
-    "p10": 0.1667,
+    "ndcg": 0.1124,
+    "p10": 0.1333,
     "p5": 0.1333,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.0,
+   "hardware_penalty": 0.2,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.6,
+   "ndcg": 0.1912,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0733,
+    "ndcg": 0.0367,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3111,
+    "ndcg": 0.0986,
+    "p10": 0.1,
+    "p5": 0.1333,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.0,
+   "hardware_penalty": 0.2,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.4667,
+   "ndcg": 0.1746,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.0833,
+    "ndcg": 0.0382,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.375,
+    "ndcg": 0.1213,
+    "p10": 0.1167,
+    "p5": 0.2,
     "seed_rec": 0.0833
    }
   },
   {
    "tag_boost": 0.01,
    "hardware_penalty": 0.0,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.6667,
    "ndcg": 0.1938,
@@ -339,7 +765,204 @@
   },
   {
    "tag_boost": 0.01,
+   "hardware_penalty": 0.0,
+   "stride_slots": 1,
+   "hit": 0.8333,
+   "mrr": 0.6667,
+   "ndcg": 0.2,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3111,
+    "ndcg": 0.1124,
+    "p10": 0.1333,
+    "p5": 0.1333,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
+   "hardware_penalty": 0.0,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.6833,
+   "ndcg": 0.2073,
+   "p10": 0.1833,
+   "p5": 0.3,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3111,
+    "ndcg": 0.0982,
+    "p10": 0.1,
+    "p5": 0.1333,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
+   "hardware_penalty": 0.0,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.5722,
+   "ndcg": 0.1919,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.375,
+    "ndcg": 0.1139,
+    "p10": 0.1,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
    "hardware_penalty": 0.03,
+   "stride_slots": 0,
+   "hit": 0.8333,
+   "mrr": 0.6667,
+   "ndcg": 0.1938,
+   "p10": 0.15,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3167,
+    "ndcg": 0.1274,
+    "p10": 0.1667,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
+   "hardware_penalty": 0.03,
+   "stride_slots": 1,
+   "hit": 0.8333,
+   "mrr": 0.6667,
+   "ndcg": 0.2,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3167,
+    "ndcg": 0.1146,
+    "p10": 0.1333,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
+   "hardware_penalty": 0.03,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.6833,
+   "ndcg": 0.2073,
+   "p10": 0.1833,
+   "p5": 0.3,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3167,
+    "ndcg": 0.1075,
+    "p10": 0.1167,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
+   "hardware_penalty": 0.03,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.5722,
+   "ndcg": 0.1919,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3889,
+    "ndcg": 0.1243,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
+   "hardware_penalty": 0.06,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.6667,
    "ndcg": 0.1938,
@@ -367,6 +990,91 @@
   {
    "tag_boost": 0.01,
    "hardware_penalty": 0.06,
+   "stride_slots": 1,
+   "hit": 0.8333,
+   "mrr": 0.6667,
+   "ndcg": 0.2,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3167,
+    "ndcg": 0.1146,
+    "p10": 0.1333,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
+   "hardware_penalty": 0.06,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.6833,
+   "ndcg": 0.2073,
+   "p10": 0.1833,
+   "p5": 0.3,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3167,
+    "ndcg": 0.1075,
+    "p10": 0.1167,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
+   "hardware_penalty": 0.06,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.5722,
+   "ndcg": 0.1919,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3889,
+    "ndcg": 0.1243,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
+   "hardware_penalty": 0.1,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.6667,
    "ndcg": 0.1938,
@@ -394,6 +1102,91 @@
   {
    "tag_boost": 0.01,
    "hardware_penalty": 0.1,
+   "stride_slots": 1,
+   "hit": 0.8333,
+   "mrr": 0.6667,
+   "ndcg": 0.2,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3167,
+    "ndcg": 0.1146,
+    "p10": 0.1333,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
+   "hardware_penalty": 0.1,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.6833,
+   "ndcg": 0.2073,
+   "p10": 0.1833,
+   "p5": 0.3,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3167,
+    "ndcg": 0.1075,
+    "p10": 0.1167,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
+   "hardware_penalty": 0.1,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.5722,
+   "ndcg": 0.1919,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3889,
+    "ndcg": 0.1243,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
+   "hardware_penalty": 0.2,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.6667,
    "ndcg": 0.1938,
@@ -421,10 +1214,11 @@
   {
    "tag_boost": 0.01,
    "hardware_penalty": 0.2,
+   "stride_slots": 1,
    "hit": 0.8333,
    "mrr": 0.6667,
-   "ndcg": 0.1938,
-   "p10": 0.15,
+   "ndcg": 0.2,
+   "p10": 0.1667,
    "p5": 0.2667,
    "seed_rec": 0.1321,
    "company": {
@@ -439,15 +1233,72 @@
    "heldout": {
     "hit": 0.6667,
     "mrr": 0.3167,
-    "ndcg": 0.1274,
-    "p10": 0.1667,
+    "ndcg": 0.1146,
+    "p10": 0.1333,
     "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
+   "hardware_penalty": 0.2,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.6833,
+   "ndcg": 0.2073,
+   "p10": 0.1833,
+   "p5": 0.3,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3167,
+    "ndcg": 0.1075,
+    "p10": 0.1167,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.01,
+   "hardware_penalty": 0.2,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.5722,
+   "ndcg": 0.1919,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3889,
+    "ndcg": 0.1243,
+    "p10": 0.1167,
+    "p5": 0.2,
     "seed_rec": 0.0833
    }
   },
   {
    "tag_boost": 0.02,
    "hardware_penalty": 0.0,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.75,
    "ndcg": 0.2085,
@@ -474,7 +1325,204 @@
   },
   {
    "tag_boost": 0.02,
+   "hardware_penalty": 0.0,
+   "stride_slots": 1,
+   "hit": 0.8333,
+   "mrr": 0.75,
+   "ndcg": 0.2147,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3167,
+    "ndcg": 0.1209,
+    "p10": 0.15,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
+   "hardware_penalty": 0.0,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7667,
+   "ndcg": 0.2229,
+   "p10": 0.1833,
+   "p5": 0.3,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3167,
+    "ndcg": 0.1071,
+    "p10": 0.1167,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
+   "hardware_penalty": 0.0,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.6833,
+   "ndcg": 0.2091,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.375,
+    "ndcg": 0.1139,
+    "p10": 0.1,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
    "hardware_penalty": 0.03,
+   "stride_slots": 0,
+   "hit": 0.8333,
+   "mrr": 0.75,
+   "ndcg": 0.2085,
+   "p10": 0.15,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.8333,
+    "mrr": 0.3417,
+    "ndcg": 0.1364,
+    "p10": 0.1833,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
+   "hardware_penalty": 0.03,
+   "stride_slots": 1,
+   "hit": 0.8333,
+   "mrr": 0.75,
+   "ndcg": 0.2147,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.1238,
+    "p10": 0.15,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
+   "hardware_penalty": 0.03,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7667,
+   "ndcg": 0.2229,
+   "p10": 0.1833,
+   "p5": 0.3,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.11,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
+   "hardware_penalty": 0.03,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.6833,
+   "ndcg": 0.2091,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3889,
+    "ndcg": 0.1243,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
+   "hardware_penalty": 0.06,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.75,
    "ndcg": 0.2085,
@@ -502,6 +1550,91 @@
   {
    "tag_boost": 0.02,
    "hardware_penalty": 0.06,
+   "stride_slots": 1,
+   "hit": 0.8333,
+   "mrr": 0.75,
+   "ndcg": 0.2147,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.1238,
+    "p10": 0.15,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
+   "hardware_penalty": 0.06,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7667,
+   "ndcg": 0.2229,
+   "p10": 0.1833,
+   "p5": 0.3,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.11,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
+   "hardware_penalty": 0.06,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.6833,
+   "ndcg": 0.2091,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3889,
+    "ndcg": 0.1243,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
+   "hardware_penalty": 0.1,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.75,
    "ndcg": 0.2085,
@@ -529,6 +1662,91 @@
   {
    "tag_boost": 0.02,
    "hardware_penalty": 0.1,
+   "stride_slots": 1,
+   "hit": 0.8333,
+   "mrr": 0.75,
+   "ndcg": 0.2147,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.1238,
+    "p10": 0.15,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
+   "hardware_penalty": 0.1,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7667,
+   "ndcg": 0.2229,
+   "p10": 0.1833,
+   "p5": 0.3,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.11,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
+   "hardware_penalty": 0.1,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.6833,
+   "ndcg": 0.2091,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3889,
+    "ndcg": 0.1243,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
+   "hardware_penalty": 0.2,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.75,
    "ndcg": 0.2085,
@@ -556,10 +1774,11 @@
   {
    "tag_boost": 0.02,
    "hardware_penalty": 0.2,
+   "stride_slots": 1,
    "hit": 0.8333,
    "mrr": 0.75,
-   "ndcg": 0.2085,
-   "p10": 0.15,
+   "ndcg": 0.2147,
+   "p10": 0.1667,
    "p5": 0.2667,
    "seed_rec": 0.1321,
    "company": {
@@ -572,10 +1791,66 @@
     "strict": 0.0
    },
    "heldout": {
-    "hit": 0.8333,
-    "mrr": 0.3417,
-    "ndcg": 0.1364,
-    "p10": 0.1833,
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.1238,
+    "p10": 0.15,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
+   "hardware_penalty": 0.2,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7667,
+   "ndcg": 0.2229,
+   "p10": 0.1833,
+   "p5": 0.3,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.11,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.02,
+   "hardware_penalty": 0.2,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.6833,
+   "ndcg": 0.2091,
+   "p10": 0.1667,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3889,
+    "ndcg": 0.1243,
+    "p10": 0.1167,
     "p5": 0.2,
     "seed_rec": 0.0833
    }
@@ -583,6 +1858,7 @@
   {
    "tag_boost": 0.04,
    "hardware_penalty": 0.0,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.7222,
    "ndcg": 0.2048,
@@ -609,7 +1885,204 @@
   },
   {
    "tag_boost": 0.04,
+   "hardware_penalty": 0.0,
+   "stride_slots": 1,
+   "hit": 1.0,
+   "mrr": 0.7389,
+   "ndcg": 0.2229,
+   "p10": 0.2,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3194,
+    "ndcg": 0.1217,
+    "p10": 0.15,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
+   "hardware_penalty": 0.0,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7407,
+   "ndcg": 0.221,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.1096,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
+   "hardware_penalty": 0.0,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.7685,
+   "ndcg": 0.2187,
+   "p10": 0.1667,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3889,
+    "ndcg": 0.1168,
+    "p10": 0.1,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
    "hardware_penalty": 0.03,
+   "stride_slots": 0,
+   "hit": 0.8333,
+   "mrr": 0.7222,
+   "ndcg": 0.2048,
+   "p10": 0.15,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.8333,
+    "mrr": 0.3361,
+    "ndcg": 0.1347,
+    "p10": 0.1833,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
+   "hardware_penalty": 0.03,
+   "stride_slots": 1,
+   "hit": 1.0,
+   "mrr": 0.7389,
+   "ndcg": 0.2229,
+   "p10": 0.2,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3194,
+    "ndcg": 0.1221,
+    "p10": 0.15,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
+   "hardware_penalty": 0.03,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7407,
+   "ndcg": 0.221,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.11,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
+   "hardware_penalty": 0.03,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.7685,
+   "ndcg": 0.2187,
+   "p10": 0.1667,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3889,
+    "ndcg": 0.1243,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
+   "hardware_penalty": 0.06,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.7222,
    "ndcg": 0.2048,
@@ -637,6 +2110,91 @@
   {
    "tag_boost": 0.04,
    "hardware_penalty": 0.06,
+   "stride_slots": 1,
+   "hit": 1.0,
+   "mrr": 0.7389,
+   "ndcg": 0.2229,
+   "p10": 0.2,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3194,
+    "ndcg": 0.1221,
+    "p10": 0.15,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
+   "hardware_penalty": 0.06,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7407,
+   "ndcg": 0.221,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.11,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
+   "hardware_penalty": 0.06,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.7685,
+   "ndcg": 0.2187,
+   "p10": 0.1667,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3889,
+    "ndcg": 0.1243,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
+   "hardware_penalty": 0.1,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.7222,
    "ndcg": 0.2048,
@@ -664,6 +2222,91 @@
   {
    "tag_boost": 0.04,
    "hardware_penalty": 0.1,
+   "stride_slots": 1,
+   "hit": 1.0,
+   "mrr": 0.7389,
+   "ndcg": 0.2229,
+   "p10": 0.2,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3194,
+    "ndcg": 0.1221,
+    "p10": 0.15,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
+   "hardware_penalty": 0.1,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7407,
+   "ndcg": 0.221,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.11,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
+   "hardware_penalty": 0.1,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.7685,
+   "ndcg": 0.2187,
+   "p10": 0.1667,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3889,
+    "ndcg": 0.1243,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
+   "hardware_penalty": 0.2,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.7222,
    "ndcg": 0.2048,
@@ -691,10 +2334,11 @@
   {
    "tag_boost": 0.04,
    "hardware_penalty": 0.2,
-   "hit": 0.8333,
-   "mrr": 0.7222,
-   "ndcg": 0.2048,
-   "p10": 0.15,
+   "stride_slots": 1,
+   "hit": 1.0,
+   "mrr": 0.7389,
+   "ndcg": 0.2229,
+   "p10": 0.2,
    "p5": 0.2333,
    "seed_rec": 0.1321,
    "company": {
@@ -707,17 +2351,74 @@
     "strict": 0.0
    },
    "heldout": {
-    "hit": 0.8333,
-    "mrr": 0.3361,
-    "ndcg": 0.1347,
-    "p10": 0.1833,
+    "hit": 0.6667,
+    "mrr": 0.3194,
+    "ndcg": 0.1221,
+    "p10": 0.15,
     "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
+   "hardware_penalty": 0.2,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7407,
+   "ndcg": 0.221,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.11,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.04,
+   "hardware_penalty": 0.2,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.7685,
+   "ndcg": 0.2187,
+   "p10": 0.1667,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3889,
+    "ndcg": 0.1243,
+    "p10": 0.1167,
+    "p5": 0.2,
     "seed_rec": 0.0833
    }
   },
   {
    "tag_boost": 0.08,
    "hardware_penalty": 0.0,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.7222,
    "ndcg": 0.1999,
@@ -744,7 +2445,204 @@
   },
   {
    "tag_boost": 0.08,
+   "hardware_penalty": 0.0,
+   "stride_slots": 1,
+   "hit": 1.0,
+   "mrr": 0.7389,
+   "ndcg": 0.2236,
+   "p10": 0.2,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.1067,
+    "ndcg": 0.0465,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.8333,
+    "mrr": 0.3426,
+    "ndcg": 0.1229,
+    "p10": 0.15,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
+   "hardware_penalty": 0.0,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7407,
+   "ndcg": 0.2219,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.1067,
+    "ndcg": 0.0465,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3333,
+    "ndcg": 0.1122,
+    "p10": 0.1167,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
+   "hardware_penalty": 0.0,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.7685,
+   "ndcg": 0.2201,
+   "p10": 0.1667,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.0667,
+    "ndcg": 0.034,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.8333,
+    "mrr": 0.3657,
+    "ndcg": 0.1202,
+    "p10": 0.1333,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
    "hardware_penalty": 0.03,
+   "stride_slots": 0,
+   "hit": 0.8333,
+   "mrr": 0.7222,
+   "ndcg": 0.1999,
+   "p10": 0.15,
+   "p5": 0.2333,
+   "seed_rec": 0.1113,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.1067,
+    "ndcg": 0.0465,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.8333,
+    "mrr": 0.3426,
+    "ndcg": 0.1298,
+    "p10": 0.1667,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
+   "hardware_penalty": 0.03,
+   "stride_slots": 1,
+   "hit": 1.0,
+   "mrr": 0.7389,
+   "ndcg": 0.2236,
+   "p10": 0.2,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.1067,
+    "ndcg": 0.0465,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.8333,
+    "mrr": 0.3426,
+    "ndcg": 0.1233,
+    "p10": 0.15,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
+   "hardware_penalty": 0.03,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7407,
+   "ndcg": 0.2219,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.1067,
+    "ndcg": 0.0465,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3333,
+    "ndcg": 0.1126,
+    "p10": 0.1167,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
+   "hardware_penalty": 0.03,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.7685,
+   "ndcg": 0.2201,
+   "p10": 0.1667,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.0667,
+    "ndcg": 0.034,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.8333,
+    "mrr": 0.3657,
+    "ndcg": 0.1276,
+    "p10": 0.15,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
+   "hardware_penalty": 0.06,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.7222,
    "ndcg": 0.1999,
@@ -772,6 +2670,91 @@
   {
    "tag_boost": 0.08,
    "hardware_penalty": 0.06,
+   "stride_slots": 1,
+   "hit": 1.0,
+   "mrr": 0.7389,
+   "ndcg": 0.2236,
+   "p10": 0.2,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.1067,
+    "ndcg": 0.0465,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.8333,
+    "mrr": 0.3426,
+    "ndcg": 0.1233,
+    "p10": 0.15,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
+   "hardware_penalty": 0.06,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7407,
+   "ndcg": 0.2219,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.1067,
+    "ndcg": 0.0465,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3333,
+    "ndcg": 0.1126,
+    "p10": 0.1167,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
+   "hardware_penalty": 0.06,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.7685,
+   "ndcg": 0.2201,
+   "p10": 0.1667,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.0667,
+    "ndcg": 0.034,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.8333,
+    "mrr": 0.3657,
+    "ndcg": 0.1276,
+    "p10": 0.15,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
+   "hardware_penalty": 0.1,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.7222,
    "ndcg": 0.1999,
@@ -799,6 +2782,91 @@
   {
    "tag_boost": 0.08,
    "hardware_penalty": 0.1,
+   "stride_slots": 1,
+   "hit": 1.0,
+   "mrr": 0.7389,
+   "ndcg": 0.2236,
+   "p10": 0.2,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.1067,
+    "ndcg": 0.0465,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.8333,
+    "mrr": 0.3426,
+    "ndcg": 0.1233,
+    "p10": 0.15,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
+   "hardware_penalty": 0.1,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7407,
+   "ndcg": 0.2219,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.1067,
+    "ndcg": 0.0465,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3333,
+    "ndcg": 0.1126,
+    "p10": 0.1167,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
+   "hardware_penalty": 0.1,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.7685,
+   "ndcg": 0.2201,
+   "p10": 0.1667,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.0667,
+    "ndcg": 0.034,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.8333,
+    "mrr": 0.3657,
+    "ndcg": 0.1276,
+    "p10": 0.15,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
+   "hardware_penalty": 0.2,
+   "stride_slots": 0,
    "hit": 0.8333,
    "mrr": 0.7222,
    "ndcg": 0.1999,
@@ -826,12 +2894,13 @@
   {
    "tag_boost": 0.08,
    "hardware_penalty": 0.2,
-   "hit": 0.8333,
-   "mrr": 0.7222,
-   "ndcg": 0.1999,
-   "p10": 0.15,
+   "stride_slots": 1,
+   "hit": 1.0,
+   "mrr": 0.7389,
+   "ndcg": 0.2236,
+   "p10": 0.2,
    "p5": 0.2333,
-   "seed_rec": 0.1113,
+   "seed_rec": 0.1321,
    "company": {
     "hit": 0.4,
     "mrr": 0.1067,
@@ -844,32 +2913,89 @@
    "heldout": {
     "hit": 0.8333,
     "mrr": 0.3426,
-    "ndcg": 0.1298,
-    "p10": 0.1667,
+    "ndcg": 0.1233,
+    "p10": 0.15,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
+   "hardware_penalty": 0.2,
+   "stride_slots": 2,
+   "hit": 1.0,
+   "mrr": 0.7407,
+   "ndcg": 0.2219,
+   "p10": 0.1833,
+   "p5": 0.2667,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.1067,
+    "ndcg": 0.0465,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3333,
+    "ndcg": 0.1126,
+    "p10": 0.1167,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
+   }
+  },
+  {
+   "tag_boost": 0.08,
+   "hardware_penalty": 0.2,
+   "stride_slots": 3,
+   "hit": 1.0,
+   "mrr": 0.7685,
+   "ndcg": 0.2201,
+   "p10": 0.1667,
+   "p5": 0.2333,
+   "seed_rec": 0.1321,
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.0667,
+    "ndcg": 0.034,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.8333,
+    "mrr": 0.3657,
+    "ndcg": 0.1276,
+    "p10": 0.15,
     "p5": 0.1667,
     "seed_rec": 0.0833
    }
   }
  ],
  "chosen": {
-  "tag_boost": 0.02,
+  "tag_boost": 0.08,
   "hardware_penalty": 0.0,
+  "stride_slots": 1,
   "selected_on": "dev nDCG@10"
  },
  "rerank": {
   "splits": {
    "dev": {
-    "hit": 0.8333,
-    "mrr": 0.75,
-    "ndcg": 0.2085,
-    "p10": 0.15,
-    "p5": 0.2667,
+    "hit": 1.0,
+    "mrr": 0.7389,
+    "ndcg": 0.2236,
+    "p10": 0.2,
+    "p5": 0.2333,
     "seed_rec": 0.1321
    },
    "company": {
     "hit": 0.4,
-    "mrr": 0.09,
-    "ndcg": 0.0418,
+    "mrr": 0.1067,
+    "ndcg": 0.0465,
     "p10": 0.04,
     "p5": 0.08,
     "seed_rec": 0.1,
@@ -877,20 +3003,20 @@
    },
    "heldout": {
     "hit": 0.8333,
-    "mrr": 0.3333,
-    "ndcg": 0.127,
-    "p10": 0.1667,
+    "mrr": 0.3426,
+    "ndcg": 0.1229,
+    "p10": 0.15,
     "p5": 0.1667,
     "seed_rec": 0.0833
    }
   },
   "per_query": {
    "SDL-Q1": {
-    "ndcg": 0.4347051694499972,
+    "ndcg": 0.41309633374023647,
     "seed_rec": 0.25,
     "hit": 1.0,
     "mrr": 1.0,
-    "p5": 0.6,
+    "p5": 0.4,
     "p10": 0.4
    },
    "SDL-Q2": {
@@ -902,18 +3028,18 @@
     "p10": 0.1
    },
    "SDL-Q3": {
-    "ndcg": 0.0,
+    "ndcg": 0.03533126475235993,
     "seed_rec": 0.0,
-    "hit": 0.0,
-    "mrr": 0.0,
+    "hit": 1.0,
+    "mrr": 0.1,
     "p5": 0.0,
-    "p10": 0.0
+    "p10": 0.1
    },
    "SDL-Q4": {
-    "ndcg": 0.187484237540045,
+    "ndcg": 0.1909600952387982,
     "seed_rec": 0.2,
     "hit": 1.0,
-    "mrr": 0.5,
+    "mrr": 0.3333333333333333,
     "p5": 0.4,
     "p10": 0.2
    },
@@ -926,12 +3052,12 @@
     "p10": 0.1
    },
    "INF-Q2": {
-    "ndcg": 0.11768826558093264,
+    "ndcg": 0.19093722549104925,
     "seed_rec": 0.0,
     "hit": 1.0,
     "mrr": 1.0,
     "p5": 0.2,
-    "p10": 0.1
+    "p10": 0.3
    },
    "CO-AS-1": {
     "ndcg": 0.06265341172228864,
@@ -970,10 +3096,10 @@
     "strict": 0.0
    },
    "CO-AS-6": {
-    "ndcg": 0.14635361484797657,
+    "ndcg": 0.16991128505192052,
     "seed_rec": 0.5,
     "hit": 1.0,
-    "mrr": 0.25,
+    "mrr": 0.3333333333333333,
     "p5": 0.2,
     "p10": 0.1,
     "strict": 0.0
@@ -987,27 +3113,27 @@
     "p10": 0.3
    },
    "VE-AS2": {
-    "ndcg": 0.14105595302781157,
+    "ndcg": 0.07671287990839405,
     "seed_rec": 0.16666666666666666,
     "hit": 1.0,
-    "mrr": 0.2,
-    "p5": 0.2,
-    "p10": 0.2
+    "mrr": 0.1111111111111111,
+    "p5": 0.0,
+    "p10": 0.1
    },
    "VE-AS3": {
-    "ndcg": 0.036831869957267185,
+    "ndcg": 0.038356439954197026,
     "seed_rec": 0.0,
     "hit": 1.0,
-    "mrr": 0.1,
+    "mrr": 0.1111111111111111,
     "p5": 0.0,
     "p10": 0.1
    },
    "PLC-AS1": {
-    "ndcg": 0.14397047852848383,
+    "ndcg": 0.18229299499732662,
     "seed_rec": 0.16666666666666666,
     "hit": 1.0,
-    "mrr": 0.2,
-    "p5": 0.2,
+    "mrr": 0.3333333333333333,
+    "p5": 0.4,
     "p10": 0.2
    },
    "PLC-AS2": {
@@ -1028,9 +3154,7 @@
    }
   }
  },
- "deployed": {
-  "tag_boost": 0.02,
-  "hardware_penalty": 0.03,
+ "rerank_only": {
   "splits": {
    "dev": {
     "hit": 0.8333,
@@ -1199,6 +3323,226 @@
     "mrr": 1.0,
     "p5": 0.2,
     "p10": 0.3
+   }
+  }
+ },
+ "deployed_by_slots": {
+  "0": {
+   "dev": {
+    "hit": 0.8333,
+    "mrr": 0.75,
+    "ndcg": 0.2085,
+    "p10": 0.15,
+    "p5": 0.2667,
+    "seed_rec": 0.1321
+   },
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.8333,
+    "mrr": 0.3417,
+    "ndcg": 0.1364,
+    "p10": 0.1833,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  "1": {
+   "dev": {
+    "hit": 0.8333,
+    "mrr": 0.75,
+    "ndcg": 0.2147,
+    "p10": 0.1667,
+    "p5": 0.2667,
+    "seed_rec": 0.1321
+   },
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.1238,
+    "p10": 0.15,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  "2": {
+   "dev": {
+    "hit": 1.0,
+    "mrr": 0.7667,
+    "ndcg": 0.2229,
+    "p10": 0.1833,
+    "p5": 0.3,
+    "seed_rec": 0.1321
+   },
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.09,
+    "ndcg": 0.0418,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.325,
+    "ndcg": 0.11,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  },
+  "3": {
+   "dev": {
+    "hit": 1.0,
+    "mrr": 0.6833,
+    "ndcg": 0.2091,
+    "p10": 0.1667,
+    "p5": 0.2667,
+    "seed_rec": 0.1321
+   },
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.05,
+    "ndcg": 0.0293,
+    "p10": 0.02,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.3889,
+    "ndcg": 0.1243,
+    "p10": 0.1167,
+    "p5": 0.2,
+    "seed_rec": 0.0833
+   }
+  }
+ },
+ "all_sources_by_slots": {
+  "0": {
+   "dev": {
+    "hit": 0.8333,
+    "mrr": 0.5278,
+    "ndcg": 0.1649,
+    "p10": 0.15,
+    "p5": 0.2333,
+    "seed_rec": 0.1321
+   },
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.08,
+    "ndcg": 0.0257,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.0,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.1611,
+    "ndcg": 0.0891,
+    "p10": 0.1333,
+    "p5": 0.1,
+    "seed_rec": 0.0556
+   }
+  },
+  "1": {
+   "dev": {
+    "hit": 0.8333,
+    "mrr": 0.5278,
+    "ndcg": 0.1711,
+    "p10": 0.1667,
+    "p5": 0.2333,
+    "seed_rec": 0.1321
+   },
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.08,
+    "ndcg": 0.0257,
+    "p10": 0.04,
+    "p5": 0.08,
+    "seed_rec": 0.0,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.163,
+    "ndcg": 0.0894,
+    "p10": 0.1333,
+    "p5": 0.1,
+    "seed_rec": 0.0556
+   }
+  },
+  "2": {
+   "dev": {
+    "hit": 1.0,
+    "mrr": 0.5444,
+    "ndcg": 0.1792,
+    "p10": 0.1833,
+    "p5": 0.2667,
+    "seed_rec": 0.1321
+   },
+   "company": {
+    "hit": 0.4,
+    "mrr": 0.08,
+    "ndcg": 0.0461,
+    "p10": 0.06,
+    "p5": 0.08,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.1683,
+    "ndcg": 0.0897,
+    "p10": 0.1167,
+    "p5": 0.1,
+    "seed_rec": 0.0833
+   }
+  },
+  "3": {
+   "dev": {
+    "hit": 1.0,
+    "mrr": 0.4611,
+    "ndcg": 0.1655,
+    "p10": 0.1667,
+    "p5": 0.2333,
+    "seed_rec": 0.1321
+   },
+   "company": {
+    "hit": 0.2,
+    "mrr": 0.04,
+    "ndcg": 0.0358,
+    "p10": 0.04,
+    "p5": 0.04,
+    "seed_rec": 0.1,
+    "strict": 0.0
+   },
+   "heldout": {
+    "hit": 0.6667,
+    "mrr": 0.2278,
+    "ndcg": 0.112,
+    "p10": 0.1333,
+    "p5": 0.1667,
+    "seed_rec": 0.0833
    }
   }
  }

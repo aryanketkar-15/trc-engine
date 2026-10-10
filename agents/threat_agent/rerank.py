@@ -16,7 +16,7 @@ baseline behaves exactly as before.  The weights are chosen on the dev split of
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
 from agents.threat_agent.schemas import AssetModel
@@ -56,3 +56,65 @@ def rerank_score(
     if "hardware" in p and not (a & _HARDWARE_ASSET_TAGS):
         score -= params.hardware_penalty
     return score
+
+
+# STRIDE types implied by each security attribute the asset must protect
+# (company document 2.4: C/I/A/Authenticity).  Deterministic, no model.
+_STRIDE_FOR_ATTRIBUTE: tuple[tuple[str, str], ...] = (
+    ("authenticity", "Spoofing"),
+    ("integrity", "Tampering"),
+    ("confidentiality", "InformationDisclosure"),
+    ("availability", "DenialOfService"),
+)
+
+
+def implied_stride(asset: AssetModel) -> list[str]:
+    """STRIDE categories an asset's required security attributes make applicable."""
+    attrs = asset.security_attributes
+    return [cat for attr, cat in _STRIDE_FOR_ATTRIBUTE if getattr(attrs, attr, False)]
+
+
+@dataclass(frozen=True)
+class Cand:
+    """Minimal candidate view used for selection (pattern id, cosine, tags, STRIDE hint)."""
+
+    pid: str
+    sim: float
+    tags: tuple[str, ...] = ()
+    stride: str | None = None
+
+
+def select_top(
+    cands: Sequence[Cand],
+    asset_tags: Iterable[str],
+    params: RerankParams,
+    categories: Sequence[str],
+    slots: int,
+    k: int,
+) -> list[str]:
+    """Pick the top-k pattern ids, guaranteeing STRIDE coverage.
+
+    Candidates are scored with ``rerank_score``.  When ``slots`` > 0, the best
+    ``slots`` candidates for each implied STRIDE category are reserved first
+    (round-robin, so every category gets its best match before any gets a
+    second), then the remaining places are filled by score.  The result is
+    ordered by score.
+    """
+    a_tags = frozenset(asset_tags)
+    score = {c.pid: rerank_score(c.sim, a_tags, c.tags, params) for c in cands}
+    ordered = sorted(cands, key=lambda c: score[c.pid], reverse=True)
+    chosen: list[str] = []
+    if slots > 0 and categories:
+        per_cat = {cat: [c for c in ordered if c.stride == cat][:slots] for cat in categories}
+        for rank in range(slots):
+            for cat in categories:
+                if rank < len(per_cat[cat]) and len(chosen) < k:
+                    pid = per_cat[cat][rank].pid
+                    if pid not in chosen:
+                        chosen.append(pid)
+    for c in ordered:
+        if len(chosen) >= k:
+            break
+        if c.pid not in chosen:
+            chosen.append(c.pid)
+    return sorted(chosen, key=lambda pid: score[pid], reverse=True)
