@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import uuid
 from pathlib import Path
 
 # Ensure the project root is in sys.path so we can import 'agents', 'config', etc.
@@ -55,13 +56,20 @@ from agents.threat_agent.orchestrator import (
     MAX_VALIDATION_ATTEMPTS,
     regenerate_after_human_rejection,
 )
-from agents.threat_agent.retrieval import build_retrieval_plan, fetch_candidates
+from agents.threat_agent.retrieval import (
+    build_retrieval_plan,
+    fetch_candidates,
+    kb_reference_exists,
+)
 from agents.threat_agent.router import MAX_HUMAN_REJECTIONS
 from agents.threat_agent.schemas import (
     AssetModel,
     DFDContext,
+    EvidenceChain,
     SecurityAttributes,
+    STRIDECategory,
     ThreatAgentInput,
+    ThreatScenario,
     ThreatStatus,
 )
 from agents.threat_agent.scorer import LOW_CONFIDENCE_THRESHOLD
@@ -309,6 +317,109 @@ def _mock_llm_fallback(system_prompt: str, user_prompt: str, run_id: str) -> str
     )
 
 
+def _say(text: str) -> None:
+    """Print through rich when available (markup-free text), else plain."""
+    print(text)
+
+
+def _expert_add(agent_input: ThreatAgentInput) -> ThreatScenario | None:
+    """Prompt the expert for a scenario, validate it and record it in the SCRS audit trail."""
+    known = {a.asset_id for a in agent_input.assets}
+    asset_id = input(f"  Asset id {sorted(known)}: ").strip()
+    if asset_id not in known:
+        _say(f"  [-] Unknown asset '{asset_id}'. Nothing added.")
+        return None
+    stride_raw = input(f"  STRIDE category {[c.value for c in STRIDECategory]}: ").strip()
+    try:
+        stride = STRIDECategory(stride_raw)
+    except ValueError:
+        _say(f"  [-] '{stride_raw}' is not a STRIDE category. Nothing added.")
+        return None
+    kb_ref = input("  KB reference (e.g. CAPEC-94, CWE-306): ").strip()
+    if kb_reference_exists(kb_ref) is False:
+        _say(f"  [-] '{kb_ref}' does not exist in the knowledge base. Nothing added.")
+        return None
+    vector = input("  Attack vector: ").strip()
+    exposure = input("  Exposure (which property of the asset is exposed): ").strip()
+    reason = input("  Why is it applicable to this asset: ").strip()
+    citation = input(f"  Citation text (must name {kb_ref}): ").strip() or f"{kb_ref}"
+    justification = input("  Justification for adding: ").strip() or "Added by expert."
+    try:
+        scenario = ThreatScenario(
+            tid=f"THR-EXP-{uuid.uuid4().hex[:8].upper()}",
+            run_id=agent_input.run_id,
+            asset_id=asset_id,
+            stride_category=stride,
+            attack_vector=vector,
+            kb_reference=kb_ref,
+            evidence_chain=EvidenceChain(
+                exposure=exposure,
+                matched_pattern=kb_ref,
+                applicability_reason=reason,
+                citation=citation,
+            ),
+            confidence_score=1.0,
+            status=ThreatStatus.PENDING_TEST,
+            validation_status="expert_added",
+        )
+    except Exception as exc:
+        _say(f"  [-] Invalid scenario: {exc}")
+        return None
+    result = Validator().validate(scenario)
+    if not result.passed:
+        for fc in result.failed_checks:
+            _say(f"  [-] Validator ({fc.check_id}): {fc.detail}")
+        return None
+    StateManager().log_edit(
+        agent_input.run_id, scenario.tid, "add", justification, scenario.model_dump(mode="json")
+    )
+    _say(f"  [+] Expert scenario {scenario.tid} added (audit-logged).")
+    return scenario
+
+
+def _expert_review_menu(
+    agent_input: ThreatAgentInput,
+    scenarios: list[ThreatScenario],
+    target: ThreatScenario,
+) -> ThreatScenario | None:
+    """Optional expert step before the approval gate: prune the candidate or add one.
+
+    Returns the scenario to put in front of the approval gate, or None when
+    everything was pruned.
+    """
+    queue = [s for s in scenarios if s.tid != target.tid]
+    while True:
+        choice = (
+            input(
+                "\nExpert options: [Enter]=continue to approval, p=prune this scenario, "
+                "a=add your own scenario: "
+            )
+            .strip()
+            .lower()
+        )
+        if choice == "":
+            return target
+        if choice == "p":
+            reason = input("  Reason for pruning (required): ").strip()
+            if not reason:
+                _say("  [-] A reason is required. Nothing pruned.")
+                continue
+            StateManager().log_edit(
+                agent_input.run_id, target.tid, "prune", reason, target.model_dump(mode="json")
+            )
+            _say(f"  [+] Scenario {target.tid} pruned (kept in the audit trail).")
+            if not queue:
+                return None
+            target = queue.pop(0)
+            _say(f"  Next candidate: {target.tid} | {target.asset_id} | {target.attack_vector}")
+        elif choice == "a":
+            added = _expert_add(agent_input)
+            if added is not None:
+                target = added
+        else:
+            _say("  Please enter p, a, or just Enter.")
+
+
 def run_demo() -> None:
     """Execute the full interactive CLI demonstration."""
     print_banner()
@@ -535,6 +646,12 @@ def run_demo() -> None:
     # escalating to a terminal rejection).
     rejection_count = 0
     approve = "n"
+
+    reviewed = _expert_review_menu(agent_input, scenarios, target_scenario)
+    if reviewed is None:
+        print("[WARNING] All scenarios were pruned; nothing to approve.")
+        return
+    target_scenario = reviewed
 
     while True:
         conf = target_scenario.confidence_score

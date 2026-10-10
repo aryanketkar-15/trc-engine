@@ -21,6 +21,8 @@ Core Invariant & Self-Correction Contract:
 
 from __future__ import annotations
 
+import hashlib
+
 from agents.threat_agent.attack_chain import build_paths, build_single_step_path
 from agents.threat_agent.exceptions import KBStoreUnreachableError
 from agents.threat_agent.generator import generate_scenarios
@@ -174,13 +176,21 @@ def generate_and_validate_with_retry(
     paths_by_id: dict[str, AttackPath] = {}
     outcomes: dict[str, ValidationResult] = {}
 
+    use_case_id = agent_input.use_case_id or (
+        "UC-" + hashlib.sha256(agent_input.use_case.encode("utf-8")).hexdigest()[:8].upper()
+    )
+    asset_versions = {a.asset_id: a.version for a in agent_input.assets}
+
     def _stamp(scenarios: list[ThreatScenario]) -> list[ThreatScenario]:
         return [
             s.model_copy(
                 update={
                     "validation_status": (
                         "passed" if outcomes[s.tid].passed else "escalated_after_retries"
-                    )
+                    ),
+                    "use_case_id": use_case_id,
+                    "asset_version": asset_versions.get(s.asset_id),
+                    "kb_snapshot_version": agent_input.kb_snapshot_version,
                 }
             )
             if hasattr(s, "model_copy")

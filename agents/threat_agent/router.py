@@ -52,6 +52,7 @@ from agents.threat_agent.orchestrator import (
     generate_and_validate_with_retry,
     regenerate_after_human_rejection,
 )
+from agents.threat_agent.retrieval import kb_reference_exists
 from agents.threat_agent.run_store import (
     InvalidStateTransitionError,
     RunNotFoundError,
@@ -998,6 +999,15 @@ async def add_scenario(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Asset '{body.asset_id}' is not part of run '{run_id}'.",
             )
+
+    if kb_reference_exists(body.kb_reference) is False:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"kb_reference '{body.kb_reference}' does not exist in the knowledge base; "
+                "cite a real CAPEC / ATT&CK / CWE / STRIDE pattern id."
+            ),
+        )
 
     scenario = ThreatScenario(
         tid=f"THR-EXP-{uuid.uuid4().hex[:8].upper()}",

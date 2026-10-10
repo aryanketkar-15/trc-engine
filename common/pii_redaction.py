@@ -10,6 +10,8 @@ Implements conservative pattern masking for:
     - Phone numbers         -> [REDACTED_PHONE]
     - Government IDs (SSN)  -> [REDACTED_GOV_ID]
     - IPv4 addresses        -> [REDACTED_IP]
+    - Secrets (API keys, bearer tokens, JWTs, private keys, password=... style
+      assignments) -> [REDACTED_SECRET]
 
 Design constraints:
     • Operates exclusively on outbound request payloads before dispatch
@@ -52,11 +54,28 @@ _IPV4_PATTERN = re.compile(
     r"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b"
 )
 
+# Secrets: PEM private keys, JWTs, vendor key prefixes, bearer tokens and
+# "password: value" style assignments.  Only the value is masked, so a phrase such
+# as "hard-coded password" (no value) is left intact.
+_SECRET_PATTERNS = [
+    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S),
+    re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b"),
+    re.compile(r"\b(?:sk|gsk|pk|rk|xox[abp])[-_][A-Za-z0-9_-]{16,}\b"),
+    re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
+    re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}\b"),
+    re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]{12,}"),
+    re.compile(
+        r"(?i)\b(pass(?:word|wd)?|pwd|secret|api[_-]?key|access[_-]?key|auth[_-]?token|token)"
+        r"(\s*[:=]\s*)(?!\[REDACTED)[^\s,;\"']{4,}"
+    ),
+]
+
 # Replacement tokens
 TOKEN_EMAIL = "[REDACTED_EMAIL]"  # noqa: S105
 TOKEN_PHONE = "[REDACTED_PHONE]"  # noqa: S105
 TOKEN_GOV_ID = "[REDACTED_GOV_ID]"  # noqa: S105
 TOKEN_IP = "[REDACTED_IP]"  # noqa: S105
+TOKEN_SECRET = "[REDACTED_SECRET]"  # noqa: S105
 
 _ORDERED_RULES: list[tuple[re.Pattern[str], str]] = [
     (_EMAIL_PATTERN, TOKEN_EMAIL),
@@ -80,6 +99,15 @@ def redact_pii_with_count(text: str) -> tuple[str, int]:
 
     sanitized = text
     total_matches = 0
+
+    for secret_pattern in _SECRET_PATTERNS:
+        if secret_pattern.groups:
+            sanitized, count = secret_pattern.subn(
+                lambda m: f"{m.group(1)}{m.group(2)}{TOKEN_SECRET}", sanitized
+            )
+        else:
+            sanitized, count = secret_pattern.subn(TOKEN_SECRET, sanitized)
+        total_matches += count
 
     for pattern, replacement in _ORDERED_RULES:
         sanitized, count = pattern.subn(replacement, sanitized)
