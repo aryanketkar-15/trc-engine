@@ -78,6 +78,7 @@ class KBEntry:
     description: str
     stride_hint: STRIDECategory | None
     mitre_tactics: list[str] = field(default_factory=list)
+    domain_tags: list[str] = field(default_factory=list)
 
     def embedding_text(self) -> str:
         """Return the text that will be embedded into a FAISS vector.
@@ -104,6 +105,7 @@ class KBEntry:
                 self.stride_hint.value if self.stride_hint is not None else None
             ),
             "mitre_tactics": list(self.mitre_tactics),
+            **({"domain_tags": sorted(self.domain_tags)} if self.domain_tags else {}),
         }
 
     @staticmethod
@@ -118,6 +120,7 @@ class KBEntry:
             description=data["description"],
             stride_hint=stride_hint,
             mitre_tactics=list(data.get("mitre_tactics", [])),
+            domain_tags=list(data.get("domain_tags", [])),
         )
 
 

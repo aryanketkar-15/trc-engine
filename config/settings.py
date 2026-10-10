@@ -207,6 +207,35 @@ class Settings(BaseSettings):
         ),
     ]
 
+    RETRIEVAL_RERANK: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="Apply domain-aware reranking when KB entries carry tags.",
+        ),
+    ]
+    RETRIEVAL_RERANK_BOOST: Annotated[
+        float,
+        Field(
+            default=0.02, ge=0.0, le=0.5,
+            description="Score boost per shared domain tag (max 2).",
+        ),
+    ]
+    RETRIEVAL_RERANK_HW_PENALTY: Annotated[
+        float,
+        Field(
+            default=0.03, ge=0.0, le=1.0,
+            description="Penalty for hardware patterns on non-hardware assets.",
+        ),
+    ]
+    RETRIEVAL_POOL_SIZE: Annotated[
+        int,
+        Field(
+            default=60, ge=10, le=500,
+            description="Candidate pool size fetched before reranking.",
+        ),
+    ]
+
     SCRS_STATE_PATH: Annotated[
         Path,
         Field(
