@@ -38,7 +38,7 @@ class AuditLogEntry(BaseModel):
         default_factory=lambda: datetime.now(UTC),
         description="UTC timestamp of the write action.",
     )
-    action: Literal["write", "reject", "revise", "approve"] = Field(
+    action: Literal["write", "reject", "revise", "approve", "prune", "add"] = Field(
         default="write",
         description="Action performed.",
     )

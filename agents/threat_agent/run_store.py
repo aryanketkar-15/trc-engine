@@ -24,6 +24,7 @@ import json
 import logging
 import threading
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -55,8 +56,24 @@ class RunRecord(BaseModel):
     scrs_entry_id: str | None = None
     agent_input: dict[str, object] = Field(default_factory=dict)
     rejection_history: list[dict[str, object]] = Field(default_factory=list)
+    edit_history: list[dict[str, object]] = Field(default_factory=list)
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+ScenarioEditor = Callable[
+    [list[dict[str, object]]], tuple[list[dict[str, object]], dict[str, object]]
+]
+"""Pure function: current scenarios -> (new scenarios, audit entry).  Run under a lock."""
+
+
+class ScenarioNotFoundError(Exception):
+    """Raised by an editor when the targeted scenario is not in the run."""
+
+    def __init__(self, run_id: str, tid: str) -> None:
+        self.run_id = run_id
+        self.tid = tid
+        super().__init__(f"Scenario '{tid}' not found in run '{run_id}'.")
 
 
 class RunNotFoundError(Exception):
@@ -110,6 +127,11 @@ def _row_to_run_record(row: dict[str, Any]) -> RunRecord:
         rej_hist if isinstance(rej_hist, list) else []
     )
 
+    edit_hist = row.get("edit_history")
+    edit_history_list: list[dict[str, object]] = (
+        edit_hist if isinstance(edit_hist, list) else []
+    )
+
     return RunRecord(
         run_id=row["run_id"],
         status=ThreatStatus(row["status"]),
@@ -121,6 +143,7 @@ def _row_to_run_record(row: dict[str, Any]) -> RunRecord:
         scrs_entry_id=row.get("scrs_entry_id"),
         agent_input=agent_input_dict,
         rejection_history=rejection_history_list,
+        edit_history=edit_history_list,
         created_at=row.get("created_at"),
         updated_at=row.get("updated_at"),
     )
@@ -177,6 +200,25 @@ class RunRegistryStore(ABC):
         Raises:
             RunNotFoundError: If run_id does not exist.
             InvalidStateTransitionError: If run exists but current status != expected_status.
+        """
+        ...
+
+    @abstractmethod
+    def edit_scenarios(
+        self,
+        run_id: str,
+        expected_status: ThreatStatus,
+        editor: ScenarioEditor,
+    ) -> RunRecord:
+        """Atomically apply an expert edit (prune/add) to a run's scenario list.
+
+        ``editor`` receives the CURRENT list under a lock / row lock and returns
+        ``(new_list, audit_entry)``; the entry is appended to ``edit_history``.
+        This prevents lost updates when two edits arrive at once.
+
+        Raises:
+            RunNotFoundError, InvalidStateTransitionError, and any exception
+            raised by ``editor`` (state is left unchanged).
         """
         ...
 
@@ -277,6 +319,29 @@ class InMemoryRunRegistryStore(RunRegistryStore):
             record.updated_at = datetime.now()
             return record.model_copy()
 
+    def edit_scenarios(
+        self,
+        run_id: str,
+        expected_status: ThreatStatus,
+        editor: ScenarioEditor,
+    ) -> RunRecord:
+        with self._lock:
+            record = self._runs.get(run_id)
+            if record is None:
+                raise RunNotFoundError(run_id)
+            if record.status != expected_status:
+                raise InvalidStateTransitionError(
+                    run_id=run_id,
+                    current_status=record.status,
+                    expected_status=expected_status,
+                    new_status=record.status,
+                )
+            new_list, entry = editor(list(record.scenarios))
+            record.scenarios = new_list
+            record.edit_history.append(entry)
+            record.updated_at = datetime.now()
+            return record.model_copy(deep=True)
+
     def clear(self) -> None:
         with self._lock:
             self._runs.clear()
@@ -315,6 +380,8 @@ def init_postgres_run_store_schema() -> None:
                     ADD COLUMN IF NOT EXISTS agent_input JSONB NOT NULL DEFAULT '{}'::jsonb;
                 ALTER TABLE threat_agent_runs
                     ADD COLUMN IF NOT EXISTS rejection_history JSONB NOT NULL DEFAULT '[]'::jsonb;
+                ALTER TABLE threat_agent_runs
+                    ADD COLUMN IF NOT EXISTS edit_history JSONB NOT NULL DEFAULT '[]'::jsonb;
                 """
             )
             cur.execute(
@@ -530,6 +597,54 @@ class PostgresRunRegistryStore(RunRegistryStore):
                     expected_status=expected_status,
                     new_status=new_status,
                 )
+
+    def edit_scenarios(
+        self,
+        run_id: str,
+        expected_status: ThreatStatus,
+        editor: ScenarioEditor,
+    ) -> RunRecord:
+        """Row-locked read-modify-write so concurrent edits cannot lose updates."""
+        with get_db_connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    "SELECT * FROM threat_agent_runs WHERE run_id = %s FOR UPDATE;",
+                    (run_id,),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    raise RunNotFoundError(run_id)
+                current = ThreatStatus(row["status"])
+                if current != expected_status:
+                    raise InvalidStateTransitionError(
+                        run_id=run_id,
+                        current_status=current,
+                        expected_status=expected_status,
+                        new_status=current,
+                    )
+                scenarios = row["scenarios"] if isinstance(row["scenarios"], list) else []
+                new_list, entry = editor(list(scenarios))
+                cur.execute(
+                    """
+                    UPDATE threat_agent_runs
+                    SET scenarios = %(scenarios)s,
+                        edit_history = edit_history || %(entry)s::jsonb,
+                        updated_at = now()
+                    WHERE run_id = %(run_id)s
+                    RETURNING *;
+                    """,
+                    {
+                        "run_id": run_id,
+                        "scenarios": Jsonb(
+                            new_list, dumps=lambda x: json.dumps(x, default=str)
+                        ),
+                        "entry": json.dumps([entry], default=str),
+                    },
+                )
+                updated = cur.fetchone()
+            conn.commit()
+        assert updated is not None
+        return _row_to_run_record(updated)
 
     def clear(self) -> None:
         """Truncate table (used for test resets)."""

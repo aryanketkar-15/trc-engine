@@ -98,28 +98,7 @@ class StateManager:
             NotApprovedError: If scenario.status != "approved".
             OSError:          If the SCRS file cannot be written (propagated).
         """
-        if scenario.status != "approved":
-            message = (
-                f"write_threat_scenario rejected: scenario '{scenario.tid}' has "
-                f"status '{scenario.status}', expected 'approved'.  "
-                "Only human-approved scenarios may enter the SCRS."
-            )
-            logger.warning(message)
-            raise NotApprovedError(message)
-
-        # Persist scenario (overwrite if same tid was previously written —
-        # this can happen on human-override re-approval in future phases).
-        self._state.threat_scenarios[scenario.tid] = scenario.model_dump(mode="json")
-
-        # Append audit log entry — MUST happen atomically with the write.
-        audit_entry = AuditLogEntry(
-            run_id=run_id,
-            tid=scenario.tid,
-            timestamp=datetime.now(UTC),
-            action="write",
-        )
-        self._state.audit_log.append(audit_entry)
-
+        audit_entry = self._apply_write(scenario, run_id)
         self._persist()
 
         logger.info(
@@ -130,6 +109,110 @@ class StateManager:
             audit_entry.timestamp.isoformat(),
         )
         return True
+
+    def commit_approved_run(
+        self, run_id: str, scenarios: list[ThreatScenario]
+    ) -> int:
+        """Write every scenario of an approved run in ONE all-or-nothing file write.
+
+        Each scenario gets a ``write`` audit entry, plus one ``approve`` entry,
+        so the log shows both the persistence and the human decision.
+
+        Raises:
+            NotApprovedError: If any scenario is not ``approved`` (nothing is persisted).
+        """
+        for scenario in scenarios:
+            self._apply_write(scenario, run_id)
+            self._state.audit_log.append(
+                AuditLogEntry(
+                    run_id=run_id,
+                    tid=scenario.tid,
+                    timestamp=datetime.now(UTC),
+                    action="approve",
+                )
+            )
+        if scenarios:
+            self._persist()
+        logger.info("SCRS commit: run_id=%s scenarios=%d", run_id, len(scenarios))
+        return len(scenarios)
+
+    def log_edit(
+        self,
+        run_id: str,
+        tid: str,
+        action: str,
+        reason: str,
+        scenario: dict[str, object] | None = None,
+    ) -> None:
+        """Record an expert prune/add and keep the affected scenario's content.
+
+        Pruned scenarios are never deleted from the record: their full content,
+        the reason and the time are preserved in ``revision_history``.
+        """
+        if action not in {"prune", "add"}:
+            raise ValueError(f"unsupported edit action '{action}'")
+        self._state.revision_history.setdefault(run_id, []).append(
+            {
+                "timestamp": datetime.now(UTC).isoformat(),
+                "action": action,
+                "reason": reason,
+                "scenarios": [scenario] if scenario else [],
+            }
+        )
+        self._state.audit_log.append(
+            AuditLogEntry(
+                run_id=run_id,
+                tid=tid,
+                timestamp=datetime.now(UTC),
+                action=action,  # type: ignore[arg-type]
+                reason=reason,
+            )
+        )
+        self._persist()
+        logger.info("SCRS edit logged: run_id=%s tid=%s action=%s", run_id, tid, action)
+
+    def _apply_write(self, scenario: ThreatScenario, run_id: str) -> AuditLogEntry:
+        """Gate-check and stage one scenario in memory (does not persist)."""
+        if scenario.status != "approved":
+            message = (
+                f"write_threat_scenario rejected: scenario '{scenario.tid}' has "
+                f"status '{scenario.status}', expected 'approved'.  "
+                "Only human-approved scenarios may enter the SCRS."
+            )
+            logger.warning(message)
+            raise NotApprovedError(message)
+
+        new_dump = scenario.model_dump(mode="json")
+        existing = self._state.threat_scenarios.get(scenario.tid)
+        if existing is not None and existing != new_dump:
+            # Non-overwrite rule: approved content is never silently replaced.
+            self._state.revision_history.setdefault(run_id, []).append(
+                {
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "action": "superseded",
+                    "reason": "re-approval with changed content",
+                    "scenarios": [existing],
+                }
+            )
+            self._state.audit_log.append(
+                AuditLogEntry(
+                    run_id=run_id,
+                    tid=scenario.tid,
+                    timestamp=datetime.now(UTC),
+                    action="revise",
+                    previous_tid=scenario.tid,
+                )
+            )
+        self._state.threat_scenarios[scenario.tid] = new_dump
+
+        audit_entry = AuditLogEntry(
+            run_id=run_id,
+            tid=scenario.tid,
+            timestamp=datetime.now(UTC),
+            action="write",
+        )
+        self._state.audit_log.append(audit_entry)
+        return audit_entry
 
     def log_rejection(
         self,

@@ -207,6 +207,14 @@ class Settings(BaseSettings):
         ),
     ]
 
+    SCRS_STATE_PATH: Annotated[
+        Path,
+        Field(
+            default=Path("SCRS_state.json"),
+            description="File where the shared reasoning state (SCRS) is persisted.",
+        ),
+    ]
+
     # ── LLM Generation & Inference ────────────────────────────────────────────
 
     USE_LIVE_LLM: Annotated[

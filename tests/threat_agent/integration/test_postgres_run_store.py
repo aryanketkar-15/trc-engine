@@ -320,3 +320,54 @@ class TestInMemoryStoreConcurrency:
         assert sorted([status1, status2]) == [200, 409], (
             f"InMemory store race condition: got {status1} and {status2}"
         )
+
+
+class TestPostgresExpertEdits:
+    """Row-locked scenario edits (expert prune/add) against live PostgreSQL."""
+
+    @staticmethod
+    def _prune(tid: str):  # type: ignore[no-untyped-def]
+        def _editor(current: list[dict[str, object]]):  # type: ignore[no-untyped-def]
+            rest = [s for s in current if s["tid"] != tid]
+            return rest, {"action": "prune", "tid": tid}
+
+        return _editor
+
+    def test_edit_persists_scenarios_and_history(self, pg_store: PostgresRunRegistryStore) -> None:
+        pg_store.create_run(
+            "RUN-PG-EDIT-1", ThreatStatus.PENDING_HUMAN, scenarios=[{"tid": "A"}, {"tid": "B"}]
+        )
+        updated = pg_store.edit_scenarios("RUN-PG-EDIT-1", ThreatStatus.PENDING_HUMAN, self._prune("A"))
+        assert [s["tid"] for s in updated.scenarios] == ["B"]
+        reloaded = pg_store.get_run("RUN-PG-EDIT-1")
+        assert reloaded is not None
+        assert [s["tid"] for s in reloaded.scenarios] == ["B"]
+        assert reloaded.edit_history[0]["tid"] == "A"
+
+    def test_edit_on_wrong_status_is_409_and_unknown_run_is_404(
+        self, pg_store: PostgresRunRegistryStore
+    ) -> None:
+        pg_store.create_run("RUN-PG-EDIT-2", ThreatStatus.APPROVED, scenarios=[{"tid": "A"}])
+        with pytest.raises(InvalidStateTransitionError):
+            pg_store.edit_scenarios("RUN-PG-EDIT-2", ThreatStatus.PENDING_HUMAN, self._prune("A"))
+        with pytest.raises(RunNotFoundError):
+            pg_store.edit_scenarios("RUN-NOPE", ThreatStatus.PENDING_HUMAN, self._prune("A"))
+
+    def test_concurrent_prunes_do_not_lose_updates(self, pg_store: PostgresRunRegistryStore) -> None:
+        tids = [f"T{i}" for i in range(8)]
+        pg_store.create_run(
+            "RUN-PG-EDIT-3", ThreatStatus.PENDING_HUMAN, scenarios=[{"tid": t} for t in tids]
+        )
+
+        def _go(tid: str) -> None:
+            PostgresRunRegistryStore().edit_scenarios(
+                "RUN-PG-EDIT-3", ThreatStatus.PENDING_HUMAN, self._prune(tid)
+            )
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+            list(pool.map(_go, tids))
+
+        final = pg_store.get_run("RUN-PG-EDIT-3")
+        assert final is not None
+        assert final.scenarios == []  # every prune applied; none resurrected by a stale read
+        assert len(final.edit_history) == 8
