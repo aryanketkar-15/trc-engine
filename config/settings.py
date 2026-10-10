@@ -228,6 +228,25 @@ class Settings(BaseSettings):
             description="Penalty for hardware patterns on non-hardware assets.",
         ),
     ]
+    RETRIEVAL_ALL_SOURCES_WHEN_TAGGED: Annotated[
+        bool,
+        Field(
+            default=False,
+            description=(
+                "On a full (tagged) KB search every source instead of routing by asset type."
+            ),
+        ),
+    ]
+    RETRIEVAL_STRIDE_SLOTS: Annotated[
+        int,
+        Field(
+            default=0, ge=0, le=5,
+            description=(
+                "Per implied STRIDE category, how many of the best matches are reserved "
+                "in the top-k (0 = off).  Only applies to a KB whose entries carry tags."
+            ),
+        ),
+    ]
     RETRIEVAL_POOL_SIZE: Annotated[
         int,
         Field(

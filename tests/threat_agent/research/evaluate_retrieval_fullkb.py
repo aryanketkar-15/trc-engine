@@ -6,9 +6,10 @@
 ``baseline`` = the 24-entry seed KB (database trc_engine).
 ``full``     = the 2,300-entry KB (database trc_engine_fullkb) with domain tags.
 
-For ``full`` the rerank weights are CHOSEN ON THE DEV SPLIT ONLY (grid below);
-the company and held-out splits are reported for that choice and never used to
+For ``full`` the rerank weights and STRIDE slots are CHOSEN ON THE DEV SPLIT ONLY
+(grid below); company and held-out are reported for that choice and never used to
 select it.  The whole grid is saved for transparency (sensitivity analysis).
+Selection logic is the production function ``agents.threat_agent.rerank.select_top``.
 
 Metrics at K=10 (relevance: 2 = expert-cited seed, 1 = MITRE-linked neighbour):
     ndcg      graded nDCG@10
@@ -41,18 +42,25 @@ if which == "full":
     )
 
 from agents.threat_agent import retrieval as rv  # noqa: E402
-from agents.threat_agent.rerank import RerankParams, infer_asset_tags, rerank_score  # noqa: E402
-from agents.threat_agent.schemas import AssetModel, DFDContext  # noqa: E402
+from agents.threat_agent.rerank import (  # noqa: E402
+    Cand,
+    RerankParams,
+    implied_stride,
+    infer_asset_tags,
+    select_top,
+)
+from agents.threat_agent.schemas import AssetModel, DFDContext, SecurityAttributes  # noqa: E402
 from common.db import get_db_connection  # noqa: E402
 
 K = 10
 POOL = 60
+STRIDE_ALL = ["Spoofing", "Tampering", "InformationDisclosure", "DenialOfService"]
 DATA = Path(__file__).resolve().parent / "retrieval_eval_fullkb.json"
 BOOSTS = [0.0, 0.01, 0.02, 0.04, 0.08]
 PENALTIES = [0.0, 0.03, 0.06, 0.10, 0.20]
+SLOTS = [0, 1, 2, 3]
 # Production defaults (config/settings.py).  boost = dev-selected; penalty 0.03 is a
-# POST-HOC choice: dev is indifferent to it (no hardware noise there) and the
-# sensitivity grid shows >=0.03 helps the held-out split, so held-out is slightly optimistic.
+# POST-HOC choice (see docs/research/full_kb_retrieval_results.md).
 DEPLOYED = RerankParams(tag_boost=0.02, hardware_penalty=0.03)
 
 
@@ -62,10 +70,16 @@ def _asset(q: dict) -> AssetModel:
         asset_id=a["asset_id"], name=a["name"], asset_type=a["asset_type"],
         dfd_context=DFDContext(interfaces=a["interfaces"], trust_zone=a["trust_zone"]),
         device_config=a["device_config"],
+        security_attributes=SecurityAttributes(**a.get("security_attributes", {})),
     )
 
 
-def fetch_pool(queries: list[dict]) -> dict[str, dict]:
+def _cand(meta: dict, sim: float) -> Cand:
+    return Cand(meta["pattern_id"], float(sim), tuple(meta.get("domain_tags", [])),
+                meta.get("stride_hint"))
+
+
+def fetch_pool(queries: list[dict], all_sources: bool = False) -> dict[str, dict]:
     import numpy as np
     from pgvector.psycopg import register_vector
 
@@ -78,27 +92,51 @@ def fetch_pool(queries: list[dict]) -> dict[str, dict]:
                 asset = _asset(q)
                 text = rv._build_query_text(asset)
                 vec = enc.encode([text], normalize_embeddings=True).astype(np.float32)[0]
+                sources = (
+                    ["ATT&CK", "CAPEC", "CWE", "STRIDE"] if all_sources else rv._select_kb_sources(asset)
+                )
                 cur.execute(
                     "SELECT metadata, 1 - (embedding <=> %s) FROM threat_patterns "
                     "WHERE source = ANY(%s) ORDER BY embedding <=> %s LIMIT %s;",
-                    (vec, rv._select_kb_sources(asset), vec, POOL),
+                    (vec, sources, vec, POOL),
                 )
-                rows = []
+                pool = []
                 for meta, sim in cur.fetchall():
                     meta = json.loads(meta) if isinstance(meta, str) else meta
-                    rows.append((meta["pattern_id"], float(sim), meta.get("domain_tags", [])))
-                out[q["query_id"]] = {"rows": rows, "tags": sorted(infer_asset_tags(asset))}
+                    pool.append(_cand(meta, sim))
+                cats: dict[str, list[Cand]] = {}
+                for cat in STRIDE_ALL:  # deepest slot setting uses slots*3 = 9 per category
+                    cur.execute(
+                        "SELECT metadata, 1 - (embedding <=> %s) FROM threat_patterns "
+                        "WHERE source = ANY(%s) AND metadata->>'stride_hint' = %s "
+                        "ORDER BY embedding <=> %s LIMIT 9;",
+                        (vec, sources, cat, vec),
+                    )
+                    cats[cat] = [
+                        _cand(json.loads(m) if isinstance(m, str) else m, s)
+                        for m, s in cur.fetchall()
+                    ]
+                out[q["query_id"]] = {
+                    "pool": pool, "cats": cats, "tags": sorted(infer_asset_tags(asset)),
+                    "stride": implied_stride(asset),
+                }
     return out
 
 
-def rank(entry: dict, params: RerankParams) -> list[str]:
-    rows = entry["rows"]
-    tagged = any(r[2] for r in rows)
-    if tagged and not params.is_noop:
-        rows = sorted(rows, key=lambda r: rerank_score(r[1], entry["tags"], r[2], params), reverse=True)
-    else:
-        rows = sorted(rows, key=lambda r: r[1], reverse=True)
-    return [r[0] for r in rows[:K]]
+def rank(entry: dict, params: RerankParams, slots: int = 0) -> list[str]:
+    pool: list[Cand] = list(entry["pool"])
+    tagged = any(c.tags for c in pool)
+    if not tagged:  # untagged KB (baseline): legacy pure-cosine order
+        return [c.pid for c in sorted(pool, key=lambda c: c.sim, reverse=True)[:K]]
+    cands = list(pool)
+    if slots > 0:
+        have = {c.pid for c in cands}
+        for cat in entry["stride"]:
+            for c in entry["cats"].get(cat, [])[: slots * 3]:
+                if c.pid not in have:
+                    have.add(c.pid)
+                    cands.append(c)
+    return select_top(cands, entry["tags"], params, entry["stride"], slots, K)
 
 
 def metrics(ranked: list[str], q: dict) -> dict[str, float]:
@@ -122,8 +160,8 @@ def metrics(ranked: list[str], q: dict) -> dict[str, float]:
     return out
 
 
-def evaluate(queries: list[dict], pool: dict, params: RerankParams) -> dict:
-    per_q = {q["query_id"]: metrics(rank(pool[q["query_id"]], params), q) for q in queries}
+def evaluate(queries: list[dict], pool: dict, params: RerankParams, slots: int = 0) -> dict:
+    per_q = {q["query_id"]: metrics(rank(pool[q["query_id"]], params, slots), q) for q in queries}
     splits: dict[str, dict[str, float]] = {}
     for split in ("dev", "company", "heldout"):
         ids = [q["query_id"] for q in queries if q["split"] == split]
@@ -144,33 +182,47 @@ def main() -> None:
         grid = []
         for b in BOOSTS:
             for p in PENALTIES:
-                ev = evaluate(queries, pool, RerankParams(tag_boost=b, hardware_penalty=p))
-                grid.append({"tag_boost": b, "hardware_penalty": p, **ev["splits"]["dev"],
-                             "company": ev["splits"]["company"], "heldout": ev["splits"]["heldout"]})
+                for sl in SLOTS:
+                    ev = evaluate(queries, pool, RerankParams(tag_boost=b, hardware_penalty=p), sl)
+                    grid.append({"tag_boost": b, "hardware_penalty": p, "stride_slots": sl,
+                                 **ev["splits"]["dev"], "company": ev["splits"]["company"],
+                                 "heldout": ev["splits"]["heldout"]})
         # Selection uses DEV nDCG only; ties -> the smaller (simpler) adjustment.
-        best = max(grid, key=lambda g: (round(g["ndcg"], 4), -(g["tag_boost"] + g["hardware_penalty"])))
+        best = max(grid, key=lambda g: (round(g["ndcg"], 4),
+                                        -(g["tag_boost"] + g["hardware_penalty"] + g["stride_slots"])))
         chosen = RerankParams(tag_boost=best["tag_boost"], hardware_penalty=best["hardware_penalty"])
         result["grid"] = grid
         result["chosen"] = {"tag_boost": best["tag_boost"], "hardware_penalty": best["hardware_penalty"],
-                            "selected_on": "dev nDCG@10"}
-        result["rerank"] = evaluate(queries, pool, chosen)
-        result["deployed"] = {"tag_boost": DEPLOYED.tag_boost,
-                              "hardware_penalty": DEPLOYED.hardware_penalty,
-                              **evaluate(queries, pool, DEPLOYED)}
+                            "stride_slots": best["stride_slots"], "selected_on": "dev nDCG@10"}
+        result["rerank"] = evaluate(queries, pool, chosen, best["stride_slots"])
+        result["rerank_only"] = evaluate(queries, pool, DEPLOYED, 0)
+        # Coverage on top of the deployed rerank, at each slot setting (sensitivity view).
+        result["deployed_by_slots"] = {
+            str(sl): evaluate(queries, pool, DEPLOYED, sl)["splits"] for sl in SLOTS
+        }
+        # Source routing: production searches ALL sources on a tagged KB (principle, not tuned).
+        pool_all = fetch_pool(queries, all_sources=True)
+        result["all_sources_by_slots"] = {
+            str(sl): evaluate(queries, pool_all, DEPLOYED, sl)["splits"] for sl in SLOTS
+        }
 
     out = _ROOT / "docs" / "research" / f"retrieval_fullkb_eval_{which}.json"
     out.write_text(json.dumps(result, indent=1), encoding="utf-8")
 
-    def show(label: str, ev: dict) -> None:
+    def show(label: str, splits: dict) -> None:
         print(f"\n[{label}]")
-        for split, m in ev["splits"].items():
+        for split, m in splits.items():
             print(f"  {split:8s} " + "  ".join(f"{k}={v:.3f}" for k, v in m.items()))
 
-    show(f"{which} / raw cosine", result["raw_cosine"])
+    show(f"{which} / raw cosine", result["raw_cosine"]["splits"])
     if which == "full":
         print("\nchosen on dev:", result["chosen"])
-        show("full / rerank (chosen on dev)", result["rerank"])
-        show("full / DEPLOYED defaults (boost 0.02, penalty 0.03)", result["deployed"])
+        show("full / chosen on dev", result["rerank"]["splits"])
+        show("full / rerank only (deployed weights, no coverage)", result["rerank_only"]["splits"])
+        for sl, sp in result["deployed_by_slots"].items():
+            show(f"full / routed sources + STRIDE slots={sl}", sp)
+        for sl, sp in result["all_sources_by_slots"].items():
+            show(f"full / ALL sources + STRIDE slots={sl}", sp)
     print("\nwrote", out)
 
 

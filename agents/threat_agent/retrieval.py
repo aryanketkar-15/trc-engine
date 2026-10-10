@@ -34,7 +34,14 @@ from agents.threat_agent.exceptions import (
     KBStoreUnreachableError,
     MalformedAssetInputError,
 )
-from agents.threat_agent.rerank import RerankParams, infer_asset_tags, rerank_score
+from agents.threat_agent.rerank import (
+    Cand,
+    RerankParams,
+    implied_stride,
+    infer_asset_tags,
+    rerank_score,
+    select_top,
+)
 from agents.threat_agent.schemas import (
     AssetModel,
     KBCandidate,
@@ -354,6 +361,7 @@ def build_retrieval_plan(
             "query_text": _build_query_text(asset),
             "kb_sources": _select_kb_sources(asset),
             "asset_tags": sorted(infer_asset_tags(asset)),
+            "asset_stride": implied_stride(asset),
         }
         for asset in agent_input.assets
     ]
@@ -424,6 +432,8 @@ def fetch_candidates(
     )
     # Ordering key per (asset, pattern); falls back to retrieval_score when absent.
     sort_keys: dict[tuple[str, str], float] = {}
+    stride_slots = int(settings.RETRIEVAL_STRIDE_SLOTS)
+    all_sources = ["ATT&CK", "CAPEC", "CWE", "STRIDE"]
 
     log_step(
         logger,
@@ -439,11 +449,23 @@ def fetch_candidates(
         with get_db_connection() as conn:
             register_vector(conn)
             with conn.cursor() as cur:
+                # Source routing (_select_kb_sources) was designed for a 24-entry KB.
+                # On a full, tagged KB every source is searched instead, otherwise e.g.
+                # an internal PLC asset would never see a CWE or ATT&CK pattern.
+                cur.execute(
+                    "SELECT EXISTS (SELECT 1 FROM threat_patterns "
+                    "WHERE metadata->'domain_tags' IS NOT NULL);"
+                )
+                row0 = cur.fetchone()
+                kb_is_tagged = bool(row0 and row0[0])
                 for query in plan.queries:
                     asset_id: str = query["asset_id"]  # type: ignore[index]
                     query_text: str = query["query_text"]  # type: ignore[index]
                     kb_sources: list[str] = query["kb_sources"]  # type: ignore[index]
                     asset_tags: list[str] = list(query.get("asset_tags", []))  # type: ignore[arg-type]
+                    asset_stride: list[str] = list(query.get("asset_stride", []))  # type: ignore[arg-type]
+                    if kb_is_tagged and settings.RETRIEVAL_ALL_SOURCES_WHEN_TAGGED:
+                        kb_sources = all_sources
 
                     if not query_text.strip():
                         raise MalformedAssetInputError(
@@ -476,7 +498,7 @@ def fetch_candidates(
                             kb_sources,
                             query_vec,
                             max(top_k * 2, settings.RETRIEVAL_POOL_SIZE)
-                            if not rerank_params.is_noop
+                            if (not rerank_params.is_noop or stride_slots > 0)
                             else top_k * 2,
                         ),
                     )
@@ -486,10 +508,34 @@ def fetch_candidates(
                         (json.loads(r[0]) if isinstance(r[0], str) else r[0]).get("domain_tags")
                         for r in rows
                     )
-                    use_rerank = tagged and not rerank_params.is_noop
+                    use_rerank = tagged and (not rerank_params.is_noop or stride_slots > 0)
                     if not use_rerank:
                         rows = rows[: top_k * 2]  # legacy behaviour, byte-for-byte
+                    elif stride_slots > 0 and asset_stride:
+                        # Guarantee STRIDE coverage: also fetch the best matches per
+                        # implied category (they may be far below the overall top-N).
+                        have = {
+                            (json.loads(r[0]) if isinstance(r[0], str) else r[0])["pattern_id"]
+                            for r in rows
+                        }
+                        for cat in asset_stride:
+                            cur.execute(
+                                """
+                                SELECT metadata, 1 - (embedding <=> %s) AS similarity
+                                FROM   threat_patterns
+                                WHERE  source = ANY(%s) AND metadata->>'stride_hint' = %s
+                                ORDER  BY embedding <=> %s
+                                LIMIT  %s;
+                                """,
+                                (query_vec, kb_sources, cat, query_vec, stride_slots * 3),
+                            )
+                            for extra in cur.fetchall():
+                                em = json.loads(extra[0]) if isinstance(extra[0], str) else extra[0]
+                                if em["pattern_id"] not in have:
+                                    have.add(em["pattern_id"])
+                                    rows.append(extra)
                     query_candidates: list[KBCandidate] = []
+                    cand_info: list[Cand] = []
                     for row in rows:
                         meta_dict = row[0]
                         if isinstance(meta_dict, str):
@@ -511,6 +557,25 @@ def fetch_candidates(
                                 rerank_params,
                             )
                         query_candidates.append(candidate)
+                        cand_info.append(
+                            Cand(
+                                candidate.pattern_id,
+                                similarity,
+                                tuple(meta_dict.get("domain_tags", [])),
+                                meta_dict.get("stride_hint"),
+                            )
+                        )
+
+                    if use_rerank and stride_slots > 0 and asset_stride:
+                        chosen_ids = set(
+                            select_top(
+                                cand_info, asset_tags, rerank_params, asset_stride,
+                                stride_slots, top_k,
+                            )
+                        )
+                        query_candidates = [
+                            c for c in query_candidates if c.pattern_id in chosen_ids
+                        ]
 
                     # Belt-and-suspenders source filter
                     if kb_sources:
