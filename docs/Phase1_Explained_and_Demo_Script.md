@@ -1,527 +1,784 @@
-# Phase 1 Explained in Simple Words, Demo Script and Phase 2 Plan
+# Phase 1 Complete Guide: Explanation, Demo Script and Phase 2 Plan
 
-*For Group TY-A9. Read this before the company meeting. Everything here is written the way you
-would explain it to a classmate: simple words, one idea at a time.*
+*For Group TY-A9. Read in this order: Part A (understand the screen), Part B (understand Phase 1),
+Part C (the scripts to speak). Everything is written the way a teacher would explain it to a class:
+simple words, one idea at a time, with examples.*
 
-**Contents**
+## Contents
 
-1. The project in one minute
-2. What the company asked for (and what Phase 1 is)
-3. What we built, mapped to the company document
-4. The demo on the command line, explained screen by screen
-5. The demo script to speak in the meeting
-6. Honest status: what is done, what is not, and our numbers
-7. Questions for the company
-8. Phase 2 (Risk Agent): the plan
-9. Small dictionary
+**Part A. Understand the CLI output (read this first)**
+1. The big picture in one story
+2. The pipeline and the tools behind each stage
+3. The output explained, screen by screen
+4. How to read the numbers (similarity, confidence, flagged)
+5. What happens inside when you press `n` (reject)
+6. Recorded mode vs live mode
 
----
+**Part B. Phase 1 in full**
+7. What the company asked for
+8. How we built it, in the order we built it
+9. Every tool we used and why (explained simply)
+10. The important ideas, explained like a lesson
+11. What we achieved: the evidence and numbers
+12. Difficulties we faced and how we solved them
+13. What is not done
+14. Questions WE should ask the company
+15. Questions THEY may ask us, with answers
 
-## 1. The project in one minute
+**Part C. Scripts to speak**
+16. Script 1: the CLI demo (10-12 minutes)
+17. Script 2: the Phase 1 explanation talk (8-10 minutes)
 
-When a company builds a smart product (a door lock, a medical pump, a car part), the law (the EU
-**Cyber Resilience Act**, CRA) says they must find out **how hackers could attack it** and **write down
-what they did about it**. That job is called **threat modelling** (the standard way to do it is
-**ISO/SAE 21434 TARA**).
+**Part D. Phase 2 (Risk Agent) plan**
+18. The plan
 
-Today, experts do this by hand. It is slow, different every time, and hard to prove to an auditor.
-
-Our project, **SCRP**, builds an **AI assistant that does the first draft of this work**, while
-**humans stay in charge**. The AI proposes. The expert checks, accepts or rejects. Every decision is
-saved so that an auditor can follow it later.
-
-The company document splits the work into steps. Different agents (small programs) do different steps:
-
-| Step | What happens | Who builds it |
-|---|---|---|
-| 1-2 | Capture the use case, draw diagrams | other teams |
-| 3 | List the assets (things worth protecting) | Team 1 |
-| **4** | **Find the threats (attacks) for each asset** | **us: the Threat Agent = Phase 1** |
-| 5 | Score the risk (how bad, how easy) | **us: Phase 2, the Risk Agent** |
-| 6 | Decide how strong the protection must be | later |
-| 7-10 | Write requirements, reports, checks | later |
-
-**Phase 1 = Step 4: the Threat Agent.** You give it a list of assets. It gives back a list of
-possible attacks, each one backed by evidence from a known attack catalogue.
+**Part E.** 19. Small dictionary
 
 ---
 
-## 2. What the company asked for (and what Phase 1 is)
+# PART A. UNDERSTAND THE CLI OUTPUT
 
-The company document (Section 3.2, row 4) says, in plain words:
+## 1. The big picture in one story
 
-> **Threat identification.** *Retrieve relevant threat patterns; propose threat scenarios with
-> rationale and knowledge-base references.*
-> Input: assets + diagrams + knowledge base. Output: a ranked threat list with citations.
-> Human checkpoint: **the expert prunes or adds.**
+Imagine a company is about to sell a **smart door lock**. The law (the EU **Cyber Resilience Act**,
+CRA) says: *find out how hackers could attack it, and keep proof that you did.*
 
-So the Threat Agent must:
+Normally a **senior security expert** sits for days and does this by hand. Our system is like giving
+that expert a **very fast junior assistant**:
 
-1. **Look into a knowledge base** of known attacks (STRIDE, CAPEC, ATT&CK, CWE ...).
-2. **Pick the attacks that fit each asset.**
-3. **Write a threat scenario** for each: what the attack is, why it applies, and **which catalogue
-   entry proves it**.
-4. **Let a human prune (remove) or add** scenarios.
+* The junior has a **huge library** of known attacks (our *knowledge base*).
+* The junior reads the product description and **looks up** the attacks that fit each part.
+* The junior **writes a short report** for each attack: what, why it applies, and *which book in the
+  library says so*.
+* A **checker** (a fixed program, not AI) makes sure the junior did not invent anything.
+* The **senior expert reads each report and says yes or no**. If no, the junior must try again using
+  the senior's comment.
+* Only the **approved** reports are filed, with a diary of every decision.
 
-The document also has a list of rules for *every* AI part (Section 3.4). We followed all of them
-that apply to Phase 1. See the table in the next section.
+That is exactly what you see on the CLI. **The AI proposes, the human decides.**
 
----
-
-## 3. What we built, mapped to the company document
-
-### 3.1 The pipeline (the path the data takes)
+## 2. The pipeline and the tools behind each stage
 
 ```
-Assets (JSON)  ->  Understand  ->  Plan search  ->  Search knowledge base  ->  Attack paths
-   ->  AI writes scenarios  ->  Automatic checks  ->  HUMAN approves / rejects  ->  Saved (SCRS)
+ project JSON ──► 1 Understand ──► 2 Plan search ──► 3 Search library ──► 4 Attack paths
+                                                                              │
+ saved + audit ◄── 7 Human review ◄── 6 Automatic checks ◄── 5 AI writes ◄───┘
 ```
 
-Plain meaning of each part:
+| Stage on screen | What the program does | Tool used | Is AI used? |
+|---|---|---|---|
+| Project menu | Finds the project JSON files | Python file handling | No |
+| **1 Understanding** | Reads and **validates** the asset sheet (rejects bad input); hides secrets and personal data | **Pydantic** (data validation), our redaction module (regex) | No |
+| **2 Planning** | Builds a search sentence per asset; works out which STRIDE types apply | Our rules in Python | No |
+| **3 Searching** | Turns text into 384 numbers and finds the closest attack patterns | **sentence-transformers** (model `all-MiniLM-L6-v2`), **PostgreSQL + pgvector** | A small embedding model, not a chatbot |
+| **4 Attack paths** | Pairs each found pattern with its asset, ranks by similarity | Our Python code | No |
+| **5 Generating** | Writes the attack story and evidence | **A language model** (gpt-4o-mini through OpenRouter) via the **OpenAI Python library** | **Yes (the only creative part)** |
+| **6 Checking** | 5 fixed checks, retries only failed scenarios | Our validator + grounding rules | No |
+| **7 Review** | You approve / reject / discard / add | **rich** library for the screen, our review loop | No |
+| Saving | Writes approved scenarios + audit diary | Our `StateManager` writing `SCRS` JSON | No |
 
-* **Understand.** Read each asset: its name, type, interfaces (BLE, HTTPS ...), and what must be
-  protected (secret? unchanged? always available? genuine?).
-* **Plan search.** Turn each asset into a search sentence and work out which kinds of threats apply.
-* **Search the knowledge base.** Find the most similar attack patterns (explained in 4.3).
-* **Attack paths.** Pair each found pattern with its asset.
-* **AI writes scenarios.** A language model writes the attack story, but **only using the pattern it
-  was given**.
-* **Automatic checks.** Programs (not AI) check the AI's work. Bad work is redone.
-* **Human gate.** A person says yes or no. Only "yes" is saved.
-* **Saved.** Approved scenarios go to the shared state file (**SCRS**) with a full history.
+**Notice:** only *one* stage uses the chatbot-style AI. Everything that decides "is this acceptable?"
+is a **fixed rule**. This is what the company calls the **determinism boundary**.
 
-### 3.2 The company's rules (Section 3.4) and how we did them
+The same program also runs as a **web service** (FastAPI) with the same workflow, backed by a
+database; the CLI is just the friendliest way to show it.
 
-| Company rule | What it means | What we did |
-|---|---|---|
-| **Citations** | Every suggestion must point to a knowledge-base item | Every scenario has a `kb_reference` (like `CAPEC-665`) and a citation text. The program **checks** that the AI only cites a pattern that search really returned. Invented citations are impossible. |
-| **Confidence and review flags** | Mark AI output with confidence; "needs review" until a human approves | Each scenario has a confidence score. If it fails a check after retries it is marked **flagged**. Nothing is final until a human approves. |
-| **Human in the loop** | AI proposes, humans decide | The approve / reject / discard step. Nothing reaches the saved state without a "yes". |
-| **Non-overwrite** | AI never silently replaces approved content | When a scenario is replaced, the old one is kept in the history marked "superseded". Rejected and pruned content is never deleted. |
-| **Auditability** | Log what was retrieved, which model, human decisions | We log: the patterns retrieved for every asset, the model and prompt version, every rejection with the reason, every prune and add. |
-| **Traceability** | Link each output to its inputs | Each scenario carries the use-case id, the asset id and version, and the knowledge-base version. |
-| **Determinism boundary** | Use fixed rules where possible; AI only for language | All checking is done by fixed rules in code. The AI only writes the explanation text. |
-| **Privacy and secrets** | Remove personal data and credentials before sending to the AI | A masking step replaces emails, phone numbers, IP addresses, passwords, API keys, tokens and private keys with `[REDACTED...]` before anything is sent. |
-| **Explainability** | Each suggestion shows its reason and evidence | Every scenario has: what is exposed, why it applies, which pattern matched, and the citation. |
-| **Expert prunes or adds (Step 4)** | The human can remove or add threats | `x` = discard with a reason. "Add a scenario of your own" = expert add, which is also checked. |
+## 3. The output explained, screen by screen
 
-**Not done / partly done:** data-residency (where data may be processed) is not handled; we store the
-*prompt version*, not the full prompt text. Both are listed in Section 6.
+Run: `python scripts/scrp_demo.py`
 
-### 3.3 The knowledge base (the "library of known attacks")
-
-The company document lists **STRIDE, CAPEC, ATT&CK, ISO catalogues**. We loaded everything that is
-**free**:
-
-| Source | What it is | Entries |
-|---|---|---|
-| **CAPEC** | Catalogue of attack patterns (how attackers act) | 556 |
-| **ATT&CK** | Real-world attacker techniques (enterprise + industrial) | 794 |
-| **CWE** | Catalogue of software and hardware weaknesses | 944 |
-| **STRIDE** | The six basic threat types | 6 |
-| **Total patterns** | | **2,300** |
-| Standards text | Common Criteria / CEM / JIL / EU CRA documents, cut into pieces | 5,097 pieces |
-
-**Not loaded:** ISO/SAE 21434 itself (it is paid) and the company's own internal patterns (we do not
-have them). We also have a small 24-entry set that the automatic tests use. The real program uses the
-big one by default.
-
-### 3.4 The safety net: why the AI cannot just make things up
-
-Two layers, both fixed rules (no AI):
-
-**Layer 1 - four validator checks** (measured: wrongly accepts 15.38%, wrongly rejects 8.33% on our
-test set):
-1. **Citation present** - there is a real citation, not "TBD".
-2. **Schema complete** - all required fields are filled.
-3. **STRIDE fit** - the attack words match the threat type (a "replay" attack is Spoofing, not DoS).
-4. **Evidence specific** - the reason is about this asset, not generic words.
-
-**Layer 2 - grounding rules:**
-5. **Grounded** - the scenario cites only a pattern that search really returned, points to a real
-   asset, and the exposure it names is a real property of that asset.
-
-If a scenario fails, **only that scenario** is redone (up to 3 tries). That saves AI cost. If it
-still fails, it is **flagged** and shown to the human.
-
-> **Be honest in the meeting:** these checks make *invented citations* impossible. They do **not**
-> prove the story is technically perfect. That is exactly why a human approves.
-
-### 3.5 Other things we built
-
-* A **web API** (FastAPI) with the same workflow: start a run, approve, reject, prune, add.
-* A **database** that remembers runs.
-* **Over 300 automatic tests** that all pass.
-
----
-
-## 4. The demo on the command line, explained screen by screen
-
-You start it with:
+### Screen 1: header and project menu
 
 ```
-python scripts/scrp_demo.py
-```
+SCRP Threat Agent  Phase 1
 
-### 4.1 The project menu
-
-```
 Available projects:
   #   Project           Assets   File
-  1   Smart Door Lock        6   ...fixtures\smart_door_lock\input.json
-  2   Infusion Pump          2   ...fixtures\infusion_pump\input.json
+  1   Smart Door Lock        6   ...\smart_door_lock\input.json
+  2   Infusion Pump          2   ...\infusion_pump\input.json
 Select a project (1-2, default 1):
 ```
 
-**What it is:** a list of "project files" (JSON). Each file describes one product and its assets.
-**Why it matters:** the same program works for *any* product: just give it another JSON. We show a
-door lock and a medical pump to prove it is not built for one product only.
+* **What it shows:** every project file the program found.
+* **Assets column:** how many things-to-protect are in that file.
+* **Why it matters:** the program is **not built only for door locks**. Give it any project JSON and
+  it works. Two different products prove this.
+* **After you choose:** `Project Smart Door Lock  6 assets  knowledge base trc_engine_fullkb  recorded
+  model output`. This line tells you *which library* is used (the big one, `fullkb`) and *where the AI
+  text comes from* (recorded or a live model).
 
-### 4.2 Step 1: Understanding the system
+### Screen 2: Step 1/7, Understanding the system
 
-The agent prints each asset and what it **must protect**:
+```
+Asset  Name              Must protect                              Interfaces
+AS-1   Unlock Command    Integrity, Availability, Authenticity     BLE 5.0, GATT, Cloud API
+...
+Privacy: 0 credential / personal item(s) masked before anything is sent to the model.
+```
 
-* **Confidentiality** - secret, nobody else may read it (like a password).
-* **Integrity** - must not be changed (like firmware).
-* **Availability** - must always work (like the unlock command).
-* **Authenticity** - must be genuine, from the right person.
+* **Asset** = a thing worth protecting. `AS-1` is just its ID.
+* **Must protect** = the four security goals (called **C-I-A + Authenticity**):
+  * **Confidentiality**: kept secret (a password).
+  * **Integrity**: not changed by attackers (firmware).
+  * **Availability**: always works (the unlock function).
+  * **Authenticity**: really comes from the right person/device.
+* **Interfaces** = the doors an attacker could knock on (Bluetooth, cloud API, a memory chip bus).
+* **Privacy line:** before any text goes to the AI, the program hides emails, phone numbers, IP
+  addresses, passwords, API keys and tokens. If your asset sheet contained `password: abc123` it
+  would say "1 item masked" and the AI would see `[REDACTED_SECRET]` instead.
 
-It also prints **"Privacy: N items masked"**: before any text goes to the AI, secrets and personal data
-are hidden.
+### Screen 3: Step 2/7, Planning the search
 
-**Say it simply:** "First the agent reads the asset sheet like a student reads a question paper."
+```
+Asset  Search text                    Topic tags               STRIDE to look for
+AS-3   Firmware Image embedded ...    crypto, firmware, wireless  Spoofing, Tampering, DenialOfService
+```
 
-### 4.3 Step 2: Planning the search
+* **Search text** = the sentence the program will look up in the library (asset name + type +
+  interfaces + settings).
+* **Topic tags** = areas this asset belongs to (cloud, firmware, crypto, hardware ...). They help the
+  search prefer relevant patterns.
+* **STRIDE to look for** = which of the six attack types matter, taken from what the asset must
+  protect: integrity -> Tampering, authenticity -> Spoofing, confidentiality -> Information
+  disclosure, availability -> Denial of service.
 
-For each asset the agent writes a **search sentence** and works out which **STRIDE** types apply.
-STRIDE is a checklist of six ways to attack:
+> **STRIDE in one table**
+>
+> | Letter | Name | Everyday example |
+> |---|---|---|
+> | S | Spoofing | pretending to be the owner (replaying an unlock signal) |
+> | T | Tampering | changing something (a fake firmware update) |
+> | R | Repudiation | denying you did it (deleting the log) |
+> | I | Information disclosure | a secret leaks (sniffing traffic) |
+> | D | Denial of service | making it stop working |
+> | E | Elevation of privilege | getting more power than allowed |
 
-| Letter | Meaning | Easy example |
-|---|---|---|
-| **S** | Spoofing | pretending to be someone else (replaying an unlock) |
-| **T** | Tampering | changing data (modified firmware) |
-| **R** | Repudiation | denying you did it (deleting the log) |
-| **I** | Information disclosure | secrets leak (listening to traffic) |
-| **D** | Denial of service | making it stop working |
-| **E** | Elevation of privilege | getting more power than allowed |
+### Screen 4: Step 3/7, Searching the knowledge base
 
-The rule: *integrity needs -> Tampering; authenticity -> Spoofing; confidentiality -> Information
-disclosure; availability -> Denial of service.* The "topic tags" (cloud, firmware, crypto ...) help
-the search choose the right area.
+```
+ok  60 patterns retrieved in 21s (ATT&CK 26, CAPEC 18, STRIDE 11, CWE 5)
+Best matches per asset
+Asset  Pattern            Source   Similarity  Title
+AS-3   ATT&CK-T1542.002   ATT&CK   0.75        Component Firmware
+AS-3   CWE-1277           CWE      0.75        Firmware Not Updateable
+```
 
-### 4.4 Step 3: Searching the knowledge base
+* **Patterns retrieved:** the library has **2,300** attack patterns; the search brought back the 60
+  best (10 per asset). The counts show which catalogues they came from.
+* **Source:** where the pattern comes from.
+  * **CAPEC**: attack patterns ("how attackers usually do X").
+  * **ATT&CK**: real techniques seen in real attacks.
+  * **CWE**: software/hardware *weaknesses* (the mistakes that attacks exploit).
+  * **STRIDE**: our six basic types.
+* **Similarity** (0 to 1): how close the pattern's meaning is to the asset description. 0.75 means
+  "quite close". It is **not** a probability that the attack is real.
+* **How it works (teacher explanation):** every pattern in the library was converted once into a list
+  of **384 numbers** that represent its meaning. The asset description is converted the same way.
+  Texts with similar meaning get similar numbers, so we can find the closest ones with maths
+  (**cosine similarity**), even if they share no exact words. Searching "BLE OTA update with no
+  signature check" finds "Component Firmware" because the *meaning* is near.
+* **Why 21 seconds?** The first search loads the embedding model into memory.
 
-This is the "smart search". Simple version:
+### Screen 5: Step 4/7, Building attack paths
 
-1. Every attack pattern in the library was turned into a **list of 384 numbers** that captures its
-   meaning (a "vector"). Similar meanings give similar numbers.
-2. Our search sentence is turned into numbers the same way.
-3. We find the patterns whose numbers are **closest** (cosine similarity, a score from 0 to 1).
-4. Patterns whose topic tags match the asset get a **small bonus**.
+```
+Path            Asset  Pattern           Confidence
+PATH-E76DCCE5   AS-4   CAPEC-665         0.77
+```
 
-The screen shows the **best matches per asset** with their **similarity** (for example 0.77). Higher
-= more similar. This is also the line `60 patterns retrieved (ATT&CK 26, CAPEC 18, ...)`.
+* An **attack path** = one asset + one pattern found for it.
+* The program takes the **best 6**, spread across the assets so every asset is covered
+  (`--max-paths` changes this number).
+* **Confidence** here is the similarity score again (see Section 4).
+* **Honest note:** the company describes *chains* (attack step 1, then 2, then 3). That is **not built
+  yet**; today each path is a single pattern. The screen says so.
 
-**Say it simply:** "It is like searching a library by meaning, not by exact words."
+### Screen 6: Step 5/7, Generating threat scenarios
 
-### 4.5 Step 4: Building attack paths
+```
+ok  6 scenarios generated (recorded model output)
+```
 
-An **attack path** here = one asset + one pattern found for it. The agent takes the best 6, spread
-across the assets so every asset gets attention.
+* For every path the AI receives: the asset facts + the pattern text. It must write back **five
+  things**: the attack, what is exposed, why it applies here, a citation, and a STRIDE type.
+* Secrets are masked *before* this call.
+* "recorded model output" means we are replaying a real earlier AI run so the demo works without
+  internet. In live mode it says how many seconds the real call took.
 
-> **Honest note (say it before they ask):** the company also describes *chains* of several patterns
-> (step 1 then step 2 then step 3 of an attack). **That multi-step chaining is not built yet.** Today
-> each path is one pattern. It is listed as a planned extension.
-
-### 4.6 Step 5: Generating scenarios
-
-For every path, the AI model gets: the asset facts + the pattern text. It must write: **the attack,
-what is exposed, why it applies, and a citation.** In recorded mode this line says
-"(recorded model output)": we replay a real earlier model run so the demo works without internet.
-With `--mode live` the model is really called.
-
-### 4.7 Step 6: Checking the output (the table)
+### Screen 7: Step 6/7, Checking the output
 
 ```
 #  Asset  Pattern  Citation  Schema  STRIDE fit  Evidence  Grounded  Result
-1  AS-4   CAPEC-665   ok       ok       ok         ok        ok      passed
-4  AS-2   ATT&CK..    ok       ok      FAIL        ok        ok      flagged
+1  AS-4   CAPEC-665    ok      ok        ok         ok        ok      passed
+4  AS-2   ATT&CK-..    ok      ok       FAIL        ok        ok      flagged
 ```
 
-Each column is one automatic check from Section 3.4. `FAIL` means that check did not pass; the
-result is `flagged`, meaning "human, look at this one carefully".
+Five automatic checks, all fixed rules:
 
-### 4.8 The results table
-
-One row per scenario: asset, STRIDE letter, pattern, confidence, passed or flagged, and the start of
-the attack text. A quick overview before the detailed review.
-
-### 4.9 Step 7: Your review (the human gate)
-
-Each scenario is shown as a card:
-
-```
-Asset       AS-3
-STRIDE      Tampering   Confidence 0.75   Validation passed
-Pattern     ATT&CK-T1542.002
-Attack      Modifying the firmware image during a BLE OTA update ...
-Exposure    BLE OTA interface allowing firmware updates without signature verification
-Why         The firmware image lacks signature verification ...
-Citation    ATT&CK-T1542.002: Component Firmware
-Derived     AS-3 -> ATT&CK-T1542.002 (similarity 0.75)
-Checks      Citation ok  Schema ok  STRIDE fit ok  Evidence ok  Grounded ok
-```
-
-* **Attack** - the story. **Exposure** - the weak spot on the asset. **Why** - the reason it applies.
-* **Citation** - the catalogue entry that backs it up.
-* **Derived** - the trail: this asset matched this pattern with this similarity.
-* **Checks** - the five automatic checks for *this* scenario.
-
-You then answer:
-
-| Answer | Meaning | What happens inside |
+| Check | Question it asks | Example of failing |
 |---|---|---|
-| `y` or Enter | yes | scenario is kept for saving |
-| `n` | no | you type a **reason**; the reason is saved; the scenario is **regenerated** and shown again; checks run again; allowed **3 times** |
-| `x` | discard | removed, with your reason, kept in history |
-| `a` | approve all remaining | quick finish |
-| `q` | quit review | unreviewed ones are not saved |
+| **Citation** | Is there a real citation? | citation is "TBD" or empty |
+| **Schema** | Are all required fields filled? | a field missing |
+| **STRIDE fit** | Do the attack words match the threat type? | called "Spoofing" but describes a flood |
+| **Evidence** | Is the reason specific to this asset? | "an attacker may attack the system" (too generic) |
+| **Grounded** | Does it cite only a pattern that search really returned, a real asset, and an exposure that belongs to that asset? | cites CAPEC-999 that was never retrieved |
 
-**What the "regenerate" really does (live mode):** your reason is added to the AI's instructions
-("the reviewer said: ..."), only that one scenario is written again, and it goes through all checks
-again. **In recorded mode** the reason is saved but the screen shows the next recorded alternative
-(it says so on screen).
+* `FAIL` in a column = that check failed. The row's **Result** is `flagged`.
+* **What happens to a failing scenario:** the program regenerates *only that scenario* (up to 3 tries)
+  and checks again. If it still fails, it is **flagged**: shown to the human with a yellow border.
+* This is the answer to "can the AI hallucinate?": it can write imperfect text, but it **cannot sneak
+  in a fake citation**, and anything doubtful is flagged.
 
-### 4.10 Adding your own scenario
+### Screen 8: the results table
 
-After the last scenario, "Add a scenario of your own?" lets the expert type one in. It must name an
-asset that exists, a valid STRIDE type, a pattern id that **really exists in the knowledge base**, and
-must pass the same checks as AI output. Example you can type:
+One row per scenario: asset, STRIDE letter, pattern, confidence, passed/flagged and the start of the
+attack. It is the "table of contents" before the detailed review.
 
-| Prompt | Type |
-|---|---|
-| Asset | `AS-1` |
-| STRIDE category | `Spoofing` |
-| Pattern id | `CWE-306` |
-| Attack description | `Impersonation of a legitimate caller to the Unlock Command through an unauthenticated management interface (identity spoofing)` |
-| What is exposed | `Unlock Command interface accepts requests without caller authentication` |
-| Why it applies | `The Unlock Command is reachable over its interface and no caller authentication is enforced before the critical function runs.` |
-| Citation text | `CWE-306: Missing Authentication for Critical Function` |
-| Why are you adding it | `Known weakness class for this product family` |
+### Screen 9: Step 7/7, Your review (the human gate)
 
-To show the safety net, type the attack `Heavy rainfall damages the enclosure` instead: the checker
-refuses it because it does not match "Spoofing".
+```
+┌─ Scenario 2 of 6   THR-PATH-8FA7D95D-002 ─────────────────────────┐
+│ Asset       AS-3                                                    │
+│ STRIDE      Tampering    Confidence 0.75    Validation passed       │
+│ Pattern     ATT&CK-T1542.002                                        │
+│ Attack      Modifying the firmware image during a BLE OTA update... │
+│ Exposure    BLE OTA interface allowing firmware updates without ... │
+│ Why         The firmware image lacks signature verification ...     │
+│ Citation    ATT&CK-T1542.002: Component Firmware                    │
+│ Derived     AS-3 -> ATT&CK-T1542.002 (similarity 0.75)              │
+│ Checks      Citation ok  Schema ok  STRIDE fit ok  Evidence ok ...  │
+└─────────────────────────────────────────────────────────────────────┘
+Approve this scenario? (y=yes, n=no, x=discard, a=all, q=quit; default y):
+```
 
-### 4.11 The last lines: saving
+Read the card like a mini report:
+
+* **THR-PATH-8FA7D95D-002**: the scenario's ID. It contains the path ID so we can always trace back.
+* **Attack**: the story. **Exposure**: the weak spot on the asset. **Why**: why it applies.
+* **Citation**: the library entry that backs the claim (the *proof*).
+* **Derived**: the trail (asset -> pattern -> similarity). **Checks**: the same five checks, for this
+  scenario. A yellow border and "flagged" means *look at this one carefully*.
+
+Your answers:
+
+| Key | Meaning | What happens |
+|---|---|---|
+| `y` / Enter | approve | kept for saving |
+| `n` | reject | you type a reason; it is regenerated and shown again (max 3 times) |
+| `x` | discard | removed from the run, with your reason, kept in history |
+| `a` | approve the rest | quick finish |
+| `q` | quit | unreviewed scenarios are not saved |
+
+After the last scenario: **"Add a scenario of your own?"** lets the expert add a threat the AI missed.
+It must use a real asset, a valid STRIDE type and a pattern ID that **really exists in the library**,
+and it passes the same checks as AI output.
+
+### Screen 10: the end
 
 ```
 Review finished: 5 approved, 1 discarded
 ok  5 approved scenarios written to demo_output\SCRS_demo.json
     audit log: 5 write, 5 approve, 2 reject, 1 prune
+ok  Report saved to demo_output\run_report.json
+Run another project? (y/n):
 ```
 
-* **SCRS** = the shared state file that all agents will read (Phase 2 will read from it).
-* **audit log** = a diary: every write, approval, rejection, prune and add, with time and reason.
-* For the demo this goes to the folder `demo_output`, so your real file is never touched.
+* **SCRS** (shared state): the file all agents read. **Only approved scenarios go in.**
+* **audit log**: a diary with time, action and reason for every write, approval, rejection, prune,
+  add. (`prune` = discard.) Rejected and replaced scenarios are **not deleted**; they stay in the
+  history marked as superseded. That is the company's "non-overwrite" rule.
+* The demo writes to the `demo_output` folder so your real file is never touched.
+
+## 4. How to read the numbers
+
+| Number | What it really means | What it does NOT mean |
+|---|---|---|
+| **Similarity** (0-1) | How close the pattern's meaning is to the asset description | Not a probability the attack is real |
+| **Confidence** (0-1) | The **average similarity** of the patterns used in the path | Not "the chance the AI is right". It says how well the *evidence matched the asset*. A value below **0.4** triggers a low-confidence warning |
+| **passed** | All 5 automatic checks passed | Not "a human approved it" |
+| **flagged** | Failed a check after the retries; needs extra attention | Not "wrong"; it is shown on purpose |
+
+## 5. What happens inside when you press `n` (reject)
+
+1. Your **reason** is saved in the audit log and the revision history (so it can never be lost).
+2. The program takes **only that scenario's attack path**.
+3. It gives the model the same asset facts and pattern **plus your reason** as extra instructions
+   ("the reviewer said: too generic, name the interface").
+4. The model writes a new version. The **five checks run again**.
+5. The new version is shown as "Revised scenario". You answer again.
+6. This can repeat **3 times**. After the third rejection the scenario is marked rejected and is not
+   saved, so the loop cannot run forever.
+
+## 6. Recorded mode vs live mode
+
+| | Recorded (default for Smart Door Lock) | Live (`--mode live`) |
+|---|---|---|
+| AI text comes from | a saved real run | a real call to the model |
+| Needs internet and a key | no | yes (funded key in `.env`) |
+| Rejection reason | saved, but the screen shows the *next recorded alternative* | really used to rewrite the scenario |
+| Speed | fast | about 7 seconds per scenario |
+| Best for | safe demo | showing the true loop |
 
 ---
 
-## 5. The demo script to speak in the meeting
+# PART B. PHASE 1 IN FULL
 
-*Target time: 10-12 minutes. Open the terminal in the `trc-engine` folder beforehand. Run the
-command once before the meeting so the model is loaded and the database is up (`docker compose up -d`).*
+## 7. What the company asked for
 
-### Before they arrive (checklist)
+The company document gives the whole TARA workflow (10 steps). **Phase 1 is Step 4, "Threat
+identification"** (Section 3.2):
 
-* [ ] `docker compose up -d` and wait 20 seconds.
-* [ ] Terminal wide (at least 120 columns), dark background, large font.
-* [ ] `.env` has a working key if you want live mode. If not, use the default recorded mode.
-* [ ] Run `python scripts/scrp_demo.py --auto` once as a rehearsal.
-* [ ] Have the two files open: this document and `docs/research/final_fullkb_addendum.md`.
+> *Retrieve relevant threat patterns; propose threat scenarios with rationale and KB references.*
+> Input: assets + diagrams + knowledge base. Output: ranked threat list with citations.
+> Human checkpoint: **expert prunes / adds**.
 
-### Opening (1 minute)
+Plus the rules that apply to every AI part (Section 3.4). How we answered each:
 
-> "Good morning. Our project is SCRP. Phase 1 is the **Threat Agent**: Step 4 of your TARA workflow.
-> It takes the asset list and proposes threat scenarios, each backed by an entry from a public attack
-> catalogue. **The AI only proposes. A human decides.** I will show it working on a smart door lock,
-> then on a medical pump to show it is not tied to one product."
-
-### Part 1: Pick the project (30 seconds)
-
-*Run:* `python scripts/scrp_demo.py` *and press Enter for project 1.*
-
-> "This menu lists project files. Each is a JSON with the assets of one product. Any new product is
-> just a new JSON file."
-
-### Part 2: Steps 1-2, understanding and planning (1.5 minutes)
-
-> "First the agent reads each asset: what it is and what must be protected. Confidentiality,
-> integrity, availability, authenticity. Notice the privacy line: before anything goes to the AI,
-> credentials and personal data are masked.
-> Next it plans the search. From the security needs it works out the STRIDE threat types to look for.
-> Integrity maps to Tampering, authenticity to Spoofing, and so on."
-
-### Part 3: Step 3, knowledge base search (2 minutes)
-
-> "Now the search. Our library has **2,300 attack patterns** from the free MITRE catalogues, CAPEC,
-> ATT&CK and CWE, plus STRIDE, and over 5,000 text pieces from Common Criteria and the CRA.
-> The search works by **meaning**, not exact words: each pattern and each asset description becomes a
-> list of numbers, and we take the closest ones. This table shows the best matches for every asset
-> with the similarity score."
-
-*Point at one row, e.g. AS-3 Firmware Image matched to ATT&CK Component Firmware (0.75).*
-
-> "For the firmware image it found 'Component Firmware', which is the right idea."
-
-### Part 4: Steps 4-6, paths, generation and checks (2.5 minutes)
-
-> "Each match becomes an attack path. We have not built **multi-step chains** yet; today each path is
-> a single pattern. I want to be upfront about that.
-> Then the AI writes a scenario for each path. It must give the attack, what is exposed, why it
-> applies, and a citation.
-> And here is our main safeguard: the AI is not trusted. Five **fixed-rule checks**, no AI involved,
-> examine every scenario. A scenario can only cite a pattern that was really retrieved, so it cannot
-> invent a citation. If a scenario fails, only that one is redone, up to three times. If it still
-> fails, it is flagged for the human. You can see one flagged row here."
-
-*Point at the FAIL cell.*
-
-### Part 5: Human review, the important part (3 minutes)
-
-> "Now the human gate. Each scenario is a card with the attack, the exposure, the reason and the
-> citation. At the bottom: where it came from, and the result of the five checks."
-
-*Press Enter on scenario 1 (y).*
-
-> "I approve this one."
-
-*On scenario 2 type `n`, then the reason:*
-
-`Too generic. Name the specific interface, such as the BLE characteristic, and say how the attacker reaches it.`
-
-> "I reject it and say why. The reason is saved in the audit trail. In live mode the agent gives the
-> reason to the model, rewrites only this scenario, checks it again and shows it to me again. I can
-> reject up to three times. In this recorded demo, the screen shows the next alternative and says so."
-
-*Approve the next one. On a later one type `x` and the reason `Out of scope for this variant.`*
-
-> "I can also discard a scenario with a reason. It is not deleted from history."
-
-*Type `a` to approve the rest. Then answer `y` to "Add a scenario of your own?" and type the
-example from Section 4.10.*
-
-> "The expert can add a threat the AI missed. It is checked like the AI output. The pattern id must
-> exist in the library; try a wrong one and it is refused."
-
-### Part 6: Saving and the audit trail (1 minute)
-
-> "Only approved scenarios are written to the shared state, the SCRS. Here is the audit log: writes,
-> approvals, rejections with reasons, prunes and adds. Nothing is deleted: rejected and replaced
-> content stays in the history. This is the traceability your document asks for."
-
-### Part 7: Honest status and close (1.5 minutes)
-
-> "To be transparent:
-> * **Working:** the whole pipeline from assets to approved, audited scenarios, with 300+ tests.
-> * **Accuracy:** on your six reference threats for the door lock, we match **1 of 6** at our
->   similarity threshold; two more are close. The reason is that the free library is general, and your
->   own patterns and ISO 21434 text are not in it yet.
-> * **Not built:** multi-step chains; the adapter for the Team 1 asset table (we need four extra fields
->   from them).
-> * **Next:** Phase 2, the Risk Agent, which scores impact and feasibility as in Section 2.6.
->
-> What would help us most: your internal threat patterns, an expert to judge about 190 search results,
-> and your risk rating tables for Phase 2."
-
-### If they ask... (prepared answers)
-
-| Question | Honest answer |
+| Company requirement | What we did |
 |---|---|
-| **Can the AI hallucinate?** | The *story text* can be imperfect, so a human approves everything. But *citations* cannot be invented: code checks that the cited pattern was really retrieved. |
-| **Why only 1 of 6?** | The free catalogues are generic; your six reference rows use hardware/internal knowledge that is not in them. Their table also seems to label one pattern (CAPEC-189) that probably should be CAPEC-622. Please confirm. |
-| **Does it work for any product?** | Yes, give it another asset JSON. We showed a door lock and a pump. It works best when the asset sheet is detailed. |
-| **Does our data go to the cloud?** | Only redacted text goes to the language model, and only the asset facts. We would like your decision on cloud use or an on-premise model. |
-| **Which standards are covered?** | CAPEC, ATT&CK, CWE, STRIDE and text from Common Criteria, CEM, JIL, EU CRA. ISO/SAE 21434 is paid; we need access or a licence. |
-| **Why are some scenarios flagged?** | They failed an automatic check after three retries. We show them on purpose instead of hiding them. |
-| **Is it deterministic?** | Retrieval, checks and saving are deterministic. The AI text varies between runs, which is why we store the run id, model and prompt version. |
-| **How much does a run cost?** | The door-lock run used about 220,000 input tokens (a few cents with gpt-4o-mini). Retrying only failed scenarios cut that roughly in half. |
+| Retrieve relevant threat patterns | Semantic search over 2,300 patterns (CAPEC, ATT&CK, CWE, STRIDE) with pgvector |
+| Propose scenarios with rationale | The AI writes attack, exposure, why-it-applies for each |
+| **KB references / citations** on everything | Every scenario cites a pattern; code checks it was really retrieved |
+| Ranked list | Every scenario carries a confidence score (average similarity) that can be used to rank; the demo spreads the first picks across assets |
+| Expert prunes / adds | Discard (`x`) with reason; expert add, validated |
+| Human-in-the-loop | Approve/reject loop; nothing saved without "yes" |
+| Confidence and review flags | Confidence score; `flagged` status for doubtful ones |
+| Non-overwrite | Old versions kept in the history as "superseded" |
+| Auditability | Audit log: retrieved patterns per asset, model + prompt version, human decisions |
+| Traceability | Each scenario carries use-case ID, asset ID/version, KB version, path ID |
+| Determinism boundary | All decisions by fixed rules; AI only writes text |
+| Privacy and secrets | Masking of PII and credentials before the AI call |
+| Explainability | Rationale + evidence + "Derived" trail on every card |
 
----
+## 8. How we built it, in the order we built it
 
-## 6. Honest status: what is done, what is not, and our numbers
+Think of it as building a house: foundation first, then walls, then safety, then polish.
 
-### Done (and tested)
+1. **Contracts first (the foundation).** We defined exactly what an *asset*, a *threat scenario*, an
+   *evidence chain*, a *validation result* look like, using **Pydantic** models. Bad data is rejected
+   at the door. (`agents/threat_agent/schemas.py`)
+2. **A small knowledge base.** 24 hand-written patterns so we could develop and test quickly.
+3. **Search.** Embedding model + PostgreSQL with the **pgvector** extension for "closest meaning"
+   search. (`retrieval.py`)
+4. **The AI writer.** A prompt that gives the model the asset facts and the pattern and demands a
+   structured answer; secrets are masked first. (`generator.py`)
+5. **The checker.** The **Protocol Invariant Validator**: 4 fixed checks, then we *measured* its
+   mistakes honestly (wrongly accepts 15.38%, wrongly rejects 8.33% on 50 labelled scenarios).
+6. **The orchestrator.** Ties it together, retries failed work (max 3), stamps each scenario
+   `passed` or `escalated_after_retries`. (`orchestrator.py`)
+7. **The web service.** FastAPI endpoints: start a run, approve, reject, prune, add. A **run
+   registry** (in memory or PostgreSQL) remembers each run safely, even with several users at once.
+8. **The human loop.** Reject -> reason -> regenerate -> re-check -> bounded retries, with history.
+9. **The shared state (SCRS).** Approved scenarios saved with an audit log and non-overwrite history.
+   We also found and fixed a gap: at first the API approval did *not* write to SCRS; now it does.
+10. **The full knowledge base.** Downloaded all free catalogues and loaded 2,300 patterns plus 5,097
+    standards pieces; marked each with topic tags.
+11. **Search quality work.** We built a benchmark (dev / company / held-out questions) and tried many
+    ideas; we kept the **topic-tag rerank** and rejected the rest (Section 12).
+12. **Grounding rules.** Added checks so the AI cannot cite what was not retrieved; **retry only the
+    failed scenarios** to save AI cost.
+13. **Expert tools.** Prune and add with validation and a check that the pattern exists.
+14. **Traceability, logging, secret masking, automatic retries for network and rate-limit errors.**
+15. **Tests.** Over 300 automatic tests; every feature above has some.
+16. **The CLI.** The friendly interface that shows all of it.
 
-* The whole Step 4 workflow with the human gate (approve, reject-and-regenerate, discard, expert add).
-* The full free knowledge base (2,300 patterns, 5,097 standards chunks).
-* Automatic checks (4 validator checks + grounding), retry-only-what-failed.
-* Masking of personal data and secrets.
-* Traceability fields, audit log, non-overwrite history.
-* A web API with the same workflow, a run database, and 300+ passing tests.
-* A command-line demo for any project JSON.
+## 9. Every tool we used and why (simple explanations)
 
-### Not done
+| Tool | What it is (simple) | What we use it for | Why we chose it |
+|---|---|---|---|
+| **Python 3.11+** | The programming language | Everything | Standard for AI/security tooling |
+| **Pydantic** | A library that checks data has the right shape and types | Asset input, scenarios, validation results | Bad data is rejected immediately; self-documenting contracts |
+| **FastAPI + Uvicorn** | A tool to build web services (APIs) and the server that runs them | The `/threat-agent/*` endpoints (start run, approve, reject, prune, add) | Fast, automatic input checking, other agents can call it |
+| **PostgreSQL** | A reliable database | Knowledge base; run registry | Industry standard, supports concurrency and transactions |
+| **pgvector** | An add-on that lets PostgreSQL store and search lists of numbers (vectors) | "Find the closest meaning" search | Keeps search and data in one database; no extra search server |
+| **sentence-transformers `all-MiniLM-L6-v2`** | A small AI model that turns a sentence into 384 numbers | Converting patterns and asset text to vectors | Small, free, runs on a laptop, good quality for English text |
+| **psycopg (v3)** | The Python-to-PostgreSQL connector, with a connection pool | All database access | Modern, supports pooling |
+| **OpenAI Python library** | A client that talks to chat language models | Calling the writing model. It also works with **OpenRouter** and **Groq** by changing the web address | One code path for many providers; easy to swap models |
+| **gpt-4o-mini** (via OpenRouter) | The language model | Writes the scenario text | Cheap and good enough; the model is a setting, not hard-wired |
+| **Docker Compose** | Runs the database in a ready-made container | `docker compose up -d` starts PostgreSQL + pgvector | Same environment on every laptop |
+| **rich** | A Python library for nice terminal output | The CLI tables and cards | Readable demo |
+| **pytest** | A testing tool | 300+ automatic tests | Catches mistakes before the demo |
+| **ruff** | A code-quality checker | Style, bugs, security hints on every commit | Keeps code clean |
+| **Git/GitHub** | Version control | Branches, history, teamwork | Standard |
+| **CAPEC / ATT&CK / CWE (MITRE)** | Free public catalogues of attacks and weaknesses | The knowledge base content | Free and recognised; named in the company document |
+| **Common Criteria, CEM, JIL, EU CRA texts** | Standards documents | Stored as 5,097 searchable pieces | Free; needed later for Phase 2 mapping |
 
-| Item | Why |
-|---|---|
-| **Multi-step attack chaining** | The chaining function is a placeholder. Each path is one pattern. |
-| **Team 1 adapter** | Team 1's table lacks trust zone, interfaces, data flows and device config. |
-| **ISO/SAE 21434, SESIP** catalogues | Paid or unclear licence. |
-| **Company internal patterns** | We do not have them. |
-| **Data-residency rules** | Needs the company's policy. |
-| **Full prompt text in the audit log** | We store prompt version and model, not the whole text. |
+## 10. The important ideas, explained like a lesson
 
-### Our numbers (use them exactly)
+### 10.1 Semantic search (finding by meaning)
+
+Normal search finds exact words. Ours finds *meaning*. A model turns each text into 384 numbers; texts
+about similar things end up with similar numbers. To search, we convert the question the same way and
+ask the database for the closest numbers. That is why "unauthenticated firmware update over Bluetooth"
+finds "Component Firmware" even though the words differ.
+
+### 10.2 Why we boost by topic tags
+
+Meaning-search can be fooled by generic wording. Each pattern and each asset also gets **topic tags**
+(cloud, firmware, crypto, hardware, wireless ...). Patterns whose tags match the asset get a small
+bonus, and hardware-only patterns are slightly penalised for pure software assets. In our benchmark
+this was the one change that reliably helped.
+
+### 10.3 How we stop the AI from inventing things
+
+Language models can "hallucinate": produce confident but false text. We cannot make that impossible,
+so we use **layers**:
+
+1. The AI is **only given retrieved patterns** and is told to cite one of them.
+2. Fixed code checks: the cited pattern **must be one of the retrieved ones**, the asset must exist,
+   the exposure must belong to the asset.
+3. Failed scenarios are redone, then **flagged**.
+4. A **human approves** every scenario.
+
+So: *invented citations are impossible; imperfect wording is possible and is caught by the human.*
+
+### 10.4 Determinism boundary
+
+"Deterministic" means the same input always gives the same output. Searching, checking, saving and
+the audit log are deterministic. Only the AI-written text can vary between runs, which is why we log
+the run ID, model and prompt version.
+
+### 10.5 Retry only what failed
+
+If 2 of 12 scenarios fail, we regenerate **2**, not 12. That roughly halves the AI cost.
+
+### 10.6 Human-in-the-loop with bounded retries
+
+Reject -> reason -> regenerate -> re-check -> show again, **at most 3 times** per scenario, so the
+loop always ends. Every step is saved in the history.
+
+### 10.7 Why a shared state (SCRS)
+
+Later agents (Risk, Requirements ...) must read the **approved** threats. SCRS is that shared record.
+Only approved content enters it; nothing is overwritten.
+
+## 11. What we achieved: the evidence and numbers
 
 | Measurement | Result |
 |---|---|
-| Patterns in the knowledge base | 2,300 (+ 5,097 standards pieces) |
-| Validator error rates | wrongly accepts 15.38%, wrongly rejects 8.33% |
-| Company's six reference threats (door lock, full knowledge base, gpt-4o-mini) | **1 of 6 matched** at similarity 0.75; near misses at 0.745 and 0.703 |
-| Scenarios generated in the final run | 60 (36 passed, 24 flagged for review) |
-| Earlier run on the small 24-entry set | 2 of 6 (older version) and 1 of 6 (newer) |
+| Knowledge base | 2,300 patterns (CAPEC 556, ATT&CK 794, CWE 944, STRIDE 6) + 5,097 standards pieces |
 | Automatic tests | over 300, all passing |
+| Validator mistakes (50 labelled scenarios) | wrongly accepts 15.38% (4/26), wrongly rejects 8.33% (2/24), accuracy 88% |
+| Company's six reference threats for the door lock (full knowledge base, gpt-4o-mini) | **1 of 6 matched** at similarity 0.75; near misses at 0.745 (T6) and 0.703 (T2) |
+| Final run | 60 scenarios, 36 passed, 24 flagged, 6 template fallbacks, 405 seconds, about 222,000 input tokens |
+| Earlier run on the small 24-pattern set | 2 of 6 (older version), 1 of 6 (newer version) |
+| Retry-only-failed | roughly halves AI calls and tokens |
 
-**Do not say:** "it reproduces the company's threat table" or "Run 8 used the whole dataset". The
-accurate sentence: *"On your door-lock example it produces grounded scenarios for every asset and
-matches 1 of your 6 reference threats; we need your internal patterns and an expert's judgements to
-improve this."*
+How to talk about the 1 of 6: *"The system produces grounded, cited scenarios for every asset. Against
+your six reference threats it matches one at our similarity threshold and is close on two more. The
+free catalogues are generic; your internal and hardware patterns are not in them. We need those, and an
+expert's judgements of our search results, to improve this."*
+
+## 12. Difficulties we faced and how we solved them
+
+| Difficulty | What happened | What we did |
+|---|---|---|
+| **1. Search did not find the company's cited patterns** | With the big library, matching their six threats was weaker than with the small hand-written set (the small set was written around the demo systems) | Built a graded benchmark; tried query rewriting by AI, hybrid keyword search, a re-ranking model, other embedding models, STRIDE-balanced picking. Only the topic-tag rerank helped consistently; the rest were rejected on evidence. Still open: needs company patterns + expert judgements |
+| **2. Hallucination** | Models can invent citations | Grounding rules in code, retry, flag, human approval |
+| **3. The validator makes mistakes** | 15.38% wrong accepts | Measured and reported honestly; added the grounding layer on top; human gate |
+| **4. Approval did not save to SCRS** | We found that the API approval did not write the shared state (only the CLI did) | Fixed: approval now writes all scenarios in one all-or-nothing save |
+| **5. Two databases mixed up** | Loading the big library once overwrote the small one | Restored it; the build scripts now refuse to write to the wrong database; tests are pinned to the small set, the app defaults to the big one |
+| **6. Cost and rate limits** | Free AI tiers allow about 8,000 tokens a minute; an account ran out of credit (HTTP 402); connections dropped | Retry-only-failed (cheaper), automatic waiting on rate limits, retries on dropped connections, recorded mode for demos |
+| **7. Results varied between runs** | 1 of 6 vs 2 of 6 on different runs and setups | We never overwrite earlier results, label every run (model, knowledge base, pipeline version) and avoid over-claiming |
+| **8. Multi-step chaining not built** | The chaining function is a placeholder | Honest: each path is a single pattern; listed as planned |
+| **9. Team 1's asset table does not match our input** | Theirs lacks trust zone, interfaces, data flows, device config | Waiting on the four fields; adapter after that |
+| **10. Paid standards** | ISO/SAE 21434 is paid; SESIP terms unclear | Loaded everything free; asked the company |
+| **11. Loop bugs in the first CLI** | Pressing `n` did not repeat the review | Rewrote the loop with a bounded retry and history |
+| **12. Keeping secrets safe** | API keys can leak when pasted in chats or committed | Keys live only in `.env` (ignored by Git); redaction before AI calls; keys that were exposed must be revoked |
+
+## 13. What is not done
+
+* **Multi-step attack chaining** (planned extension).
+* **Team 1 adapter** (waiting for four fields).
+* **Company internal patterns** and **expert judgements** of search results.
+* **ISO/SAE 21434 and SESIP** catalogues (paid / unclear).
+* **Data-residency rules** (needs company policy).
+* **Full prompt text** in the audit log (we store prompt version and model).
+* **Tamper-proof audit** (the SCRS is a JSON file, not signed or in an append-only store).
+* **Diagram input** (the Modelling Agent belongs to another team).
+* **Accuracy against the company's six threats** is 1 of 6, not yet where we want it.
+
+## 14. Questions WE should ask the company
+
+1. In the T6 row, is the pattern **CAPEC-189 or CAPEC-622**? (CAPEC-189 looks like a different
+   attack in the public catalogue.)
+2. Can you share your **internal / hardware threat patterns** (Section 3.4 mentions "internal pattern
+   id")? Even 20-30 would help a lot.
+3. Can one of your experts **judge about 190 search results** (relevant / not relevant)? We prepared a
+   spreadsheet; it takes about an hour.
+4. Do you have, or can you give us access to, **ISO/SAE 21434** text and the **SESIP** terms?
+5. Are **cloud language models allowed** for your data, or must it run on-premise?
+6. For Phase 2: your **attack-feasibility rating tables**, **impact level definitions** and **risk
+   matrix**.
+7. How do you want threats **ranked**: by similarity confidence, by STRIDE group, or by asset?
+8. Do you have company rules on **how many retries** or what counts as "good enough" for a threat?
+9. Is it enough that **only approved scenarios** enter the shared state, or do you also need drafts
+   stored?
+10. How should we handle the **Team 1 asset table**: can they add the four missing fields?
+11. What **evidence format** would your auditors like for the audit log?
+12. Which **other products** can we test on besides the lock and the pump?
+
+## 15. Questions THEY may ask us, with answers
+
+*(They know the project, so answers are direct and honest.)*
+
+**Accuracy and quality**
+
+**Q1. How accurate is it?**
+On your door-lock example it produces cited scenarios for every asset and matches **1 of your 6**
+reference threats at our similarity threshold (two more are close: 0.745 and 0.703). The checker
+wrongly accepts 15.38% and wrongly rejects 8.33% in our 50-scenario test. The human gate catches the
+rest. We think the main gap is missing company-specific knowledge, not the pipeline.
+
+**Q2. Why did it only match 1 of 6?**
+Our free library is general. Your six rows use hardware and internal knowledge (for example key
+extraction by side-channel) that is not in the public catalogues in the same wording. Also one pattern
+in your table (CAPEC-189) seems to differ from the public catalogue (CAPEC-622 looks closer). With your
+patterns and an expert's judgements we can tune the search.
+
+**Q3. Can the AI hallucinate?**
+Its *wording* can be imperfect. Its *citations* cannot be invented: code checks that the cited pattern
+was really retrieved, the asset exists and the exposure belongs to that asset. Failures are retried and
+flagged, and a human approves everything. We do not claim zero errors.
+
+**Q4. What does "confidence" mean?**
+The average similarity between the asset and the patterns used. It tells how well the evidence matched
+the asset, not the probability that the attack is real. Below 0.4 we show a low-confidence warning.
+
+**Q5. Why would results differ between two runs?**
+Search, checks and saving are deterministic. The AI-written text can vary. We log the run ID, model and
+prompt version so a run can be explained.
+
+**Q6. What is a "flagged" scenario?**
+One that failed an automatic check after three tries. We show it with a warning rather than hiding it.
+
+**Design and compliance**
+
+**Q7. Does it follow ISO/SAE 21434?**
+Phase 1 follows the TARA structure for the threat-identification step. We do not have the ISO text
+(paid). Phase 2 (risk) follows the §15.5/15.6 structure from your document; we need your rating tables.
+
+**Q8. Does it make us CRA-compliant?**
+No tool does that by itself. It produces traceable, auditable evidence (citations, decisions, history)
+that supports a CRA process. Accountability stays with your experts.
+
+**Q9. How is the "determinism boundary" respected?**
+Every accept/reject decision, the search ranking, the checks and the storage are fixed rules. The
+language model only writes explanation text.
+
+**Q10. Where is the audit trail and is it tamper-proof?**
+In the shared-state JSON (every write, approval, rejection, prune, add with time and reason) and in
+logs (retrieved patterns, model, prompt version). It is not cryptographically signed; moving it to a
+database with append-only rules is a possible hardening.
+
+**Q11. Do you log the prompts?**
+We log the prompt *version*, the model, and the retrieved patterns for each run, not the full text of
+every prompt. We can add full prompt logging if your audit needs it.
+
+**Q12. How do you protect confidential data?**
+Emails, phone numbers, IPs, passwords, API keys, tokens and private keys are masked before any AI
+call. Only asset facts go to the model. We need your rule on cloud vs on-premise models; the model is a
+setting, so an on-premise model can be used.
+
+**Technology**
+
+**Q13. Why PostgreSQL + pgvector and not a separate vector database?**
+One database for patterns, runs and vectors keeps the system simpler and transactional. Our library
+(2,300 patterns) is small, so no special vector server is needed.
+
+**Q14. Why the MiniLM embedding model?**
+It is small, free, runs on a laptop and works well on English technical text. We also tried other
+embedding models and a re-ranking model; they did not give consistent gains, so we kept the simple one.
+
+**Q15. Which language model and can we change it?**
+`gpt-4o-mini` through OpenRouter in our tests. It is a setting; any OpenAI-compatible service works
+(we also tried Groq). An on-premise model works the same way.
+
+**Q16. What does a run cost?**
+The final door-lock run used about 222,000 input and 18,000 output tokens, which is a few cents with
+gpt-4o-mini. Retrying only failed scenarios roughly halves the cost.
+
+**Q17. Will it work for any product?**
+Yes, give it another asset JSON; we showed a lock and a medical pump. Quality depends on how detailed
+the asset sheet is and how well the knowledge base covers that domain.
+
+**Q18. What if the knowledge base changes?**
+Scenarios store a knowledge-base version label. Right now it is a label, not a content hash; making it
+a hash is a small improvement we can do.
+
+**Q19. Can several people use it at once?**
+The API's run store handles concurrent runs safely (atomic status changes in PostgreSQL). The SCRS file
+is a single-process JSON file in Phase 1; Phase 2 should move it to the database.
+
+**Q20. How do other agents use your output?**
+Through the SCRS (approved scenarios) and the API. Phase 2 reads the approved scenarios from there.
+
+**Process**
+
+**Q21. What is still missing from Phase 1?**
+Multi-step chaining, the Team 1 adapter, your internal patterns, ISO/SESIP catalogues, data-residency
+rules and tamper-proof audit. All are listed with reasons.
+
+**Q22. How did you test?**
+Over 300 automatic tests, a labelled validator test (50 scenarios), a retrieval benchmark with
+dev/company/held-out questions, and end-to-end runs on your six reference threats.
+
+**Q23. What do you need from us?**
+Internal patterns, an expert's judgements on about 190 results, the CAPEC-189/622 clarification, access
+to ISO 21434 and SESIP terms, and the Phase 2 rating tables.
+
+**Q24. Can the expert override the AI?**
+Yes, at every step: approve, reject with reason, discard, or add an own scenario. Every override is
+logged.
 
 ---
 
-## 7. Questions for the company
+# PART C. SCRIPTS TO SPEAK
 
-1. Please confirm **CAPEC-189 vs CAPEC-622** in the T6 row of your table.
-2. Can you share **internal or hardware threat patterns** ("internal pattern id" in Section 3.4)?
-3. Can an expert **judge about 190 search results** (we prepared a sheet) so we can tune the search?
-4. Access to **ISO/SAE 21434** text and the **SESIP** terms? (for Phase 2 and the mapping step)
-5. Are **cloud language models** allowed for your data, or must it run on-premise?
-6. For Phase 2: your **attack-feasibility rating tables** and **risk matrix** (see Section 8).
-7. Is a **ranked list** enough, or do you want threats grouped per STRIDE category?
-8. Should the **5 automatic checks** and the 3-retry limit match any company policy?
+## 16. Script 1: the CLI demo (10-12 minutes)
+
+### Before they arrive (checklist)
+
+* [ ] `docker compose up -d`, wait 20 seconds.
+* [ ] Wide terminal (120+ columns), large font.
+* [ ] `python scripts/scrp_demo.py --auto` once as a rehearsal (loads the model).
+* [ ] For live mode: `OPENAI_API_KEY` in `.env` is a funded key; test once with `--mode live`.
+* [ ] Have ready: the rejection reason and the expert scenario from this document.
+
+**Rejection reason to type:**
+`Too generic. Name the specific interface, such as the BLE characteristic, and say how the attacker reaches it.`
+
+**Expert scenario to type** (Spoofing example):
+`AS-1` / `Spoofing` / `CWE-306` / `Impersonation of a legitimate caller to the Unlock Command through an unauthenticated management interface (identity spoofing)` / `Unlock Command interface accepts requests without caller authentication` / `The Unlock Command is reachable over its interface and no caller authentication is enforced before the critical function runs.` / `CWE-306: Missing Authentication for Critical Function` / `Known weakness class for this product family`
+
+### Opening (30 seconds)
+
+> "This is Phase 1, the Threat Agent: Step 4 of your TARA workflow. It reads an asset list and proposes
+> threat scenarios, each backed by a public attack catalogue. The AI proposes; a human decides. I'll
+> run it on a smart door lock."
+
+### Part 1: choose a project (30 seconds)
+
+*Run `python scripts/scrp_demo.py`, press Enter for project 1.*
+
+> "This menu lists project files. Any product is just another JSON file. We also have a medical pump."
+
+### Part 2: understanding and planning (1.5 minutes)
+
+> "First the agent reads each asset: what it is and what must be protected, confidentiality,
+> integrity, availability, authenticity. See the privacy line: credentials and personal data are masked
+> before anything reaches the AI.
+> Then it plans: from those security needs it decides which STRIDE threat types to look for."
+
+### Part 3: knowledge base search (2 minutes)
+
+> "Our library has 2,300 patterns from the free MITRE catalogues, CAPEC, ATT&CK and CWE, plus STRIDE,
+> and about 5,000 pieces of Common Criteria and CRA text. The search is by meaning, not exact words.
+> This table shows the best matches per asset. For the firmware image it found 'Component Firmware',
+> which is exactly the right idea."
+
+*Point at AS-3.*
+
+### Part 4: paths, generation and checks (2.5 minutes)
+
+> "Each match becomes an attack path. Multi-step chains are not built yet; I want to be upfront.
+> The AI then writes a scenario for each path. And here is the key point: we do not trust it. Five
+> fixed-rule checks look at every scenario. It can only cite a pattern that retrieval really returned,
+> so it cannot invent a citation. If one fails, only that one is redone, up to three times; if it still
+> fails it is flagged for the human. You can see one flagged row here."
+
+*Point at the FAIL cell.*
+
+### Part 5: human review (3 minutes)
+
+> "Now the human gate. This card shows the attack, the exposure, the reason, the citation, where it
+> came from and the check results."
+
+*Scenario 1: press Enter.* "I approve this one."
+*Scenario 2: type `n`, then the rejection reason above.*
+
+> "I reject it and give a reason. It's saved in the audit trail. In live mode the reason goes to the
+> model, only this scenario is rewritten and checked again, and I see the new version. Up to three
+> times. In this recorded demo, the screen shows the next alternative and says so."
+
+*Next scenario: type `x`, reason `Out of scope for this variant.`*
+
+> "I can also discard one with a reason. Nothing is deleted from the history."
+
+*Type `a` for the rest. Answer `y` to "Add a scenario of your own?" and type the expert scenario.*
+
+> "The expert can add a threat the AI missed. It's checked like AI output, and the pattern ID has to
+> exist in the library."
+
+*(Optional: type the attack `Heavy rainfall damages the enclosure` to show it being refused.)*
+
+### Part 6: saving and audit (1 minute)
+
+> "Only approved scenarios are written to the shared state. The audit log shows writes, approvals,
+> rejections with reasons, prunes and adds. Rejected and replaced content stays in the history. That's
+> your traceability and non-overwrite rule."
+
+### Part 7: honest close (1 minute)
+
+> "Working: the full workflow from assets to approved, audited scenarios, with over 300 tests.
+> Accuracy on your six reference threats is 1 of 6, with two more close. Not built: multi-step chains
+> and the Team 1 adapter. What would help most: your internal patterns, an expert's judgement of about
+> 190 search results, and the rating tables for Phase 2."
+
+## 17. Script 2: the Phase 1 explanation talk (8-10 minutes, no screen needed)
+
+**Slide/point 1: the goal (1 min)**
+> "Your document describes an AI-assisted TARA process. Phase 1 is the Threat Agent, Step 4: given the
+> assets, find the relevant threats, with rationale and citations, and let the expert prune or add."
+
+**Point 2: how it works (2 min)**
+> "Seven stages. One: read and validate the asset sheet, and mask secrets. Two: plan a search per asset
+> using its security needs and STRIDE. Three: semantic search over a knowledge base of 2,300 patterns,
+> turning text into vectors in PostgreSQL with pgvector. Four: form attack paths. Five: the language
+> model writes the scenario from the asset facts and the retrieved pattern. Six: fixed-rule checks.
+> Seven: the human approves or rejects, and approved scenarios go to the shared state with an audit
+> log."
+
+**Point 3: how we meet your Section 3.4 rules (2 min)**
+> "Citations on every scenario, verified by code. Confidence and flags. Human approval. Non-overwrite
+> history. Audit log of retrieved patterns, model, prompt version and decisions. Traceability fields on
+> each scenario. Fixed rules for every decision; the AI only writes text. Masking of personal data and
+> secrets. Evidence and rationale on every suggestion."
+
+**Point 4: what we measured (1.5 min)**
+> "The checker was measured on 50 labelled scenarios: 15% wrongly accepted, 8% wrongly rejected, and
+> we report that openly. On your six door-lock threats, one is matched and two are close. Over 300
+> automatic tests pass. A full run takes about 7 minutes and a few cents of AI cost."
+
+**Point 5: the hard parts (1.5 min)**
+> "Search quality was the hard part: a larger library is not automatically better. We tested six ideas
+> with a benchmark and kept only the one that helped. We also dealt with hallucination, AI cost and
+> rate limits, and a bug where approval did not reach the shared state, which is fixed."
+
+**Point 6: what is open and what we need (1.5 min)**
+> "Open: multi-step chaining, the Team 1 adapter, ISO 21434 and SESIP catalogues, data-residency rules.
+> From you: internal or hardware patterns, an expert's judgement on a short list of results, the
+> CAPEC-189 or 622 clarification, and the rating tables for Phase 2. Next phase: the Risk Agent."
 
 ---
 
-## 8. Phase 2 (Risk Agent): the plan
+# PART D. PHASE 2 (RISK AGENT) PLAN
 
-### 8.1 What the company wants (Section 2.6 and Step 5)
+## 18. The plan
 
-Step 5 of the document: *score impact (S/F/O/P) and attack feasibility (time, expertise, knowledge,
-window, equipment). Input: threats + context. Output: risk score + justification. Human checkpoint:
-the expert adjusts.*
+### 18.1 What the company wants (Section 2.6, Step 5)
 
-In simple words, for **every approved threat** the Risk Agent must say:
+*Score impact (S/F/O/P) and attack feasibility. Input: threats + context. Output: risk score +
+justification. The expert adjusts.* For every approved threat the Risk Agent must say:
 
-1. **How bad is it?** (Impact) on four axes: **S**afety, **F**inancial, **O**perational, **P**rivacy,
-   each from *Negligible* to *Severe*. The **overall impact** is the worst of the four.
-2. **How easy is it for the attacker?** (Attack feasibility) using five factors from ISO 21434
-   section 15.5: **elapsed time, expertise, knowledge of the item, window of opportunity,
-   equipment**. The result is a level, e.g. Low / Medium / High.
-3. **How risky is it?** Combine impact and feasibility using a **risk matrix** -> Low / Medium / High.
-4. **What to do about it?** The **risk treatment decision**: **Reduce / Share / Retain / Avoid**, with
-   the reason.
+1. **How bad?** Impact on four axes, **S**afety, **F**inancial, **O**perational, **P**rivacy, each
+   Negligible to Severe. **Overall impact** = the worst axis.
+2. **How easy for an attacker?** Five factors (ISO 21434 §15.5): elapsed time, expertise, knowledge of
+   the item, window of opportunity, equipment -> a feasibility level (Low/Medium/High).
+3. **How risky?** Combine impact and feasibility in a **risk matrix** -> Low/Medium/High.
+4. **What do we do?** **Reduce / Share / Retain / Avoid**, with a reason.
 
-The company's own worked example gives six rows to test against:
+Their six worked rows (these become our main test):
 
 | Threat | Impact S/F/O/P | Overall impact | Feasibility | Risk |
 |---|---|---|---|---|
@@ -532,88 +789,79 @@ The company's own worked example gives six rows to test against:
 | T5 | -/Mod/Sev/- | Moderate | High | Medium |
 | T6 | -/Sev/Sev/Sev | Severe | Low | Medium |
 
-Two things we can already see: overall impact = the **highest** axis; and the matrix is not a simple
-formula (Moderate+High and Severe+Low both give Medium), so the matrix must be a **table we can
-configure**, not hard-coded logic.
+What the rows teach us: overall impact is the **highest** axis; and the matrix is **not a simple
+formula** (Moderate+High and Severe+Low both give Medium), so it must be a **configurable table**.
 
-### 8.2 Design: rules in tables, AI only for suggestions
+### 18.2 Design
 
-The company's "determinism boundary" says: fixed rules for decisions, AI only for language. So:
+* **Fixed rules in config tables:** impact levels, feasibility scoring, the risk matrix, treatment
+  options. Easy to replace when the company gives its real tables.
+* **AI for suggestions only:** propose axis ratings and the written justification from the scenario
+  evidence, with the same masking and checks as Phase 1.
+* **Human:** the expert adjusts and approves; every change is logged.
 
-* **Fixed rules (tables in a config file):** impact levels, feasibility scoring, the risk matrix, the
-  treatment options. Easy to change when the company gives us their real tables.
-* **AI (suggestion only):** propose the ratings per axis and the written justification for each
-  threat ("why Severe for Operational?"), using the scenario's evidence.
-* **Human:** the expert sees each rating, can change it, and approves. Changes are logged like in
-  Phase 1.
+### 18.3 Inputs and outputs
 
-### 8.3 What it reads and writes
+* **Reads** approved scenarios from the SCRS and asset damage information.
+* **Writes** a risk record per threat: impact per axis, overall impact, feasibility factors and level,
+  risk value, treatment decision, justification, history of changes, links back to the threat ID.
 
-* **Reads:** the approved threat scenarios from the SCRS (written by Phase 1) plus asset damage
-  information.
-* **Writes:** a `RiskAssessment` per threat to the SCRS: impact per axis, overall impact, feasibility
-  factors, feasibility level, risk value, treatment decision, justification, who changed what.
-* Same rules as Phase 1: citations to the rules used, non-overwrite, audit log, traceability
-  (threat id -> risk id).
-
-### 8.4 Steps and rough timing
+### 18.4 Steps and timing (a plan, not a promise)
 
 | Week | Work | Result |
 |---|---|---|
-| 1 | Define the data model, rule tables and config format (impact levels, feasibility, risk matrix, treatment) | Schema + empty tables |
-| 2 | Build the deterministic engine: overall impact = max of axes, feasibility rating, risk matrix lookup | Pure functions with unit tests |
-| 3 | **Reproduce the company's six rows** exactly as a test (T1-T6) | Test passes = tables are right |
-| 4 | AI suggestion step: propose axis ratings and justification from the scenario (with redaction and checks) | Draft ratings with reasons |
-| 5 | Human gate: expert adjusts ratings, approves, treatment decision, audit log | CLI + API like Phase 1 |
-| 6 | Integrate with SCRS; demo on the door lock; documentation; write-up | Phase 2 demo |
+| 1 | Data model, rule-table format (impact, feasibility, risk matrix, treatment) | Schema + empty tables |
+| 2 | Deterministic engine: overall impact, feasibility rating, matrix lookup | Pure functions with unit tests |
+| 3 | **Reproduce the company's six rows (T1-T6)** as a test | Test passes = tables right |
+| 4 | AI suggestion step with masking and checks | Draft ratings with reasons |
+| 5 | Human gate + audit (CLI and API like Phase 1) | Reviewable risk workflow |
+| 6 | Integration with SCRS, door-lock demo, documentation | Phase 2 demo |
 
-Timing is a plan, not a promise: it depends on getting the company's rating tables early.
+### 18.5 Needs and risks
 
-### 8.5 How we will test it
-
-* **The six company rows (T1-T6)** are the main test: given their inputs, our rule engine must output
-  their overall impact and risk.
-* Unit tests for each table lookup, edge cases (a "-" axis means no impact on that axis).
-* The same safeguards as Phase 1: checks on AI suggestions, human approval, audit trail.
-
-### 8.6 What we need and the risks
-
-| Need | From | Risk if missing |
+| Need | From | If missing |
 |---|---|---|
-| Feasibility scoring tables (how factor values map to Low/Medium/High) | Company / ISO 21434 | We use a clearly-labelled placeholder table |
-| The risk matrix | Company | Same; our 6-row test fixes part of it |
-| Impact level definitions per axis | Company | Same |
-| Approved threats from Phase 1 | us | Done |
-| Team 1 data (asset damage scenarios) | Team 1 | Impact suggestions will be weaker |
+| Feasibility scoring tables | Company / ISO 21434 | We use a clearly labelled placeholder |
+| Risk matrix | Company | Same; the six rows fix part of it |
+| Impact level definitions | Company | Same |
+| Approved threats | Phase 1 | Done |
+| Asset damage scenarios | Team 1 | Impact suggestions are weaker |
 
-After Phase 2, the next step in the document is mapping risk to required attack resistance (JIL /
-SESIP / EAL) with a rule base, which fits the same "tables in config" design.
+After Phase 2 the document's next step maps risk to required attack resistance (JIL / SESIP / EAL) with
+a rule base, which fits the same "rules in tables" design.
 
 ---
 
-## 9. Small dictionary
+# PART E. SMALL DICTIONARY
+
+## 19. Words used in this guide
 
 | Word | Simple meaning |
 |---|---|
-| **Asset** | Something worth protecting (a key, firmware, a log, personal data) |
+| **Asset** | A thing worth protecting (key, firmware, log, personal data) |
 | **Threat / scenario** | A way an attacker could harm an asset, written as a short story |
-| **Threat modelling / TARA** | Systematically finding and rating the ways a product can be attacked |
-| **STRIDE** | A 6-point checklist of attack types |
+| **TARA / threat modelling** | Systematically finding and rating ways a product can be attacked |
+| **STRIDE** | A six-point checklist of attack types |
 | **CAPEC** | Public catalogue of attack patterns |
 | **ATT&CK** | Public catalogue of real attacker techniques |
 | **CWE** | Public catalogue of software / hardware weaknesses |
-| **Knowledge base (KB)** | Our library of those catalogues, searchable by meaning |
-| **Embedding / vector** | The list of 384 numbers that stands for the meaning of a text |
-| **Cosine similarity** | A score (0 to 1) of how close two meanings are |
-| **LLM** | The language model (AI) that writes the scenario text |
-| **Hallucination** | When an AI invents facts; we block invented citations with fixed checks |
+| **Knowledge base (KB)** | Our searchable library of those catalogues |
+| **Embedding / vector** | The 384 numbers that stand for the meaning of a text |
+| **Cosine similarity** | A 0-to-1 score of how close two meanings are |
+| **pgvector** | PostgreSQL add-on for storing and searching vectors |
+| **LLM** | The language model that writes the scenario text |
+| **Hallucination** | An AI inventing facts; we block invented citations with fixed checks |
+| **Prompt** | The instructions and facts we give the language model |
 | **Validator** | Our fixed-rule checker for the AI's output |
 | **Grounding** | Making sure the output rests only on retrieved evidence |
+| **FAR / FRR** | How often the checker wrongly accepts / wrongly rejects |
 | **Human in the loop (HITL)** | A person approves or rejects before anything is final |
 | **SCRS** | The shared state file where approved results are stored for all agents |
 | **Audit log** | The diary of every action and decision |
-| **Redaction** | Hiding personal data and secrets before sending text to the AI |
-| **Flagged** | Failed an automatic check after retries; needs extra human attention |
-| **Impact / feasibility / risk** | How bad it would be / how easy for an attacker / the combined rating (Phase 2) |
-| **JIL, SESIP, EAL** | Standards that describe how strong protection must be (later step) |
-| **CRA** | The EU Cyber Resilience Act (the law behind the project) |
+| **Redaction / masking** | Hiding personal data and secrets before sending text to the AI |
+| **Flagged / escalated** | Failed a check after the retries; needs extra human attention |
+| **Determinism boundary** | Fixed rules decide; the AI only writes text |
+| **API** | A way for programs (other agents) to call our service |
+| **Impact / feasibility / risk** | How bad / how easy for an attacker / the combined rating (Phase 2) |
+| **JIL, SESIP, EAL** | Standards describing how strong the protection must be (later step) |
+| **CRA** | The EU Cyber Resilience Act, the law behind the project |
