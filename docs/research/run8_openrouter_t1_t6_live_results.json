@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-10-10T14:30:10.077586+00:00",
+  "total_expert_threats": 6,
+  "total_generated_scenarios": 60,
+  "true_positives_tp": 1,
+  "false_negatives_fn": 5,
+  "false_positives_fp": 59,
+  "precision": 0.0167,
+  "recall": 0.1667,
+  "f1": 0.0303,
+  "threshold": 0.75,
+  "tp_threat_ids": [
+    "T3"
+  ],
+  "fn_threat_ids": [
+    "T1",
+    "T2",
+    "T4",
+    "T5",
+    "T6"
+  ],
+  "matched_details": {
+    "T1": [],
+    "T2": [],
+    "T3": [
+      {
+        "scenario_tid": "THR-PATH-4AC12FD9-002",
+        "asset_id": "AS-3",
+        "stride_category": "Tampering",
+        "kb_reference": "CAPEC-186",
+        "attack_vector": "Exploitation of insecure OTA update mechanisms to inject malicious firmware.",
+        "cosine_similarity": 0.8774
+      }
+    ],
+    "T4": [],
+    "T5": [],
+    "T6": []
+  },
+  "highest_sim_per_threat": {
+    "T1": {
+      "cosine_similarity": 0.7529,
+      "scenario_tid": "THR-PATH-7A192C42-033",
+      "asset_id": "AS-5",
+      "stride_category": "Spoofing",
+      "kb_reference": "CAPEC-60",
+      "attack_vector": "An attacker captures a BLE session token used for unlocking the smart lock and replays it to gain unauthorized access."
+    },
+    "T2": {
+      "cosine_similarity": 0.4994,
+      "scenario_tid": "THR-PATH-32DAE599-009",
+      "asset_id": "AS-3",
+      "stride_category": "Spoofing",
+      "kb_reference": "CWE-798",
+      "attack_vector": "Utilizing hard-coded credentials to authenticate as the legitimate user, gaining unauthorized access to the device functionalities."
+    },
+    "T3": {
+      "cosine_similarity": 0.8793,
+      "scenario_tid": "THR-PATH-229C10D4-032",
+      "asset_id": "AS-4",
+      "stride_category": "Tampering",
+      "kb_reference": "CAPEC-186",
+      "attack_vector": "Exploiting insecure OTA update mechanism to inject malicious firmware, leading to compromised device behavior."
+    },
+    "T4": {
+      "cosine_similarity": 0.624,
+      "scenario_tid": "THR-PATH-3FA3326D-030",
+      "asset_id": "AS-1",
+      "stride_category": "InformationDisclosure",
+      "kb_reference": "STRIDE-I-001",
+      "attack_vector": "Transmitting unlock commands over unencrypted BLE characteristics allowing eavesdropping."
+    },
+    "T5": {
+      "cosine_similarity": 0.3505,
+      "scenario_tid": "THR-PATH-3FA3326D-030",
+      "asset_id": "AS-1",
+      "stride_category": "InformationDisclosure",
+      "kb_reference": "STRIDE-I-001",
+      "attack_vector": "Transmitting unlock commands over unencrypted BLE characteristics allowing eavesdropping."
+    },
+    "T6": {
+      "cosine_similarity": 0.5952,
+      "scenario_tid": "THR-PATH-BA52F9FC-023",
+      "asset_id": "AS-6",
+      "stride_category": "InformationDisclosure",
+      "kb_reference": "STRIDE-I-001",
+      "attack_vector": "Exposing cryptographic keys through unencrypted BLE transmissions."
+    }
+  }
+}
