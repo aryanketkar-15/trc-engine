@@ -135,7 +135,7 @@ class TestRouterRejectRegenerate:
         self,
         app_and_client: tuple[FastAPI, TestClient],
         valid_payload: dict[str, Any],
-        tmp_path: Path,
+        scrs_path: Path,
     ) -> None:
         """First rejection regenerates scenarios and keeps run in pending_human."""
         _, client = app_and_client
@@ -170,7 +170,7 @@ class TestRouterRejectRegenerate:
         assert status_data["human_rejection_count"] == 1
 
         # 4. Check SCRS StateManager recorded the rejection
-        state_mgr = StateManager()
+        state_mgr = StateManager(scrs_path=scrs_path)
         audit_log = state_mgr.get_audit_log()
         matching_entries = [
             e for e in audit_log if e.run_id == run_id and e.action == "reject"

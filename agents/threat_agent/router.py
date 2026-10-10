@@ -39,8 +39,10 @@ from __future__ import annotations
 
 import logging
 import secrets
+import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
+from pathlib import Path as FilePath
 from typing import Annotated, Final
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Path, status
@@ -55,16 +57,21 @@ from agents.threat_agent.run_store import (
     RunNotFoundError,
     RunRecord,
     RunRegistryStore,
+    ScenarioNotFoundError,
     get_in_memory_run_store,
     get_run_store,
 )
 from agents.threat_agent.schemas import (
+    EvidenceChain,
+    STRIDECategory,
     ThreatAgentInput,
     ThreatScenario,
     ThreatStatus,
     ValidationResult,
 )
+from agents.threat_agent.validator import Validator
 from config.settings import get_settings
+from scrp.state_manager import StateManager
 
 # TODO (TRC-STUB-002): update this import once feature/threat-agent-validator
 # is merged to develop.  NotApprovedError is currently defined in
@@ -129,6 +136,16 @@ def get_regenerator(
     return regenerate_after_human_rejection
 
 
+def get_scrs_path() -> FilePath:
+    """Location of the shared reasoning state file (overridable in tests)."""
+    return FilePath(get_settings().SCRS_STATE_PATH)
+
+
+def get_state_manager() -> StateManager:
+    """Fresh StateManager bound to the configured SCRS file."""
+    return StateManager(get_scrs_path())
+
+
 
 def verify_api_key(
     x_api_key: Annotated[
@@ -167,9 +184,7 @@ def _get_run_or_404(run_id: str, store: RunRegistryStore | None = None) -> RunRe
 
     # Fallback: check persisted SCRS StateManager for historical runs
     try:
-        from scrp.state_manager import StateManager
-
-        state_mgr = StateManager()
+        state_mgr = StateManager(get_scrs_path())
         for scenario in state_mgr.get_threat_scenarios().values():
             s_run_id = (
                 scenario.get("run_id")
@@ -228,6 +243,15 @@ def _raise_invalid_transition(
         status_code=status.HTTP_409_CONFLICT,
         detail=detail,
     )
+
+
+def _approved_scenarios(raw: list[dict[str, object]]) -> list[ThreatScenario]:
+    """Parse stored scenario dicts and stamp them ``approved`` (raises ValueError)."""
+    out: list[ThreatScenario] = []
+    for item in raw:
+        scenario = ThreatScenario.model_validate(item)
+        out.append(scenario.model_copy(update={"status": ThreatStatus.APPROVED}))
+    return out
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -297,6 +321,51 @@ class ApproveResponse(BaseModel):
             ),
         ),
     ]
+    scenarios_written: Annotated[
+        int,
+        Field(default=0, description="Scenarios written to the SCRS by this approval."),
+    ] = 0
+
+
+class PruneRequest(BaseModel):
+    """Request body for POST /{run_id}/scenarios/{tid}/prune."""
+
+    reason: Annotated[
+        str,
+        Field(min_length=1, description="Why the expert removes this scenario."),
+    ]
+
+
+class PruneResponse(BaseModel):
+    """A pruned scenario leaves the review list but stays in the audit trail."""
+
+    run_id: str
+    tid: str
+    status: ThreatStatus
+    remaining_scenarios: int
+
+
+class AddScenarioRequest(BaseModel):
+    """An expert-authored threat scenario (SRS: 'expert prunes/adds')."""
+
+    asset_id: Annotated[str, Field(min_length=1)]
+    stride_category: STRIDECategory
+    attack_vector: Annotated[str, Field(min_length=1)]
+    kb_reference: Annotated[str, Field(min_length=1)]
+    evidence_chain: EvidenceChain
+    justification: Annotated[
+        str,
+        Field(min_length=1, description="Why the expert adds this scenario."),
+    ]
+
+
+class AddScenarioResponse(BaseModel):
+    """Response for an expert add."""
+
+    run_id: str
+    tid: str
+    status: ThreatStatus
+    scenario_count: int
 
 
 class RejectRequest(BaseModel):
@@ -567,6 +636,7 @@ async def approve_run(
         RunRegistryStore,
         Depends(get_run_store),
     ],
+    state_mgr: Annotated[StateManager, Depends(get_state_manager)],
 ) -> ApproveResponse:
     """Approve a threat analysis run and write its scenarios to the SCRS.
 
@@ -586,7 +656,17 @@ async def approve_run(
     """
     logger.info("Approval request received", extra={"run_id": run_id})
 
-    _get_run_or_404(run_id, store)
+    pre = _get_run_or_404(run_id, store)
+
+    # Fail early (422) if any stored scenario cannot be parsed, BEFORE the
+    # irreversible state transition.
+    try:
+        _approved_scenarios(pre.scenarios)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Run '{run_id}' has an invalid stored scenario: {exc}",
+        ) from exc
 
     try:
         run = store.transition_run(
@@ -596,10 +676,26 @@ async def approve_run(
             scrs_entry_id=f"SCRS-{run_id}",
         )
 
+        # The post-transition list is authoritative (it includes any expert edits).
+        try:
+            written = state_mgr.commit_approved_run(
+                run_id, _approved_scenarios(run.scenarios)
+            )
+        except Exception as exc:
+            logger.exception("SCRS write failed after approval", extra={"run_id": run_id})
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=(
+                    f"Run '{run_id}' was approved but writing to the SCRS failed; "
+                    "the run is approved in the registry and needs a manual SCRS sync."
+                ),
+            ) from exc
+
         return ApproveResponse(
             run_id=run.run_id,
             status=run.status,
             scrs_entry_id=run.scrs_entry_id,
+            scenarios_written=written,
         )
 
     except RunNotFoundError as exc:
@@ -655,6 +751,7 @@ async def reject_run(
         Callable[..., tuple[list[ThreatScenario], int, str]],
         Depends(get_regenerator),
     ],
+    state_mgr: Annotated[StateManager, Depends(get_state_manager)],
 ) -> RejectResponse:
     """Reject a threat analysis run and trigger retry or escalation.
 
@@ -698,9 +795,6 @@ async def reject_run(
 
     # Log rejection to SCRS audit log and revision history
     try:
-        from scrp.state_manager import StateManager
-
-        state_mgr = StateManager()
         state_mgr.log_rejection(
             run_id=run_id,
             reason=body.reason,
@@ -799,6 +893,166 @@ async def reject_run(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to regenerate threat scenarios: {exc}",
         ) from exc
+
+
+def _require_pending_human(run: RunRecord) -> None:
+    if run.status != ThreatStatus.PENDING_HUMAN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Run '{run.run_id}' is in status '{run.status.value}'; "
+                "scenarios can only be edited while pending_human."
+            ),
+        )
+
+
+@router.post(
+    "/{run_id}/scenarios/{tid}/prune",
+    response_model=PruneResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Expert prune: remove one scenario from review (kept in the audit trail)",
+    dependencies=[Depends(verify_api_key)],
+)
+async def prune_scenario(
+    run_id: Annotated[str, Path(description="The run to edit.")],
+    tid: Annotated[str, Path(description="The scenario to prune.")],
+    body: Annotated[PruneRequest, Body(description="Reason for pruning.")],
+    store: Annotated[RunRegistryStore, Depends(get_run_store)],
+    state_mgr: Annotated[StateManager, Depends(get_state_manager)],
+) -> PruneResponse:
+    """Remove a scenario from the pending list.
+
+    Never a silent delete: the full scenario, the reason and the time are
+    preserved in the run's edit history and in the SCRS revision history and
+    audit log.
+    """
+    run = _get_run_or_404(run_id, store)
+    _require_pending_human(run)
+
+    removed: dict[str, object] = {}
+
+    def _editor(
+        current: list[dict[str, object]],
+    ) -> tuple[list[dict[str, object]], dict[str, object]]:
+        target = next((s for s in current if s.get("tid") == tid), None)
+        if target is None:
+            raise ScenarioNotFoundError(run_id, tid)
+        removed.update(target)
+        entry: dict[str, object] = {
+            "action": "prune",
+            "tid": tid,
+            "reason": body.reason,
+            "timestamp": datetime.now(UTC).isoformat(),
+            "scenario": target,
+        }
+        return [s for s in current if s.get("tid") != tid], entry
+
+    try:
+        updated = store.edit_scenarios(run_id, ThreatStatus.PENDING_HUMAN, _editor)
+    except (ScenarioNotFoundError, RunNotFoundError) as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except InvalidStateTransitionError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+    try:
+        state_mgr.log_edit(run_id, tid, "prune", body.reason, removed)
+    except Exception as exc:
+        logger.warning("Failed to log prune to SCRS for run %s: %s", run_id, exc)
+
+    return PruneResponse(
+        run_id=run_id,
+        tid=tid,
+        status=updated.status,
+        remaining_scenarios=len(updated.scenarios),
+    )
+
+
+@router.post(
+    "/{run_id}/scenarios",
+    response_model=AddScenarioResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Expert add: insert an expert-authored scenario into the review list",
+    dependencies=[Depends(verify_api_key)],
+)
+async def add_scenario(
+    run_id: Annotated[str, Path(description="The run to edit.")],
+    body: Annotated[AddScenarioRequest, Body(description="The expert's scenario.")],
+    store: Annotated[RunRegistryStore, Depends(get_run_store)],
+    state_mgr: Annotated[StateManager, Depends(get_state_manager)],
+) -> AddScenarioResponse:
+    """Add a scenario written by the expert.
+
+    It must target an asset of this run and pass the same four Protocol
+    Invariant checks as machine output.  It is marked
+    ``validation_status='expert_added'`` and its confidence is expert-asserted
+    (1.0), not model-derived.
+    """
+    run = _get_run_or_404(run_id, store)
+    _require_pending_human(run)
+
+    assets = run.agent_input.get("assets") if run.agent_input else None
+    if isinstance(assets, list) and assets:
+        known = {a.get("asset_id") for a in assets if isinstance(a, dict)}
+        if body.asset_id not in known:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Asset '{body.asset_id}' is not part of run '{run_id}'.",
+            )
+
+    scenario = ThreatScenario(
+        tid=f"THR-EXP-{uuid.uuid4().hex[:8].upper()}",
+        run_id=run_id,
+        asset_id=body.asset_id,
+        stride_category=body.stride_category,
+        attack_vector=body.attack_vector,
+        kb_reference=body.kb_reference,
+        evidence_chain=body.evidence_chain,
+        confidence_score=1.0,
+        status=ThreatStatus.PENDING_TEST,
+        validation_status="expert_added",
+    )
+    result = Validator().validate(scenario)
+    if not result.passed:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error": "expert scenario failed the Protocol Invariant Validator",
+                "failed_checks": [fc.model_dump() for fc in result.failed_checks],
+            },
+        )
+
+    new_dict = scenario.model_dump(mode="json")
+
+    def _editor(
+        current: list[dict[str, object]],
+    ) -> tuple[list[dict[str, object]], dict[str, object]]:
+        entry: dict[str, object] = {
+            "action": "add",
+            "tid": scenario.tid,
+            "reason": body.justification,
+            "timestamp": datetime.now(UTC).isoformat(),
+            "scenario": new_dict,
+        }
+        return [*current, new_dict], entry
+
+    try:
+        updated = store.edit_scenarios(run_id, ThreatStatus.PENDING_HUMAN, _editor)
+    except RunNotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except InvalidStateTransitionError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+    try:
+        state_mgr.log_edit(run_id, scenario.tid, "add", body.justification, new_dict)
+    except Exception as exc:
+        logger.warning("Failed to log add to SCRS for run %s: %s", run_id, exc)
+
+    return AddScenarioResponse(
+        run_id=run_id,
+        tid=scenario.tid,
+        status=updated.status,
+        scenario_count=len(updated.scenarios),
+    )
 
 
 @router.get(
