@@ -83,6 +83,11 @@ def short(text: str, n: int = 70) -> str:
     return text if len(text) <= n else text[: n - 3] + "..."
 
 
+def step(number: int, title: str, does: str) -> None:
+    console.print(f"\n[bold cyan]Step {number}/7  {title}[/bold cyan]")
+    console.print(f"[dim]{does}[/dim]")
+
+
 def stride_name(value: Any) -> str:
     return str(getattr(value, "value", value))
 
@@ -202,12 +207,15 @@ class Replay:
 
 
 class Session:
-    def __init__(self, agent_input: Any, mode: str, scrs_path: Path, max_paths: int) -> None:
+    def __init__(
+        self, agent_input: Any, mode: str, scrs_path: Path, max_paths: int, explain: bool = True
+    ) -> None:
         from scrp.state_manager import StateManager
 
         self.agent_input = agent_input
         self.mode = mode
         self.max_paths = max_paths
+        self.explain = explain
         self.replay = Replay() if mode == "replay" else None
         self.sm = StateManager(scrs_path)
         self.candidates: list[Any] = []
@@ -227,18 +235,128 @@ class Session:
             )
         return list(scenarios)
 
+    # -- helpers used to explain what the agent did ---------------------------------
+    def score_of(self, s: Any) -> float | None:
+        for c in self.candidates:
+            if c.asset_id == s.asset_id and c.pattern_id == s.kb_reference:
+                return float(c.retrieval_score)
+        return None
+
+    def check_flags(self, s: Any) -> dict[str, bool]:
+        """Which of the five automatic checks this scenario passes (True = pass)."""
+        from agents.threat_agent.grounding import check_grounding, path_id_from_tid
+        from agents.threat_agent.validator import Validator
+
+        failed = {fc.check_id for fc in Validator().validate(s).failed_checks}
+        grounded = not check_grounding(
+            s, self.paths.get(path_id_from_tid(s.tid) or ""), self.agent_input.assets
+        )
+        return {
+            "Citation": "CITATION_MISSING" not in failed,
+            "Schema": "SCHEMA_INCOMPLETE" not in failed,
+            "STRIDE fit": "CONSISTENCY_MISMATCH" not in failed,
+            "Evidence": "EVIDENCE_GENERIC" not in failed,
+            "Grounded": grounded,
+        }
+
     def run_pipeline(self) -> None:
         from agents.threat_agent.attack_chain import build_paths, build_single_step_path
         from agents.threat_agent.retrieval import build_retrieval_plan, fetch_candidates
+        from common.pii_redaction import redact_pii_with_count
 
+        ai = self.agent_input
+        ex = self.explain
+
+        # Step 1 - understand the system
+        if ex:
+            step(
+                1,
+                "Understanding the system",
+                "The agent reads every asset: what it is, which interfaces it exposes and which "
+                "security properties it must keep (confidentiality, integrity, availability, "
+                "authenticity).",
+            )
+            console.print(f"  Use case: {short(ai.use_case, 110)}")
+            t = Table(box=box.SIMPLE_HEAD, header_style="bold")
+            for col in ("Asset", "Name", "Must protect", "Interfaces"):
+                t.add_column(col)
+            for a in ai.assets:
+                needs = [
+                    k.capitalize()
+                    for k in ("confidentiality", "integrity", "availability", "authenticity")
+                    if getattr(a.security_attributes, k, False)
+                ]
+                t.add_row(
+                    a.asset_id,
+                    a.name,
+                    ", ".join(needs) or "-",
+                    short(", ".join(a.dfd_context.interfaces), 40),
+                )
+            console.print(t)
+            _, masked = redact_pii_with_count(ai.use_case + " " + ai.system_model)
+            console.print(
+                f"  Privacy: {masked} credential / personal item(s) masked before anything is "
+                "sent to the model."
+            )
+
+        # Step 2 - plan the search
         t0 = time.time()
-        plan = build_retrieval_plan(self.agent_input)
+        plan = build_retrieval_plan(ai)
+        if ex:
+            step(
+                2,
+                "Planning the search",
+                "For each asset the agent writes a search text and works out which STRIDE threat "
+                "types apply (integrity -> Tampering, authenticity -> Spoofing, confidentiality "
+                "-> Information Disclosure, availability -> Denial of Service).",
+            )
+            t = Table(box=box.SIMPLE_HEAD, header_style="bold")
+            for col in ("Asset", "Search text", "Topic tags", "STRIDE to look for"):
+                t.add_column(col)
+            for q in plan.queries:
+                t.add_row(
+                    str(q["asset_id"]),
+                    short(str(q["query_text"]), 46),
+                    ", ".join(q.get("asset_tags", [])[:4]) or "-",  # type: ignore[arg-type]
+                    ", ".join(q.get("asset_stride", [])) or "-",  # type: ignore[arg-type]
+                )
+            console.print(t)
+
+        # Step 3 - search the knowledge base
+        if ex:
+            step(
+                3,
+                "Searching the knowledge base",
+                "Each search text becomes a 384-number vector and is compared (cosine similarity) "
+                "with every CAPEC / ATT&CK / CWE / STRIDE pattern. Patterns whose topic tags match "
+                "the asset get a small boost.",
+            )
         with console.status("Searching the knowledge base..."):
             self.candidates = fetch_candidates(plan)
-        ok(f"Retrieved {len(self.candidates)} candidate patterns ({time.time() - t0:.0f}s)")
+        by_src = Counter(c.source.value for c in self.candidates)
+        ok(
+            f"{len(self.candidates)} patterns retrieved in {time.time() - t0:.0f}s "
+            f"({', '.join(f'{k} {v}' for k, v in by_src.most_common())})"
+        )
+        if ex:
+            t = Table(box=box.SIMPLE_HEAD, header_style="bold", title="Best matches per asset")
+            for col in ("Asset", "Pattern", "Source", "Similarity", "Title"):
+                t.add_column(col)
+            for a in ai.assets:
+                mine = [c for c in self.candidates if c.asset_id == a.asset_id]
+                for c in sorted(mine, key=lambda x: -x.retrieval_score)[:2]:
+                    t.add_row(
+                        a.asset_id,
+                        c.pattern_id,
+                        c.source.value,
+                        f"{c.retrieval_score:.2f}",
+                        short(c.title, 40),
+                    )
+            console.print(t)
 
+        # Step 4 - attack paths
         try:
-            paths = build_paths(self.candidates, self.agent_input)
+            paths = build_paths(self.candidates, ai)
         except NotImplementedError:
             paths = [build_single_step_path(c) for c in self.candidates]
         per_asset: dict[str, list[Any]] = {}
@@ -250,16 +368,73 @@ class Session:
                 if lst and len(chosen) < self.max_paths:
                     chosen.append(lst.pop(0))
         self.paths = {p.path_id: p for p in chosen}
-        ok(f"Built {len(chosen)} attack paths")
+        if ex:
+            step(
+                4,
+                "Building attack paths",
+                "Each retrieved pattern is paired with the asset it was found for. The best "
+                f"{len(chosen)} (spread across the assets) are taken forward. Linking patterns "
+                "into multi-step chains is not implemented yet.",
+            )
+            t = Table(box=box.SIMPLE_HEAD, header_style="bold")
+            for col in ("Path", "Asset", "Pattern", "Confidence"):
+                t.add_column(col)
+            for p in chosen:
+                t.add_row(
+                    p.path_id,
+                    ",".join(p.target_asset_ids),
+                    " -> ".join(x.pattern_id for x in p.steps),
+                    f"{p.chain_confidence:.2f}",
+                )
+            console.print(t)
+        else:
+            ok(f"Built {len(chosen)} attack paths")
 
+        # Step 5 - generate
+        if ex:
+            step(
+                5,
+                "Generating threat scenarios",
+                "For every path the model receives the asset facts and the pattern text, and must "
+                "return the attack, what is exposed, why it applies and a citation of the pattern.",
+            )
         t0 = time.time()
         with console.status("Generating and validating threat scenarios..."):
             self.scenarios = self._generate(chosen)
-        flagged = sum(1 for s in self.scenarios if s.validation_status != "passed")
-        ok(
-            f"Generated {len(self.scenarios)} scenarios ({time.time() - t0:.0f}s): "
-            f"{len(self.scenarios) - flagged} passed validation, {flagged} flagged for review"
-        )
+        src = " (recorded model output)" if self.replay else ""
+        ok(f"{len(self.scenarios)} scenarios generated{src}")
+
+        # Step 6 - validate
+        if ex:
+            step(
+                6,
+                "Checking the output",
+                "Every scenario must pass 5 automatic checks. Scenarios that fail are regenerated "
+                "(only those, up to 3 times); if they still fail they are flagged for you.",
+            )
+            t = Table(box=box.SIMPLE_HEAD, header_style="bold")
+            t.add_column("#", justify="right")
+            t.add_column("Asset")
+            t.add_column("Pattern")
+            for col in ("Citation", "Schema", "STRIDE fit", "Evidence", "Grounded"):
+                t.add_column(col, justify="center")
+            t.add_column("Result")
+            for i, sc in enumerate(self.scenarios, 1):
+                flags = self.check_flags(sc)
+                cells = ["[green]ok[/green]" if v else "[red]FAIL[/red]" for v in flags.values()]
+                result = (
+                    "[green]passed[/green]"
+                    if sc.validation_status == "passed"
+                    else "[yellow]flagged[/yellow]"
+                )
+                t.add_row(str(i), sc.asset_id, sc.kb_reference, *cells, result)
+            console.print(t)
+            console.print(
+                "  Grounded = cites only a pattern that was really retrieved, targets a real "
+                "asset, and describes an exposure that belongs to that asset."
+            )
+        flagged = sum(1 for sc in self.scenarios if sc.validation_status != "passed")
+        ok(f"{len(self.scenarios) - flagged} passed all checks, {flagged} flagged for your review")
 
     # -- regeneration after a rejection --------------------------------------
     def regenerate(self, old: Any, feedback: str) -> Any | None:
@@ -289,6 +464,8 @@ class Session:
                 return None
             path = build_single_step_path(alt)
             self.paths[path.path_id] = path
+            # the scenario keeps its tid, so its tid must now resolve to the new path
+            self.paths[path_id_from_tid(old.tid) or ""] = path
             new = self._generate([path])
         return new[0].model_copy(update={"tid": old.tid}) if new else None
 
@@ -296,7 +473,9 @@ class Session:
 # --------------------------------------------------------------------- display
 
 
-def show_card(s: Any, index: int, total: int, title: str | None = None) -> None:
+def show_card(
+    s: Any, index: int, total: int, title: str | None = None, session: Session | None = None
+) -> None:
     e = s.evidence_chain
     flagged = (s.validation_status or "") != "passed"
     status = (
@@ -313,6 +492,15 @@ def show_card(s: Any, index: int, total: int, title: str | None = None) -> None:
         f"[bold]Why[/bold]         {e.applicability_reason}",
         f"[bold]Citation[/bold]    {e.citation}",
     ]
+    if session is not None:
+        score = session.score_of(s)
+        origin = f"{s.asset_id} -> {s.kb_reference}" + (
+            f" (similarity {score:.2f})" if score else ""
+        )
+        flags = session.check_flags(s)
+        checks = "  ".join(f"{k} {'ok' if v else 'FAIL'}" for k, v in flags.items())
+        lines.append(f"[bold]Derived[/bold]     {origin}")
+        lines.append(f"[bold]Checks[/bold]      {checks}")
     console.print(
         Panel(
             "\n".join(lines),
@@ -419,7 +607,9 @@ def review_one(session: Session, idx: int, total: int, auto: bool) -> tuple[str,
     rejections = 0
     first = True
     while True:
-        show_card(s, idx + 1, total, None if first else f"Revised scenario {idx + 1} of {total}")
+        show_card(
+            s, idx + 1, total, None if first else f"Revised scenario {idx + 1} of {total}", session
+        )
         first = False
         if auto:
             answer = "n" if (idx == 0 and rejections == 0) else "y"
@@ -575,7 +765,7 @@ def run_once(args: argparse.Namespace, settings: Any) -> bool:
         f"knowledge base {db}   {source}\n"
     )
 
-    session = Session(agent_input, mode, scrs_path, args.max_paths)
+    session = Session(agent_input, mode, scrs_path, args.max_paths, not args.quiet)
     session.run_pipeline()
     if not session.scenarios:
         err("No scenarios were produced.")
@@ -583,7 +773,17 @@ def run_once(args: argparse.Namespace, settings: Any) -> bool:
 
     console.print()
     show_summary_table(session.scenarios)
-    console.print("Review each scenario. Nothing is saved until you approve it.\n")
+    if args.quiet:
+        console.print("Review each scenario. Nothing is saved until you approve it.\n")
+    else:
+        step(
+            7,
+            "Your review",
+            "You decide on every scenario; nothing is saved until you approve it. If you reject "
+            "one, give a reason: the agent feeds it back to the model, regenerates that scenario, "
+            "re-checks it and shows it again (at most 3 rejections per scenario). Approved "
+            "scenarios are written to the shared state with an audit log.",
+        )
     approved, counts = review_all(session, args.auto)
 
     console.print()
@@ -609,6 +809,7 @@ def main() -> None:
     parser.add_argument(
         "--max-paths", type=int, default=6, help="scenarios to generate (default 6)"
     )
+    parser.add_argument("--quiet", action="store_true", help="short output without explanations")
     parser.add_argument("--verbose", action="store_true", help="show internal JSON logs")
     args = parser.parse_args()
     if not args.verbose:

@@ -27,7 +27,9 @@ python scripts/scrp_demo.py --auto                 # scripted answers, for rehea
 
 Projects offered: every `tests/threat_agent/e2e/fixtures/*/input.json` plus any `*.json` placed in a
 `projects/` folder. For the Smart Door Lock the default is recorded real model output (no network);
-other projects call the model. `--max-paths N` sets how many scenarios are generated (default 6).
+other projects call the model. `--max-paths N` sets how many scenarios are generated (default 6). The output explains each step the
+agent takes (understand the system, plan the search, search the knowledge base, build attack paths,
+generate, check, your review); add `--quiet` for short output.
 
 ## At each scenario
 
