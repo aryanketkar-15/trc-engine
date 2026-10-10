@@ -34,6 +34,7 @@ from agents.threat_agent.exceptions import (
     KBStoreUnreachableError,
     MalformedAssetInputError,
 )
+from agents.threat_agent.rerank import RerankParams, infer_asset_tags, rerank_score
 from agents.threat_agent.schemas import (
     AssetModel,
     KBCandidate,
@@ -44,6 +45,7 @@ from agents.threat_agent.schemas import (
 )
 from common.db import get_db_connection
 from common.logging import get_logger, log_step
+from config.settings import get_settings
 
 logger = get_logger(__name__)
 
@@ -351,6 +353,7 @@ def build_retrieval_plan(
             "asset_id": asset.asset_id,
             "query_text": _build_query_text(asset),
             "kb_sources": _select_kb_sources(asset),
+            "asset_tags": sorted(infer_asset_tags(asset)),
         }
         for asset in agent_input.assets
     ]
@@ -410,6 +413,18 @@ def fetch_candidates(
     encoder = _get_encoder(model_name)
     top_k = plan.top_k if hasattr(plan, "top_k") else 10
 
+    settings = get_settings()
+    rerank_params = (
+        RerankParams(
+            tag_boost=settings.RETRIEVAL_RERANK_BOOST,
+            hardware_penalty=settings.RETRIEVAL_RERANK_HW_PENALTY,
+        )
+        if settings.RETRIEVAL_RERANK
+        else RerankParams()
+    )
+    # Ordering key per (asset, pattern); falls back to retrieval_score when absent.
+    sort_keys: dict[tuple[str, str], float] = {}
+
     log_step(
         logger,
         "INFO",
@@ -428,6 +443,7 @@ def fetch_candidates(
                     asset_id: str = query["asset_id"]  # type: ignore[index]
                     query_text: str = query["query_text"]  # type: ignore[index]
                     kb_sources: list[str] = query["kb_sources"]  # type: ignore[index]
+                    asset_tags: list[str] = list(query.get("asset_tags", []))  # type: ignore[arg-type]
 
                     if not query_text.strip():
                         raise MalformedAssetInputError(
@@ -455,10 +471,24 @@ def fetch_candidates(
                         ORDER  BY embedding <=> %s
                         LIMIT  %s;
                         """,
-                        (query_vec, kb_sources, query_vec, top_k * 2),
+                        (
+                            query_vec,
+                            kb_sources,
+                            query_vec,
+                            max(top_k * 2, settings.RETRIEVAL_POOL_SIZE)
+                            if not rerank_params.is_noop
+                            else top_k * 2,
+                        ),
                     )
 
                     rows = cur.fetchall()
+                    tagged = any(
+                        (json.loads(r[0]) if isinstance(r[0], str) else r[0]).get("domain_tags")
+                        for r in rows
+                    )
+                    use_rerank = tagged and not rerank_params.is_noop
+                    if not use_rerank:
+                        rows = rows[: top_k * 2]  # legacy behaviour, byte-for-byte
                     query_candidates: list[KBCandidate] = []
                     for row in rows:
                         meta_dict = row[0]
@@ -473,6 +503,13 @@ def fetch_candidates(
                             asset_id=asset_id,
                             retrieval_score=score,
                         )
+                        if use_rerank:
+                            sort_keys[(asset_id, candidate.pattern_id)] = rerank_score(
+                                similarity,
+                                asset_tags,
+                                meta_dict.get("domain_tags", []),
+                                rerank_params,
+                            )
                         query_candidates.append(candidate)
 
                     # Belt-and-suspenders source filter
@@ -503,7 +540,11 @@ def fetch_candidates(
 
         seen.setdefault(asset_id, set())
         deduped: list[KBCandidate] = []
-        for c in sorted(candidates, key=lambda x: x.retrieval_score, reverse=True):
+        for c in sorted(
+            candidates,
+            key=lambda x: sort_keys.get((x.asset_id, x.pattern_id), x.retrieval_score),
+            reverse=True,
+        ):
             if c.pattern_id not in seen[asset_id]:
                 seen[asset_id].add(c.pattern_id)
                 deduped.append(c)
@@ -513,7 +554,10 @@ def fetch_candidates(
         final.extend(deduped)
 
     # Global sort by score descending
-    final.sort(key=lambda c: c.retrieval_score, reverse=True)
+    final.sort(
+        key=lambda c: sort_keys.get((c.asset_id, c.pattern_id), c.retrieval_score),
+        reverse=True,
+    )
 
     log_step(
         logger,

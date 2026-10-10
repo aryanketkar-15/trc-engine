@@ -60,6 +60,7 @@ def main() -> None:
     from kb.scripts import build_index as bi
 
     entries = []
+    ics_entries: list = []
     for loader, path in [
         (CAPECXMLLoader(), args.full_dir / "capec_latest.xml"),
         (CWEXMLLoader(), args.full_dir / "cwec_latest.xml"),
@@ -68,8 +69,24 @@ def main() -> None:
         (STRIDELoader(), args.seed_dir / "stride_seed.json"),
     ]:
         loaded = loader.load(path)
+        if path.name == "ics-attack.json":
+            ics_entries.extend(loaded)
         print(f"  [LOAD] {loader.source}: {len(loaded)} from {path.name}", file=sys.stderr)
         entries.extend(loaded)
+
+    # Domain tags (deterministic keyword rules shared with query-time reranking).
+    from dataclasses import replace
+
+    from common.domain_tags import tags_for_text
+
+    ics_ids = {e.pattern_id for e in ics_entries}
+    tagged = []
+    for e in entries:
+        tags = set(tags_for_text(f"{e.title} {e.description}"))
+        if e.pattern_id in ics_ids:
+            tags.add("ics")
+        tagged.append(replace(e, domain_tags=sorted(tags)))
+    entries = tagged
 
     seen: set[tuple[str, str]] = set()
     unique = []
