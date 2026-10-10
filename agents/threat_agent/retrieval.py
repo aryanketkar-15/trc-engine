@@ -629,10 +629,41 @@ def fetch_candidates(
         "INFO",
         "fetch_end",
         plan.run_id,
-        {"total_candidates": len(final)},
+        {
+            "total_candidates": len(final),
+            "retrieved_patterns": {
+                a: [c.pattern_id for c in final if c.asset_id == a]
+                for a in dict.fromkeys(c.asset_id for c in final)
+            },
+        },
     )
 
     return final
+
+
+def kb_reference_exists(kb_reference: str) -> bool | None:
+    """Does ``kb_reference`` (e.g. 'CAPEC-94', 'T1078', 'ATT&CK-T1078') exist in the KB?
+
+    Source-agnostic, tolerant of the ``ATT&CK-`` prefix.  Returns ``None`` when the
+    KB cannot be reached, so callers can decide whether to block or to warn.
+    """
+    ref = kb_reference.strip()
+    variants = {ref, ref.upper()}
+    if not ref.upper().startswith(("ATT&CK-", "CAPEC-", "CWE-", "STRIDE-")):
+        variants.add(f"ATT&CK-{ref.upper()}")
+    if ref.upper().startswith("ATT&CK"):
+        variants.add("ATT&CK-" + ref.upper().replace("ATT&CK", "").strip(" -"))
+    try:
+        with get_db_connection() as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT EXISTS (SELECT 1 FROM threat_patterns WHERE pattern_id = ANY(%s));",
+                (sorted(variants),),
+            )
+            row = cur.fetchone()
+            return bool(row and row[0])
+    except Exception:
+        logger.warning("kb_reference_exists: KB unreachable for %s", kb_reference)
+        return None
 
 
 @lru_cache(maxsize=512)

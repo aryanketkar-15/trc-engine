@@ -345,6 +345,30 @@ class ThreatScenario(BaseModel):
         ),
     ]
 
+    use_case_id: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="Traceability: id of the use case this scenario was generated for.",
+        ),
+    ] = None
+
+    asset_version: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="Traceability: version of the asset record the scenario targets.",
+        ),
+    ] = None
+
+    kb_snapshot_version: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description="Traceability: KB snapshot version used for retrieval.",
+        ),
+    ] = None
+
     validation_status: Annotated[
         str | None,
         Field(
@@ -912,6 +936,14 @@ class AssetModel(BaseModel):
 
     # ── Threat-Agent-Specific Technical Metadata ─────────────────────────────
 
+    version: Annotated[
+        str,
+        Field(
+            default="1.0",
+            description="Version of this asset record (traceability, §3.4).",
+        ),
+    ] = "1.0"
+
     device_config: Annotated[
         dict[str, str],
         Field(
@@ -962,6 +994,17 @@ class ThreatAgentInput(BaseModel):
             ),
         ),
     ]
+
+    use_case_id: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description=(
+                "Optional stable use-case identifier from the orchestrator; "
+                "derived from the use_case text when absent."
+            ),
+        ),
+    ] = None
 
     use_case: Annotated[
         str,

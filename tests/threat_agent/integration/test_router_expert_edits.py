@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from fastapi import FastAPI
@@ -211,6 +212,24 @@ class TestExpertAdd:
         ids = [fc["check_id"] for fc in res.json()["detail"]["failed_checks"]]
         assert "CITATION_MISSING" in ids
         assert len(client.get(f"/threat-agent/{run_id}/scenarios").json()) == 2
+
+    def test_kb_reference_missing_from_kb_is_rejected(
+        self, client: TestClient, payload: dict[str, Any]
+    ) -> None:
+        run_id = _start(client, payload, "RUN-ADD-KB")
+        with patch("agents.threat_agent.router.kb_reference_exists", return_value=False):
+            res = client.post(f"/threat-agent/{run_id}/scenarios", json=_expert_body())
+        assert res.status_code == 422
+        assert "does not exist in the knowledge base" in res.json()["detail"]
+        assert len(client.get(f"/threat-agent/{run_id}/scenarios").json()) == 2
+
+    def test_kb_unreachable_does_not_block_the_expert(
+        self, client: TestClient, payload: dict[str, Any]
+    ) -> None:
+        run_id = _start(client, payload, "RUN-ADD-KB2")
+        with patch("agents.threat_agent.router.kb_reference_exists", return_value=None):
+            res = client.post(f"/threat-agent/{run_id}/scenarios", json=_expert_body())
+        assert res.status_code == 201
 
     def test_unknown_asset_is_rejected(self, client: TestClient, payload: dict[str, Any]) -> None:
         run_id = _start(client, payload, "RUN-ADD-3")
