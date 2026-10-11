@@ -70,6 +70,10 @@ def ok(msg: str) -> None:
     console.print(f"[green]ok[/green]  {msg}")
 
 
+def info(msg: str) -> None:
+    console.print(f"[cyan]..[/cyan]  {msg}")
+
+
 def warn(msg: str) -> None:
     console.print(f"[yellow]!![/yellow]  {msg}")
 
@@ -206,6 +210,16 @@ class Replay:
 # ---------------------------------------------------------------------- session
 
 
+def project_key(agent_input: Any) -> str:
+    """Stable id of a project (same rule the pipeline uses for use_case_id)."""
+    import hashlib
+
+    return str(
+        agent_input.use_case_id
+        or "UC-" + hashlib.sha256(agent_input.use_case.encode("utf-8")).hexdigest()[:8].upper()
+    )
+
+
 class Session:
     def __init__(
         self, agent_input: Any, mode: str, scrs_path: Path, max_paths: int, explain: bool = True
@@ -221,6 +235,9 @@ class Session:
         self.candidates: list[Any] = []
         self.paths: dict[str, Any] = {}
         self.scenarios: list[Any] = []
+        self.previous: list[Any] = []
+        self.skip: set[tuple[str, str]] = set()
+        self.load_previous()
 
     # -- generation -------------------------------------------------------
     def _generate(self, paths: list[Any], feedback: list[str] | None = None) -> list[Any]:
@@ -234,6 +251,23 @@ class Session:
                 self.agent_input, paths=paths, initial_failure_details=feedback
             )
         return list(scenarios)
+
+    def load_previous(self) -> None:
+        """Approved scenarios of this project saved by earlier runs (kept, never re-reviewed)."""
+        from agents.threat_agent.schemas import ThreatScenario
+
+        key = project_key(self.agent_input)
+        found = []
+        for raw in self.sm.get_threat_scenarios().values():
+            try:
+                sc = ThreatScenario.model_validate(raw)
+            except Exception:  # noqa: S112
+                continue
+            if sc.use_case_id == key and str(sc.status) in {"approved", "ThreatStatus.APPROVED"}:
+                found.append(sc)
+        found.sort(key=lambda x: x.created_at)
+        self.previous = found
+        self.skip = {(x.asset_id, x.kb_reference) for x in found}
 
     # -- helpers used to explain what the agent did ---------------------------------
     def score_of(self, s: Any) -> float | None:
@@ -359,6 +393,19 @@ class Session:
             paths = build_paths(self.candidates, ai)
         except NotImplementedError:
             paths = [build_single_step_path(c) for c in self.candidates]
+        if self.skip:
+            before = len(paths)
+            paths = [
+                p
+                for p in paths
+                if (p.target_asset_ids[0] if p.target_asset_ids else "?", p.steps[0].pattern_id)
+                not in self.skip
+            ]
+            if before != len(paths):
+                info(
+                    f"{before - len(paths)} patterns already approved in earlier runs are skipped, "
+                    "so you only review new proposals"
+                )
         per_asset: dict[str, list[Any]] = {}
         for p in sorted(paths, key=lambda x: -x.chain_confidence):
             per_asset.setdefault(p.target_asset_ids[0] if p.target_asset_ids else "?", []).append(p)
@@ -535,6 +582,44 @@ def show_summary_table(scenarios: list[Any]) -> None:
     console.print(t)
 
 
+def approved_table(rows: list[tuple[Any, str]], title: str) -> None:
+    t = Table(box=box.SIMPLE_HEAD, header_style="bold", title=title)
+    t.add_column("#", justify="right")
+    t.add_column("Asset")
+    t.add_column("STRIDE")
+    t.add_column("Pattern")
+    t.add_column("From", no_wrap=True)
+    t.add_column("Attack", no_wrap=True, overflow="ellipsis", max_width=44)
+    for i, (sc, origin) in enumerate(rows, 1):
+        t.add_row(
+            str(i),
+            sc.asset_id,
+            stride_name(sc.stride_category),
+            sc.kb_reference,
+            origin,
+            sc.attack_vector,
+        )
+    console.print(t)
+
+
+def origin_of(sc: Any, current_run: str) -> str:
+    who = "expert" if sc.tid.startswith("THR-EXP") else "AI"
+    when = "new" if sc.run_id == current_run else "earlier"
+    return f"{who} ({when})"
+
+
+def show_previous(session: Session) -> None:
+    if not session.previous:
+        return
+    run = session.agent_input.run_id
+    console.print()
+    approved_table(
+        [(sc, origin_of(sc, run)) for sc in session.previous],
+        f"Already approved for this project ({len(session.previous)}), kept from earlier runs",
+    )
+    console.print("These stay in the shared state. New proposals below are in addition to them.\n")
+
+
 # ----------------------------------------------------------------------- review
 
 
@@ -690,7 +775,7 @@ def review_all(session: Session, auto: bool) -> tuple[list[Any], dict[str, int]]
         i += 1
     if (
         not auto
-        and counts
+        and (counts or session.previous)
         and Prompt.ask("\nAdd a scenario of your own? (y/n)", default="n", show_default=False)
         == "y"
     ):
@@ -711,13 +796,25 @@ def write_results(
     from agents.threat_agent.schemas import ThreatStatus
 
     if not approved:
-        warn("Nothing approved, so nothing was written to the shared state.")
+        warn("Nothing new was approved, so nothing was added to the shared state.")
+        if session.previous:
+            ok(f"{len(session.previous)} earlier approved scenarios are still saved")
         return
     final = [s.model_copy(update={"status": ThreatStatus.APPROVED}) for s in approved]
     n = session.sm.commit_approved_run(session.agent_input.run_id, final)
     log = session.sm.get_audit_log()
     actions = Counter(e.action for e in log)
-    ok(f"{n} approved scenarios written to {scrs_path.relative_to(_ROOT)}")
+    ok(f"{n} newly approved scenarios written to {scrs_path.relative_to(_ROOT)}")
+    run = session.agent_input.run_id
+    everything = [(sc, origin_of(sc, run)) for sc in session.previous] + [
+        (sc, origin_of(sc, run)) for sc in approved
+    ]
+    console.print()
+    approved_table(
+        everything,
+        f"All approved scenarios for this project now saved ({len(everything)})",
+    )
+    console.print("Run the project again to continue from here; use --fresh to start clean.")
     console.print(
         "    audit log: "
         + ", ".join(
@@ -731,7 +828,8 @@ def write_results(
             {
                 "run_id": session.agent_input.run_id,
                 "mode": session.mode,
-                "approved": [s.model_dump(mode="json") for s in approved],
+                "approved_this_run": [s.model_dump(mode="json") for s in approved],
+                "approved_total": len(session.previous) + len(approved),
                 "audit_counts": dict(actions),
             },
             indent=2,
@@ -754,8 +852,9 @@ def run_once(args: argparse.Namespace, settings: Any) -> bool:
     if mode == "replay" and folder not in REPLAY_PROJECTS:
         sys.exit("No recorded output for this project; use --mode live.")
 
-    shutil.rmtree(OUT_DIR, ignore_errors=True)
-    OUT_DIR.mkdir(parents=True)
+    if args.fresh or args.auto:
+        shutil.rmtree(OUT_DIR, ignore_errors=True)
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
     scrs_path, report_path = OUT_DIR / "SCRS_demo.json", OUT_DIR / "run_report.json"
 
     db = settings.DATABASE_URL.rsplit("/", 1)[-1].split("?")[0]
@@ -766,13 +865,17 @@ def run_once(args: argparse.Namespace, settings: Any) -> bool:
     )
 
     session = Session(agent_input, mode, scrs_path, args.max_paths, not args.quiet)
+    show_previous(session)
     session.run_pipeline()
-    if not session.scenarios:
+    if not session.scenarios and not session.previous:
         err("No scenarios were produced.")
         return False
+    if not session.scenarios:
+        warn("No new proposals: every retrieved pattern is already approved for this project.")
 
     console.print()
-    show_summary_table(session.scenarios)
+    if session.scenarios:
+        show_summary_table(session.scenarios)
     if args.quiet:
         console.print("Review each scenario. Nothing is saved until you approve it.\n")
     else:
@@ -808,6 +911,11 @@ def main() -> None:
     parser.add_argument("--auto", action="store_true", help="scripted answers for rehearsal")
     parser.add_argument(
         "--max-paths", type=int, default=6, help="scenarios to generate (default 6)"
+    )
+    parser.add_argument(
+        "--fresh",
+        action="store_true",
+        help="start clean: forget scenarios approved in earlier runs",
     )
     parser.add_argument("--quiet", action="store_true", help="short output without explanations")
     parser.add_argument("--verbose", action="store_true", help="show internal JSON logs")

@@ -273,7 +273,15 @@ After the last scenario: **"Add a scenario of your own?"** lets the expert add a
 It must use a real asset, a valid STRIDE type and a pattern ID that **really exists in the library**,
 and it passes the same checks as AI output.
 
-### Screen 10: the end
+### Screen 10: the end (and what happens next time)
+
+**The shared state is remembered between runs.** If you run the same project again, the first thing
+you see is **"Already approved for this project (N), kept from earlier runs"** (including scenarios an
+expert added). The agent skips patterns that are already approved, so you only review *new* proposals,
+and at the end it shows **everything approved so far** (marked "earlier" or "new"). This is how an
+expert can continue the work over several sessions. `--fresh` starts clean (the scripted `--auto`
+rehearsal always starts clean).
+
 
 ```
 Review finished: 5 approved, 1 discarded

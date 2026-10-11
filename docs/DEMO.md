@@ -44,6 +44,14 @@ generate, check, your review); add `--quiet` for short output.
 After the last scenario you may add an expert scenario of your own (validated, and its pattern id is
 checked against the knowledge base). Approved scenarios are then written to the SCRS.
 
+## Your work is remembered between runs
+
+Approved scenarios (including the ones you add yourself) are saved in `demo_output/SCRS_demo.json`.
+When you run the same project again, the CLI first shows **"Already approved for this project"**,
+skips patterns you already approved so you only review new proposals, and at the end shows **all**
+approved scenarios (earlier + new). Use `--fresh` to start clean. `--auto` (the scripted rehearsal)
+always starts clean.
+
 ## Notes
 
 * Scenarios marked `flagged` failed an automatic check after the retries; they are shown on purpose.
