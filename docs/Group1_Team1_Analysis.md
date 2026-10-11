@@ -42,8 +42,8 @@ the latest branch before relying on any of it.
 1. **Contracts are never enforced.** No application code calls `model_validate` on agent output;
    artefacts are stored as raw dicts. Proof: their own placeholder asset output **fails their own
    `AssetTable` schema** (missing the required `source`; it uses `source_entity`/`source_diagram`),
-   and the placeholder use-case output fails `UseCaseRecord` (missing `product_description`, `actor`
-   is a stub...). When real agents arrive, nothing guarantees they match the schema unless validation is added.
+   and the placeholder use-case output fails `UseCaseRecord` (2 required fields missing, starting with `product_description`).
+   When real agents arrive, nothing guarantees they match the schema unless validation is added.
 2. **Authentication is not enforced.** `approve_step(approved_by="any string")`: the human checkpoint
    is unverifiable today (their own finding R-13).
 3. **LangGraph is pinned but never used** (open decision R-28); SRS and code disagree.
