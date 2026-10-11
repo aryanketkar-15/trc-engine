@@ -1,160 +1,191 @@
-# Analysis of Team 1's repository (`ai-threat-modelling-main.zip`)
+# Analysis of Team 1's work (five branch zips)
 
-*Reviewed read-only from the zip; nothing of theirs was run, only their Pydantic schema files were
-imported in an isolated process to test them. Their own documents are dated up to 22 Aug 2026.*
+*Read-only review of: `fix-environment-and-config-hardening`, `feature-phase1-4-hardening`,
+`feature-phase5-grounded-elicitation`, `feature-phase6-live-modelling`, `feature-phase7-asset-agent`.
+Nothing of theirs was run. Their documents are dated up to 11 Oct 2026.*
 
-## 1. The headline finding
+## 0. Correction to my earlier review
 
-**The zip does not contain the three finished agents.** It contains Team 1's *infrastructure*
-(Phases 1-4 of their ten-phase plan). The agent folder is empty and all three agents are placeholders:
+My first review looked at one earlier zip (`ai-threat-modelling-main`, the Phase 1-4 snapshot). It is
+byte-identical to the `fix-environment-and-config-hardening` branch, and it really did have empty agents.
+**The Phase 7 branch changes the answer: Team 1 now has all their agents implemented** (Item-Definition,
+Use-Case, Modelling, Asset) plus a security knowledge base, an API and tests. You were right.
 
-| Component | What is in the zip | Evidence |
+## 1. How the five zips relate
+
+```
+feature/phase1-4-hardening  (R-01..R-32 fixes from their code review)
+        └─ fix/environment-and-config-hardening   (= the earlier "main" zip: stricter SECRET_KEY guard, bcrypt pin)
+              └─ feature/phase5-grounded-elicitation   Item Definition + Use-Case agents, clarification loop, API
+                    └─ feature/phase6-live-modelling    Modelling Agent, structured system model, 4 diagrams
+                          └─ feature/phase7-asset-agent    Asset Agent, §2.4 asset table, security KB   <- latest
+```
+
+Each branch contains the previous ones, so **the Phase 7 zip is the only one that matters for integration**;
+the other four are earlier states. Size of the Phase 7 branch: about 17,900 lines of application code
+(9,450 in `app/agents`), about 8,450 lines of tests, about 29,000 words of documentation.
+
+| Branch | What it adds | Their verification |
 |---|---|---|
-| Use-Case Agent | **Not built** (placeholder) | `app/agents/__init__.py` is 0 bytes; `orchestrator.py` calls `_stub_usecase_output()` |
-| Modelling Agent | **Not built** (placeholder) | `_stub_modelling_output()` returns a one-line fake diagram |
-| Asset Agent | **Not built** (placeholder) | `_stub_asset_output()` returns one fake asset `AS-STUB` |
-| Knowledge base layer | **Not built** | `app/knowledge_base/` is empty; their review calls it "absent" (S-02) |
-| API routes | **Not built** | `app/api/` empty; `main.py` only has health endpoints, routers are commented out |
-| Their status text | | README: "Phase 5 in progress"; `PROJECT_CONTEXT.md`: "Phase 5 — Not started" |
+| hardening | Fixes for 32 review findings: reload bugs, versioning, hash-chained audit log + DB trigger, redaction, timeouts, JSONB, indexes, Alembic, CI | phases 1-4: 5/5, 8/8, 7/7, 12/12 |
+| envfix | Production guard rejects every documented placeholder `SECRET_KEY` and keys shorter than 32; `bcrypt` pinned | same |
+| phase 5 | Item definition split from use case (own table, own gate); `PipelineStep` renumbered into blocks of ten; **grounded elicitation** (the model may only keep what the text supports; gaps become questions); `/api/v1/sessions` endpoints; JWT roles | 22/22; live 25-26/29 (not green) |
+| phase 6 | **Modelling Agent**: structured system model (entities, flows with payload/protocol/controls, trust boundaries with membership, store C/I/A ratings, provenance), four Mermaid diagrams drawn by code from the model | 29/29; live 31/31 |
+| phase 7 | **Asset Agent** (§2.4 table) and a **security knowledge base** (official, pinned, hashed ATT&CK 19.2 + CAPEC 3.9); citation validation | 43/43; live 50/50 |
 
-So the claim "all three agents are done" is **not supported by this zip**. Either there is a newer
-branch (their notes mention `feature/usecase-agent`) or the agents are still to come. Ask Team 1 for
-the latest branch before relying on any of it.
+## 2. The pipeline they built
 
-## 2. What is actually built (and built well)
+```
+INITIALISED
+ -> item definition (§2.1) -> human approves -> use case (§2.2) -> approves
+ -> system model + 4 diagrams (§2.3) -> approves -> asset table (§2.4) -> approves = ASSET_DONE
+                                                                        -> Team 2: get_latest_asset_for_session()
+```
 
-| Area | What it does | Quality notes |
+Design idea that runs through everything (decisions D1-D41 in their `PROJECT_CONTEXT.md`):
+**the model only reads language; code decides what is required, missing, a duplicate or a conflict, and
+nothing is ever invented.** Anything the input does not support becomes an *open question* put to an
+engineer through `/clarify` and `/finalize`, instead of a default. Examples: an asset's C/I/A attribute exists
+only if the approved model states a rating or an engineer says it; Authenticity has no default anywhere;
+damage scenarios are stored verbatim from an engineer; severity and impact are never guessed.
+
+### Knowledge base (relevant to us)
+* Official files, URL + SHA-256 pinned: ATT&CK **19.2** (enterprise + mobile + ICS, 1,317 entries) and CAPEC
+  **3.9** (615). A hash mismatch or wrong version stops the import. Licence text stored. No fallback dataset.
+* Tables `kb_releases`, `kb_entries`, `kb_relationships` (only relationships the source states).
+* Retrieval is **lexical** (Postgres full text + IDF weighting in code), **no embeddings, pgvector not enabled**.
+* `KnowledgeBase.validate()` accepts a citation only if the entry exists, is active, is an attack description
+  and (for a model choice) was among the retrieved entries; revoked, deprecated, mitigation, invented IDs refused.
+* ISO and INTERNAL families are declared with **no data** (licensed ISO clause catalogue needed).
+
+## 3. What the final contract to us looks like (`AssetTable`)
+
+Retrieved with `crud.get_latest_asset_for_session()` (approved only). Per asset: `id` (stable AS-n),
+`name`, `location` (may be empty), `attributes` (accepted C/I/A/Auth only) + `attribute_evidence`,
+`is_message`, `authenticity_required`, `damage_scenarios` (engineer's words; severity/impact only if stated),
+`kb_citations` (validated, with release/URL/how chosen), `kb_candidates`, `source` (model element(s) or
+engineer, with paths back into the diagram set), `unresolved` (which facts the reviewer approved without),
+`confidence`. Table level: `usecase_id`, `diagram_id`, `diagram_version`, `excluded`, `kb_releases`.
+
+**Important change from the earlier version:** `kb_citation`, `attributes` and `damage_scenarios` are no
+longer mandatory. An asset can reach us with **no attributes, no damage scenario and no citation** if nobody
+stated them. Our adapter must treat an empty value as "unknown", not as an error.
+
+## 4. Assessment
+
+### Strengths
+1. **Engineering discipline.** Claim/produce/persist transactions with row locks, failure containment,
+   hash-chained audit log with a DB trigger, versioning with stored diffs, RBAC roles, Alembic migrations,
+   CI with a migration round trip.
+2. **No invention by design,** enforced in code and tested (soundness fixture vs accuracy fixture kept apart).
+3. **Honest measurement.** Accuracy on the SRS six assets: precision 1.00, coverage 0.67 from the model
+   alone and 1.00 with an engineer's answers; locations 0.81 mean; they list their own weak spots
+   (citation quality, Phase 5 live failures).
+4. **Good ground truth for us:** `tests/fixtures/csdl100/` holds the SRS door-lock data (item definition,
+   UC-01, assets AS-1..AS-6, DFD) and the SRS threat references (CAPEC-94/125, T1078, T1566, CAPEC-186,
+   CAPEC-117, CAPEC-189). The same data our evaluation uses.
+5. **Real-world runs:** six products they had not seen, end to end, 0 failures.
+
+### Weaknesses and risks
+1. **Nothing is merged.** Their notes say Phases 5-7 are unmerged into `main` and Phase 7 was "uncommitted at
+   the time of writing". The latest work exists only as branches/zips.
+2. **Phase 5 live tests are not green** (25/29: `out_scope` not extracted, templated actor fill 5/17). They
+   record it as unresolved and ask for a decision on the live thresholds or a stronger model.
+3. **Model quality and speed.** Everything was verified with **llama3 8B on CPU** (about 60 s per call,
+   about 2 min per asset draft, live suite 18.5 min). Their own reading of one run's 36 citations: about 16
+   apt, 10 loose, 10 wrong.
+4. **LLM client supports only Ollama and Azure** (`Literal["ollama","azure"]`), and their design rule 1
+   forbids agents from using vendor SDKs directly. Our OpenAI-compatible access (OpenRouter/Groq) does not fit
+   without a new provider.
+5. **Lexical retrieval only,** so a concept worded differently from the catalogue is missed (they say so).
+6. **Heavy human-in-the-loop load.** Each gate is an interactive question/answer round; unanswered facts stay
+   open. Real tables will often contain assets with `unresolved` facts, which weakens our inputs.
+7. **Auth is "enforced but not armed":** roles are checked, but `auth_enabled=false`, no user store, and the
+   dev principal is ADMIN.
+8. **LangGraph still pinned and unused** (decision pending before final integration).
+9. **One use case per session;** Python 3.11 only; SQLAlchemy + psycopg2 stack.
+10. **The Team 2 hooks do not exist yet:** only the enum values `THREAT_PENDING=10`, `THREAT_DONE=11` and the
+    text "unlocks Team 2 - Threat Agent"; `crud.py` has no functions for `threat_artefacts` /
+    `risk_artefacts` / `compliance_artefacts`.
+
+## 5. Integration with our Threat Agent
+
+### 5.1 Mapping `AssetTable` (+ `DiagramSet`, `UseCaseRecord`) -> our `ThreatAgentInput`
+
+| Our field | Their source | Notes |
 |---|---|---|
-| **Orchestrator** (`orchestrator.py`, 853 lines) | Controls the pipeline for one session: gate -> run agent -> human approve/reject. Claim/produce/persist transaction model with a row lock | Careful design: no DB lock during the slow LLM call; failed runs are recoverable; concurrent callers are blocked |
-| **State machine** (`state.py`) | `PipelineStep` 0-18 for all three teams; per-agent state; gates (`can_run_*`) | Clear; but see numbering warning in section 5 |
-| **Database** (`models.py`, Alembic `0001`) | 11 tables: sessions, use-case / diagram / asset artefacts (Team 1), **threat / risk / compliance artefacts (Team 2, ours)**, requirement / trace / consistency (Team 3), audit log | Shared `ArtefactMixin`: version, `parent_version_id`, diff, approval + rejection columns, confidence, JSONB payload, indexes, UTC times |
-| **Audit log** | Hash-chained (SHA-256, per session) **plus a database trigger rejecting UPDATE/DELETE**; `verify_audit_chain()` | Stronger than our JSON audit file |
-| **Versioning** | Re-run after rejection = version N+1 with a stored diff; approved content never overwritten | Matches company "non-overwrite" rule |
-| **LLM boundary** (`llm_client.py`) | One entry point; redaction before the call; timeouts; retries; JSON recovery with one repair round-trip; audit metadata (prompt SHA-256 + preview, not full prompt) | Providers: **Ollama and Azure OpenAI only** |
-| **Privacy** (`privacy.py`) | Secrets (keys, JWT, bearer, private keys, connection strings, `password=`) + PII (email, phone, card, Aadhaar) | Deliberately does **not** mask IP addresses or protocol versions |
-| **Security** (`security.py`) | JWT, roles (analyst / expert reviewer / admin / read-only), `Principal` | Written but **not enforced anywhere yet** (no endpoints, `AUTH_ENABLED=false`) |
-| **Schemas** | `UseCaseRecord`, `DiagramSet` (entities, flows, trust boundaries), `AssetTable` | Thoughtful (see 4) |
-| **Tests / CI** | `test_phase1-4.py` (5 + 8 + 7 + 12 checks), GitHub Actions with Postgres + Redis | CI runs only phases 3-4 (no model runner); tests use the dev database |
-| **Docker** | Postgres (`pgvector/pgvector:pg16`, container `threat_postgres`, port 5432, DB `threat_modelling`), Redis, multi-stage Dockerfile | Same Postgres image as ours |
+| `run_id` | `session_id` + table version | |
+| `use_case_id` | `AssetTable.usecase_id` | |
+| `use_case` (text) | approved `UseCaseRecord` title/product/actor/flow + item definition | second lookup |
+| `system_model` (text) | approved `DiagramSet` summary (entities, flows, boundaries) | third lookup |
+| asset `asset_id`, `name`, `location` | `id`, `name`, `location` | location may be `''` |
+| `security_attributes` | `attributes` (accepted C/I/A/Auth) -> four booleans | all false = unknown |
+| `damage_scenario` | `damage_scenarios[].scenario` joined | may be empty |
+| `asset_type` | `source.element_type` (data_store / flow / payload / process / external_entity) or `engineer` | derive |
+| `dfd_context.trust_zone` | `source.element_id` -> `DiagramSet.entities[].trust_boundary` -> `trust_boundaries[].name`; for a flow `from_boundary`/`to_boundary` | derivable |
+| `dfd_context.interfaces` | flows touching the element: `protocol`; item-definition interfaces | derivable |
+| `dfd_context.data_flows` | flow names + `payload_fields` | derivable |
+| `device_config` | store `sensitivity` ratings, flow `security_controls`, `authenticity_required`, `is_message` | derivable |
 
-## 3. Problems and risks found in their code
+**So the four fields we asked Team 1 for are already in their data, in the `DiagramSet`.** Team 1 does not have
+to add them to the asset table; our adapter reads the approved diagram set. Assets named only by an
+engineer (`source.kind = engineer`, e.g. the SRS AS-5 user PII) have no diagram element, so they reach us with
+location text only; the adapter must mark them "low context".
 
-1. **Contracts are never enforced.** No application code calls `model_validate` on agent output;
-   artefacts are stored as raw dicts. Proof: their own placeholder asset output **fails their own
-   `AssetTable` schema** (missing the required `source`; it uses `source_entity`/`source_diagram`),
-   and the placeholder use-case output fails `UseCaseRecord` (2 required fields missing, starting with `product_description`).
-   When real agents arrive, nothing guarantees they match the schema unless validation is added.
-2. **Authentication is not enforced.** `approve_step(approved_by="any string")`: the human checkpoint
-   is unverifiable today (their own finding R-13).
-3. **LangGraph is pinned but never used** (open decision R-28); SRS and code disagree.
-4. **The 4 diagrams cannot be produced yet** and the DFD reference has inconsistencies (F8 labelled
-   twice, P3 drawn twice) that Team 1 still has to confirm with their lead.
-5. **Planned renumbering of `PipelineStep`.** Today Team 2 = steps 7-12. Their context file plans to
-   renumber (Team 1 = 0-9, Team 2 = 10-19, Team 3 = 20-29). Anything of ours that hard-codes 7/8 will break.
-6. **Python pinned to 3.11 (not 3.12+)**; ours runs on 3.13/3.14 locally. `fastapi`, `pydantic`
-   pins nearly match ours; but they use SQLAlchemy + `psycopg2`, we use `psycopg` 3.
-7. **Local dev model is Llama 3 through Ollama**; structured-JSON reliability of a small local model is
-   a risk for Phases 5-7 (they know it and added JSON repair).
-8. **No evaluation harness yet** for their ">90% asset coverage" KPI (their S-08).
+### 5.2 Their handling of unknowns vs our pipeline
+Our rerank uses `implied_stride(attributes)`; with no accepted attributes it returns nothing. The adapter
+should fall back to "all six STRIDE types" (or by `is_message`/store) and flag the scenarios as low-evidence.
+Our grounding check requires the exposure to share words with the asset vocabulary; the adapter should
+include `location` and the diagram element names in that vocabulary.
 
-None of these is a flaw in what exists: the infrastructure is solid. The risk is that the *agents on
-top of it are still to be written*.
+### 5.3 Work needed (ordered)
 
-## 4. The hand-off contract to us: `AssetTable`
-
-Producer: Asset Agent. Consumer: **our Threat Agent**, via `crud.get_latest_asset_for_session(db, session_id)`
-(returns the newest **approved** asset artefact).
-
-`AssetTable`: `session_id`, `usecase_id`, `diagram_version`, `assets[]`, confidence, versioning, approval.
-
-`SecurityAsset`: `id` (AS-n), `name`, `location`, `description`, `attributes` (C / I / A / Auth),
-`damage_scenarios[]` (violated attribute, scenario text, severity Negligible/Moderate/Major/Severe,
-impact categories Safety/Financial/Operational/Privacy), **mandatory `kb_citation`** (CAPEC / ATT&CK /
-ISO-21434 / STRIDE), `source` (entity / flow / usecase / knowledge_base, with element id and rationale),
-`confidence`, `needs_review`, `ai_rationale`.
-
-### 4.1 Mapping to our `ThreatAgentInput`
-
-| Our field | Source in Team 1's data | Status |
+| # | Work | Owner |
 |---|---|---|
-| `run_id` | `session_id` (+ version) | OK |
-| `use_case_id` | `AssetTable.usecase_id` | OK |
-| `use_case` (text) | `UseCaseRecord` title + product description + flows (the approved use-case artefact) | OK, needs a second lookup |
-| `system_model` (text) | `DiagramSet` summary (entities, flows, boundaries) | OK, needs a third lookup |
-| asset `asset_id`, `name`, `location` | `id`, `name`, `location` | direct |
-| `security_attributes` | `attributes` C/I/A/Auth -> four booleans | direct |
-| `damage_scenario` | `damage_scenarios[]` joined | direct |
-| `asset_type` | not present | derive from `source.kind` + element type (process / store / flow), else "unspecified" |
-| `dfd_context.trust_zone` | not on the asset | **derivable**: `source.element_id` -> `DiagramSet.entities[].trust_boundary` -> `trust_boundaries[].name` |
-| `dfd_context.interfaces` | not on the asset | **derivable** from `DiagramSet.data_flows` touching that element (protocol) |
-| `dfd_context.data_flows` | not on the asset | **derivable** from the same flows (names / payload fields) |
-| `device_config` | not on the asset | **partly derivable**: flow `security_controls`, store `sensitivity` |
+| 1 | Adapter `AssetTable + DiagramSet + UseCaseRecord -> ThreatAgentInput`, tested on their CSDL-100 fixtures | us |
+| 2 | `crud` functions for `ThreatArtefact` (create / get_current / approve / reject / version) | us (in their repo, PR) |
+| 3 | Orchestrator step `threat`: `_StepConfig`, state fields, gate (needs `ASSET_DONE` + approved asset), reference steps **by name** (numbers were already renumbered once) | us + Team 1 |
+| 4 | LLM: add an OpenAI-compatible provider (OpenRouter/Groq) to `llm_client.py`, or route our generator through `call_llm_for_json_with_meta` | us + Team 1 |
+| 5 | Record **who** approved/rejected in our flow (authenticated `Principal`); our audit log has no actor | us |
+| 6 | Write scenarios to `threat_artefacts` + the hash-chained audit log instead of our JSON "SCRS" | us |
+| 7 | Decide ONE knowledge base: theirs (pinned, hashed, validated, lexical) vs ours (embeddings, CWE, STRIDE, standards chunks) or a merge: their `KnowledgeBase.validate()` for citation checks and our embedding search for retrieval | both |
+| 8 | Redaction policy: they deliberately do **not** mask IPs/protocol versions, we do; agree one policy | both |
+| 9 | One environment for the integrated demo (their Postgres `threat_modelling` on 5432 vs our `trc_engine_fullkb` on 5433; SQLAlchemy+psycopg2 vs psycopg3; Python 3.11) | both |
 
-**Important consequence:** the four fields we asked Team 1 for do **not** need to be added to their
-asset table. They can be built from the `DiagramSet` they already model, **but only when
-`source.element_id` points to a diagram element**. Assets with `source.kind = usecase` or
-`knowledge_base` (the SRS example's AS-4 audit log and AS-5 user PII are exactly like this, per their
-own review S-12) have no diagram element, so those assets will reach us with weak context and search
-quality will drop for them. We need fallbacks (use the location text and the use-case text) and should
-mark such assets "low context".
+### 5.4 Knowledge-base comparison
 
-Also useful for Phase 2: their `damage_scenarios[].impact_categories` and `severity` map directly onto
-the Risk Agent's S/F/O/P impact axes. Note their scale has **Major**, while the company's §2.6 examples only
-print Negligible / Moderate / Severe (their own docs flag this).
-
-## 5. How our Threat Agent plugs into their pipeline
-
-What their design already provides for us: the tables `threat_artefacts` (and risk / compliance) with the
-same version/approval/audit spine, the gate concept, the hand-off function, an audit chain, auth roles.
-
-What is missing and must be added (by Team 2 = us, in agreement with Team 1, who do the final integration):
-
-| # | Work | Why |
+| | Theirs | Ours |
 |---|---|---|
-| 1 | CRUD for `ThreatArtefact` (create / get_current / approve / reject / version): **only usecase / diagram / asset exist** | no functions exist for Team 2 tables |
-| 2 | Orchestrator step `"threat"`: `_StepConfig`, state fields (`threat_state`, `threat_content`), gate `can_run_threat_agent()` (needs `ASSET_DONE` + approved asset), `PipelineStep` name-based references (not numbers) | gate and step do not exist |
-| 3 | An adapter `AssetTable (+UseCaseRecord, DiagramSet) -> ThreatAgentInput` (table in 4.1) | different shapes |
-| 4 | LLM calls through **their** `call_llm_for_json_with_meta`, or add an OpenAI-compatible provider (OpenRouter / Groq) to their client: today it supports only Ollama and Azure, and their design rule 1 forbids agents calling vendor SDKs directly | our generator currently uses its own OpenAI-SDK client |
-| 5 | Record **who** approved/rejected: our audit log has no actor field; theirs does (authenticated `Principal`) | CRA accountability |
-| 6 | Replace our JSON "SCRS" file by their `threat_artefacts` + hash-chained `audit_log` | one source of truth; tamper-evidence |
-| 7 | Redaction alignment: we mask IP addresses; they deliberately do not (IPs are architecture facts a threat model needs) | agree one policy, else we blur useful facts |
-| 8 | Share our knowledge base with them: their Asset Agent needs a `kb_citation` for every asset and their knowledge-base layer (S-02) is empty | we already have 2,300 patterns + pgvector search |
-| 9 | Merge the databases/environments: separate stacks today (`threat_postgres:5432/threat_modelling` vs ours `trc-postgres:5433`), SQLAlchemy+Alembic vs raw psycopg3, dependency pins | one stack for integration |
+| Sources | ATT&CK 19.2 (3 domains), CAPEC 3.9 | CAPEC, ATT&CK (enterprise + ICS), CWE, STRIDE seed, CC/CEM/JIL/CRA text |
+| Size | 1,317 + 615 entries (incl. mitigations, tactics, deprecated/revoked) | 2,300 patterns + 5,097 standards chunks |
+| Search | Postgres full text + IDF | sentence embeddings (MiniLM, pgvector) + domain-tag rerank |
+| Integrity | SHA-256 pinned releases, version checks, licences stored | files downloaded, MITRE notices stored; no hash pinning |
+| Citation validation | exists + active + attack description + among retrieved | cited pattern must be among the retrieved ones; existence check for expert adds |
+| Relationships | stated CAPEC<->ATT&CK<->CWE links stored | not stored |
 
-**Numbering warning:** reference steps by name (`PipelineStep.THREAT_PENDING`), never by number: the
-numbers are planned to change.
+They complement each other: ours adds semantic search, CWE and standards text; theirs adds provenance,
+pinning, relationship data and stricter validation.
 
-## 6. Where we are ahead / behind
+## 6. Questions for Team 1
 
-| | Team 1 (infrastructure) | Us (Threat Agent) |
-|---|---|---|
-| Working agents | 0 of 3 (placeholders) | 1 of 1 (Threat Agent end to end) |
-| Knowledge base | empty | 2,300 patterns + 5,097 standards chunks, benchmarked |
-| Audit integrity | hash chain + DB trigger | JSON file, not tamper-evident, no actor |
-| Auth / roles | written, not enforced | static API key |
-| Versioning + diff | in DB, tested | revision history in JSON |
-| Concurrency | row locks, tested | atomic status changes in the run store |
-| Schema enforcement | defined, not enforced | enforced by Pydantic at every boundary |
-| Redaction | broader secret/PII set | masks IPs, fewer secret types (our secret masking was extended) |
+1. Which branch is the current baseline, and when will phases 5-7 be merged into `main`?
+2. Can we get a **sample approved session export** (`AssetTable`, `DiagramSet`, `UseCaseRecord` JSON) for the
+   CSDL-100 so we can test the adapter on real artefacts?
+3. Agree the adapter approach: we read the `DiagramSet` for trust zone / interfaces / flows. OK?
+4. May we add an OpenAI-compatible provider to `llm_client.py`? Which model will the integrated system use?
+5. Who writes `ThreatArtefact` CRUD and the orchestrator `threat` step: us, in a PR?
+6. Will `auth_enabled` be armed for the integrated demo, so approvals carry a real identity?
+7. Shall we share one knowledge base (merge ours into their `kb_*` tables, or use their `validate()`)?
+8. Policy on masking IP addresses and protocol versions?
+9. How are unresolved asset facts meant to be shown to the Threat Agent (`unresolved` list), and are
+   assets with no attributes acceptable inputs?
+10. Confirmation of CAPEC-189 vs CAPEC-622 for the SRS T6 row: their fixture also lists CAPEC-189.
 
-## 7. Questions to raise with Team 1
+## 7. Suggested next steps for us
 
-1. Is there a newer branch with the Use-Case / Modelling / Asset agents? The zip stops at "Phase 5 not started".
-2. When will `AssetTable` + `DiagramSet` samples (even hand-written, e.g. the SRS door-lock six assets) be available so we can test the adapter?
-3. Will assets with `source.kind = usecase / knowledge_base` get any context (interfaces, trust zone)?
-4. Will `PipelineStep` be renumbered, and when? Can we reference steps by name only?
-5. Which LLM will be used in the integrated system, and can the OpenAI-compatible provider be added to `llm_client`?
-6. Will they enforce schema validation on agent output (their placeholders fail their own schemas)?
-7. Do they want our knowledge base as their Phase 6 knowledge-base layer?
-8. Who creates the CRUD and orchestrator step for `threat` - us (preferred, in a PR) or them?
-9. Authentication: will approvals carry an authenticated principal, and can we log it?
-10. One database for the integrated demo: `threat_modelling` on 5432?
-
-## 8. Suggested next steps for us (in order)
-
-1. Ask Team 1 the questions above, especially #1 and #2.
-2. Build the **adapter** against a hand-made `AssetTable` + `DiagramSet` for the SRS six assets (we can write it now using their schema files).
-3. Add `ThreatArtefact` CRUD and the orchestrator `threat` step in a branch of their repo.
-4. Route our LLM calls through their client (or add the provider).
-5. Add actor identity to our approvals and migrate the SCRS file to their audit chain.
-6. Then start Phase 2 (Risk Agent) on top of the same tables.
+1. Send the questions above, especially 2, 4 and 5.
+2. Build the adapter against the **CSDL-100 fixtures** in their repo (item definition, UC-01, assets, DFD).
+3. Evaluate our Threat Agent on the six SRS assets as Team 1 defines them (their IDs and wording).
+4. Branch in their repo: `ThreatArtefact` CRUD + `threat` step + provider.
+5. Then Phase 2 (Risk Agent) on the same tables; their `impact_categories` / severity fields feed it
+   (stated by an engineer only, never defaulted).
