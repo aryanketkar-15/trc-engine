@@ -1,0 +1,188 @@
+{
+  "$defs": {
+    "AssetModel": {
+      "description": "A single asset entry aligned with \u00a72.4 Asset Identification table.\n\nCombines the \u00a72.4 Asset Record fields (asset_id, name, asset_type,\nlocation, security_attributes, damage_scenario) with a DFDContext block\nsourced from \u00a72.3.1 and Threat-Agent-specific device_config metadata.\n\nasset_id format follows the \u00a72.4 convention: 'AS-{n}' (e.g. 'AS-1', 'AS-2').\nAn explicit id_alias field preserves any internal identifiers for audit.\n\nKept deliberately domain-neutral \u2014 fields apply equally to a Smart Door\nLock BLE controller, a medical infusion pump, and a vehicle ECU.",
+      "properties": {
+        "asset_id": {
+          "description": "Unique asset identifier following \u00a72.4 convention: 'AS-{n}', e.g. 'AS-1', 'AS-2'.  This is the join key for the Traceability Matrix linking Asset \u2192 Threat \u2192 Risk \u2192 Requirement.",
+          "minLength": 1,
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "name": {
+          "description": "Human-readable asset name (\u00a72.4).",
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "asset_type": {
+          "default": "unspecified",
+          "description": "Optional internal classification (not in \u00a72.4 baseline). e.g. 'firmware', 'REST API endpoint', 'BLE peripheral'.",
+          "title": "Asset Type",
+          "type": "string"
+        },
+        "location": {
+          "default": "unspecified",
+          "description": "Physical or logical location of the asset per \u00a72.4, e.g. 'on-device', 'cloud-hosted', 'edge-gateway', 'internal VLAN'.",
+          "title": "Location",
+          "type": "string"
+        },
+        "security_attributes": {
+          "$ref": "#/$defs/SecurityAttributes",
+          "description": "CIA-triad security properties required for this asset per \u00a72.4. Used by the Risk Agent's impact scoring (S/F/O/P) in Phase 2."
+        },
+        "damage_scenario": {
+          "default": "",
+          "description": "Human-readable worst-case damage scenario if this asset is compromised, per \u00a72.4.  Used by Risk Agent for impact scoring. e.g. 'Unauthorised physical entry to premises' or 'Incorrect drug dosage causing patient harm'.",
+          "title": "Damage Scenario",
+          "type": "string"
+        },
+        "dfd_context": {
+          "$ref": "#/$defs/DFDContext",
+          "description": "Data-Flow-Diagram context for this asset, sourced from \u00a72.3.1. retrieval.py reads interfaces and trust_zone from here to build FAISS query vectors and select KB sources."
+        },
+        "version": {
+          "default": "1.0",
+          "description": "Version of this asset record (traceability, \u00a73.4).",
+          "title": "Version",
+          "type": "string"
+        },
+        "device_config": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Threat-Agent-specific technical device configuration. Captures *what security mechanisms the asset has* (distinct from security_attributes which captures *what it needs to protect*). e.g. {'auth_mechanism': 'PIN-only', 'encryption': 'none', 'firmware_version': '2.3.1'}.  These are the primary inputs to retrieval.py's FAISS query embedding.",
+          "title": "Device Config",
+          "type": "object"
+        }
+      },
+      "required": [
+        "asset_id",
+        "name"
+      ],
+      "title": "AssetModel",
+      "type": "object"
+    },
+    "DFDContext": {
+      "description": "Data-Flow-Diagram context sourced from Group 1's \u00a72.3.1 output.\n\nSeparates DFD-level context (interfaces, trust zone, flows) from the\nAsset Identification table (\u00a72.4).  retrieval.py reads this to determine\nwhich KB sources to query and to build the FAISS query vector.",
+      "properties": {
+        "interfaces": {
+          "description": "Communication interfaces of this asset as extracted from the DFD, e.g. ['BLE 5.0', 'UART', 'OTA update channel'].",
+          "items": {
+            "type": "string"
+          },
+          "title": "Interfaces",
+          "type": "array"
+        },
+        "trust_zone": {
+          "default": "untrusted",
+          "description": "Trust boundary zone from the DFD, e.g. 'trusted', 'untrusted', 'DMZ', 'external', 'internal'.",
+          "title": "Trust Zone",
+          "type": "string"
+        },
+        "data_flows": {
+          "description": "Data flow names that involve this asset as a source or destination, e.g. ['unlock_command', 'ota_update'].",
+          "items": {
+            "type": "string"
+          },
+          "title": "Data Flows",
+          "type": "array"
+        }
+      },
+      "title": "DFDContext",
+      "type": "object"
+    },
+    "SecurityAttributes": {
+      "description": "CIA-triad security properties required for this asset per \u00a72.4.\n\nDistinct from device_config (which captures *what mechanisms the asset has*).\nThese fields capture *which security properties the asset needs to maintain*,\nand are used by the Risk Agent's impact scoring (S/F/O/P) in Phase 2.",
+      "properties": {
+        "confidentiality": {
+          "default": false,
+          "description": "Asset requires confidentiality protection (C).",
+          "title": "Confidentiality",
+          "type": "boolean"
+        },
+        "integrity": {
+          "default": false,
+          "description": "Asset requires integrity protection (I).",
+          "title": "Integrity",
+          "type": "boolean"
+        },
+        "availability": {
+          "default": false,
+          "description": "Asset requires availability protection (A).",
+          "title": "Availability",
+          "type": "boolean"
+        },
+        "authenticity": {
+          "default": false,
+          "description": "Asset requires authenticity / non-repudiation (Auth).",
+          "title": "Authenticity",
+          "type": "boolean"
+        }
+      },
+      "title": "SecurityAttributes",
+      "type": "object"
+    }
+  },
+  "description": "Top-level input payload sent by the orchestrator to the Threat Agent.\n\nAfter PII redaction (middleware.py), this is passed to perceive().\nMust not assume any domain \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00e2\u20ac\u00a1\u00c3\u0192\u00c2\u00b6 valid for Smart Door Lock, infusion pump,\nvehicle ECU, and any future fixture.",
+  "properties": {
+    "run_id": {
+      "description": "Unique identifier for this Threat Agent invocation.  Auto-generated if not supplied by the orchestrator.  Propagated to every ThreatScenario, log entry, and SCRS write record.",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "use_case_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional stable use-case identifier from the orchestrator; derived from the use_case text when absent.",
+      "title": "Use Case Id"
+    },
+    "use_case": {
+      "description": "Natural-language description of the system use case being threat-modelled.  Minimum 10 chars to reject trivially empty submissions; the LLM uses this as the top-level context.",
+      "minLength": 10,
+      "title": "Use Case",
+      "type": "string"
+    },
+    "system_model": {
+      "description": "Serialized system model (DFD/UML description, data flows, trust boundaries) as a string.  Structured formats (JSON/YAML) are accepted; perceive() normalises this into NormalizedInput.",
+      "minLength": 1,
+      "title": "System Model",
+      "type": "string"
+    },
+    "assets": {
+      "description": "Ordered list of assets within the system model.  Must contain at least one asset; retrieval.py iterates over this list to build FAISS query vectors.",
+      "items": {
+        "$ref": "#/$defs/AssetModel"
+      },
+      "minItems": 1,
+      "title": "Assets",
+      "type": "array"
+    },
+    "kb_snapshot_version": {
+      "default": "latest",
+      "description": "Version or content-hash of the KB snapshot to use.  Logged verbatim for reproducibility (Section 2.7).  Use 'latest' to resolve to the current KB at runtime.",
+      "title": "Kb Snapshot Version",
+      "type": "string"
+    },
+    "requested_at": {
+      "description": "UTC timestamp when the orchestrator submitted this input.",
+      "format": "date-time",
+      "title": "Requested At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "use_case",
+    "system_model",
+    "assets"
+  ],
+  "title": "ThreatAgentInput",
+  "type": "object"
+}

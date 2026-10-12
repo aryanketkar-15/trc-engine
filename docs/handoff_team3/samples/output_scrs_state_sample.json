@@ -1,0 +1,561 @@
+{
+  "threat_scenarios": {
+    "THR-PATH-B12751B2-022": {
+      "tid": "THR-PATH-B12751B2-022",
+      "asset_id": "AS-1",
+      "stride_category": "Spoofing",
+      "attack_vector": "Exploiting weak authentication to impersonate a legitimate user and send unlock commands.",
+      "kb_reference": "ATT&CK-T1021.007",
+      "evidence_chain": {
+        "exposure": "PIN-only authentication with no encryption",
+        "matched_pattern": "ATT&CK-T1021.007",
+        "applicability_reason": "The asset's weak PIN-only authentication and lack of encryption allow attackers to spoof user identity and send malicious commands via the Cloud API.",
+        "citation": "ATT&CK-T1021.007: Cloud Services"
+      },
+      "confidence_score": 0.7012816845606757,
+      "status": "approved",
+      "created_at": "2026-10-10T15:17:15.240450Z",
+      "run_id": "RUN-SDL-E2E-001",
+      "use_case_id": "UC-6E516A54",
+      "asset_version": "1.0",
+      "kb_snapshot_version": "latest",
+      "validation_status": "passed"
+    },
+    "THR-PATH-9DE0C2D5-023": {
+      "tid": "THR-PATH-9DE0C2D5-023",
+      "asset_id": "AS-1",
+      "stride_category": "Spoofing",
+      "attack_vector": "Impersonation of a legitimate BLE device to send unlock commands.",
+      "kb_reference": "STRIDE-S-001",
+      "evidence_chain": {
+        "exposure": "BLE 5.0 and unauthenticated pairing",
+        "matched_pattern": "STRIDE-S-001",
+        "applicability_reason": "The unlock command relies on BLE with no cryptographic pairing, making it vulnerable to impersonation.",
+        "citation": "STRIDE-S-001: Spoofing Identity via BLE Device Impersonation"
+      },
+      "confidence_score": 0.7007558822181299,
+      "status": "approved",
+      "created_at": "2026-10-10T15:19:05.088043Z",
+      "run_id": "RUN-SDL-E2E-001",
+      "use_case_id": "UC-6E516A54",
+      "asset_version": "1.0",
+      "kb_snapshot_version": "latest",
+      "validation_status": "passed"
+    },
+    "THR-PATH-05064984-037": {
+      "tid": "THR-PATH-05064984-037",
+      "asset_id": "AS-2",
+      "stride_category": "ElevationOfPrivilege",
+      "attack_vector": "Unauthorized access to cloud database using valid JWT tokens.",
+      "kb_reference": "ATT&CK-T1021.008",
+      "evidence_chain": {
+        "exposure": "REST API with OAuth 2.0 and JWT authentication.",
+        "matched_pattern": "ATT&CK-T1021.008",
+        "applicability_reason": "The asset utilizes OAuth 2.0 and JWT for authentication, providing a method for attackers to exploit valid JWTs to gain unauthorized access.",
+        "citation": "ATT&CK-T1021.008: Direct Cloud VM Connections"
+      },
+      "confidence_score": 0.683089562286192,
+      "status": "approved",
+      "created_at": "2026-10-10T15:17:50.425599Z",
+      "run_id": "RUN-SDL-E2E-001",
+      "use_case_id": "UC-6E516A54",
+      "asset_version": "1.0",
+      "kb_snapshot_version": "latest",
+      "validation_status": "passed"
+    },
+    "THR-PATH-BE5ED663-004": {
+      "tid": "THR-PATH-BE5ED663-004",
+      "asset_id": "AS-3",
+      "stride_category": "Tampering",
+      "attack_vector": "Modifying the firmware image during a BLE OTA update to insert malicious code.",
+      "kb_reference": "ATT&CK-T1542.002",
+      "evidence_chain": {
+        "exposure": "BLE OTA interface allowing firmware updates without signature verification.",
+        "matched_pattern": "ATT&CK-T1542.002",
+        "applicability_reason": "The firmware image lacks signature verification, making it vulnerable to unauthorized updates through the BLE OTA interface.",
+        "citation": "ATT&CK-T1542.002: Component Firmware"
+      },
+      "confidence_score": 0.7509489207894258,
+      "status": "approved",
+      "created_at": "2026-10-10T15:18:38.964674Z",
+      "run_id": "RUN-SDL-E2E-001",
+      "use_case_id": "UC-6E516A54",
+      "asset_version": "1.0",
+      "kb_snapshot_version": "latest",
+      "validation_status": "passed"
+    },
+    "THR-PATH-4BFFE35B-003": {
+      "tid": "THR-PATH-4BFFE35B-003",
+      "asset_id": "AS-3",
+      "stride_category": "Tampering",
+      "attack_vector": "Exploiting the lack of signature verification to inject malicious firmware via the BLE OTA interface.",
+      "kb_reference": "CWE-1277",
+      "evidence_chain": {
+        "exposure": "BLE OTA interface with no signature verification",
+        "matched_pattern": "CWE-1277",
+        "applicability_reason": "The firmware image does not employ signature verification, allowing unauthorized firmware to be uploaded over BLE OTA.",
+        "citation": "CWE-1277: Firmware Not Updateable"
+      },
+      "confidence_score": 0.7480777801228897,
+      "status": "approved",
+      "created_at": "2026-10-10T15:13:52.405397Z",
+      "run_id": "RUN-SDL-E2E-001",
+      "use_case_id": "UC-6E516A54",
+      "asset_version": "1.0",
+      "kb_snapshot_version": "latest",
+      "validation_status": "passed"
+    },
+    "THR-PATH-FF8876D6-001": {
+      "tid": "THR-PATH-FF8876D6-001",
+      "asset_id": "AS-4",
+      "stride_category": "Tampering",
+      "attack_vector": "Physical access to manipulate audit log firmware via SPI Flash.",
+      "kb_reference": "CAPEC-665",
+      "evidence_chain": {
+        "exposure": "SPI Flash interface lacks tamper protection.",
+        "matched_pattern": "CAPEC-665",
+        "applicability_reason": "The audit log's SPI Flash interface is accessible without tamper protection, allowing potential physical manipulation.",
+        "citation": "CAPEC-665: Exploitation of Thunderbolt Protection Flaws (CAPEC v3.9)"
+      },
+      "confidence_score": 0.7691975671531225,
+      "status": "approved",
+      "created_at": "2026-10-10T15:13:46.601214Z",
+      "run_id": "RUN-SDL-E2E-001",
+      "use_case_id": "UC-6E516A54",
+      "asset_version": "1.0",
+      "kb_snapshot_version": "latest",
+      "validation_status": "passed"
+    },
+    "THR-PATH-9F63700F-002": {
+      "tid": "THR-PATH-9F63700F-002",
+      "asset_id": "AS-4",
+      "stride_category": "Tampering",
+      "attack_vector": "Inserting malicious code into the flash memory of the audit log to alter or delete entries.",
+      "kb_reference": "CAPEC-458",
+      "evidence_chain": {
+        "exposure": "SPI Flash interface can be targeted for direct memory manipulation.",
+        "matched_pattern": "CAPEC-458",
+        "applicability_reason": "The audit log is stored in flash memory without tamper protection, making it vulnerable to unauthorized modifications.",
+        "citation": "CAPEC-458: Flash Memory Attacks (CAPEC v3.9)"
+      },
+      "confidence_score": 0.761908082734575,
+      "status": "approved",
+      "created_at": "2026-10-10T15:13:49.839750Z",
+      "run_id": "RUN-SDL-E2E-001",
+      "use_case_id": "UC-6E516A54",
+      "asset_version": "1.0",
+      "kb_snapshot_version": "latest",
+      "validation_status": "passed"
+    },
+    "THR-PATH-470F30A8-027": {
+      "tid": "THR-PATH-470F30A8-027",
+      "asset_id": "AS-5",
+      "stride_category": "InformationDisclosure",
+      "attack_vector": "Eavesdropping on BLE broadcasts that transmit user data in cleartext.",
+      "kb_reference": "STRIDE-I-001",
+      "evidence_chain": {
+        "exposure": "BLE Broadcast interface transmits data unencrypted",
+        "matched_pattern": "STRIDE-I-001",
+        "applicability_reason": "The asset uses BLE for communication without encryption, making it susceptible to interception of sensitive user data.",
+        "citation": "STRIDE-I-001: Information Disclosure via Cleartext Credential Transmission"
+      },
+      "confidence_score": 0.6960946204605929,
+      "status": "approved",
+      "created_at": "2026-10-10T15:17:27.416659Z",
+      "run_id": "RUN-SDL-E2E-001",
+      "use_case_id": "UC-6E516A54",
+      "asset_version": "1.0",
+      "kb_snapshot_version": "latest",
+      "validation_status": "passed"
+    },
+    "THR-PATH-FDE2D800-046": {
+      "tid": "THR-PATH-FDE2D800-046",
+      "asset_id": "AS-5",
+      "stride_category": "InformationDisclosure",
+      "attack_vector": "Interception of unencrypted HTTPS traffic after SSL termination to extract user data.",
+      "kb_reference": "CAPEC-57",
+      "evidence_chain": {
+        "exposure": "HTTPS interface with unencrypted data flow.",
+        "matched_pattern": "CAPEC-57",
+        "applicability_reason": "The asset transmits sensitive PII over HTTPS without encryption of the payload, increasing the risk once SSL is terminated.",
+        "citation": "CAPEC-57: Utilizing REST's Trust in the System Resource to Obtain Sensitive Data"
+      },
+      "confidence_score": 0.6719308197498322,
+      "status": "approved",
+      "created_at": "2026-10-10T15:15:56.615116Z",
+      "run_id": "RUN-SDL-E2E-001",
+      "use_case_id": "UC-6E516A54",
+      "asset_version": "1.0",
+      "kb_snapshot_version": "latest",
+      "validation_status": "passed"
+    },
+    "THR-PATH-6514AC14-008": {
+      "tid": "THR-PATH-6514AC14-008",
+      "asset_id": "AS-6",
+      "stride_category": "Tampering",
+      "attack_vector": "Modifying firmware parameters stored in unprotected memory due to physical access.",
+      "kb_reference": "STRIDE-T-001",
+      "evidence_chain": {
+        "exposure": "Unprotected flash memory storing cryptographic keys",
+        "matched_pattern": "STRIDE-T-001",
+        "applicability_reason": "The asset contains cryptographic keys stored in persistent memory without adequate tamper protections, making it susceptible to physical modification.",
+        "citation": "STRIDE-T-001: Tampering with Firmware Parameters via Unprotected Storage"
+      },
+      "confidence_score": 0.7238529391244931,
+      "status": "approved",
+      "created_at": "2026-10-10T15:16:51.825952Z",
+      "run_id": "RUN-SDL-E2E-001",
+      "use_case_id": "UC-6E516A54",
+      "asset_version": "1.0",
+      "kb_snapshot_version": "latest",
+      "validation_status": "passed"
+    },
+    "THR-PATH-478674E1-016": {
+      "tid": "THR-PATH-478674E1-016",
+      "asset_id": "AS-6",
+      "stride_category": "Tampering",
+      "attack_vector": "Manipulation of cryptographic keys through firmware exploit on SPI interface.",
+      "kb_reference": "CAPEC-665",
+      "evidence_chain": {
+        "exposure": "SPI interface used for key storage manipulation.",
+        "matched_pattern": "CAPEC-665",
+        "applicability_reason": "The asset uses SPI for key storage, making it vulnerable to tampering through rogue SPI commands post-authentication.",
+        "citation": "CAPEC-665: Exploitation of Thunderbolt Protection Flaws (CAPEC v3.9)"
+      },
+      "confidence_score": 0.7225896633443137,
+      "status": "approved",
+      "created_at": "2026-10-10T15:14:28.058667Z",
+      "run_id": "RUN-SDL-E2E-001",
+      "use_case_id": "UC-6E516A54",
+      "asset_version": "1.0",
+      "kb_snapshot_version": "latest",
+      "validation_status": "passed"
+    },
+    "THR-EXP-1A2B3C4D": {
+      "tid": "THR-EXP-1A2B3C4D",
+      "asset_id": "AS-1",
+      "stride_category": "Spoofing",
+      "attack_vector": "Impersonation of a legitimate caller to the Unlock Command through an unauthenticated management interface (identity spoofing)",
+      "kb_reference": "CWE-306",
+      "evidence_chain": {
+        "exposure": "Unlock Command interface accepts requests without caller authentication",
+        "matched_pattern": "CWE-306",
+        "applicability_reason": "The Unlock Command is reachable over its interface and no caller authentication is enforced before the critical function runs.",
+        "citation": "CWE-306: Missing Authentication for Critical Function"
+      },
+      "confidence_score": 1.0,
+      "status": "approved",
+      "created_at": "2026-10-12T03:51:29.404788Z",
+      "run_id": "RUN-SDL-E2E-001",
+      "use_case_id": "UC-6E516A54",
+      "asset_version": "1.0",
+      "kb_snapshot_version": "latest",
+      "validation_status": "expert_added"
+    }
+  },
+  "audit_log": [
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-AAB20135-005",
+      "timestamp": "2026-10-12T03:51:29.400381Z",
+      "action": "reject",
+      "reason": "Too generic: name the interface and say why existing controls fail.",
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-B55517B0-009",
+      "timestamp": "2026-10-12T03:51:29.402450Z",
+      "action": "prune",
+      "reason": "Out of scope for this product variant.",
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-EXP-1A2B3C4D",
+      "timestamp": "2026-10-12T03:51:29.404895Z",
+      "action": "add",
+      "reason": "Known weakness class for this product family.",
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-B12751B2-022",
+      "timestamp": "2026-10-12T03:51:29.406936Z",
+      "action": "write",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-B12751B2-022",
+      "timestamp": "2026-10-12T03:51:29.406958Z",
+      "action": "approve",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-9DE0C2D5-023",
+      "timestamp": "2026-10-12T03:51:29.407029Z",
+      "action": "write",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-9DE0C2D5-023",
+      "timestamp": "2026-10-12T03:51:29.407041Z",
+      "action": "approve",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-05064984-037",
+      "timestamp": "2026-10-12T03:51:29.407060Z",
+      "action": "write",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-05064984-037",
+      "timestamp": "2026-10-12T03:51:29.407066Z",
+      "action": "approve",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-BE5ED663-004",
+      "timestamp": "2026-10-12T03:51:29.407081Z",
+      "action": "write",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-BE5ED663-004",
+      "timestamp": "2026-10-12T03:51:29.407090Z",
+      "action": "approve",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-4BFFE35B-003",
+      "timestamp": "2026-10-12T03:51:29.407108Z",
+      "action": "write",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-4BFFE35B-003",
+      "timestamp": "2026-10-12T03:51:29.407114Z",
+      "action": "approve",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-FF8876D6-001",
+      "timestamp": "2026-10-12T03:51:29.407130Z",
+      "action": "write",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-FF8876D6-001",
+      "timestamp": "2026-10-12T03:51:29.407136Z",
+      "action": "approve",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-9F63700F-002",
+      "timestamp": "2026-10-12T03:51:29.407168Z",
+      "action": "write",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-9F63700F-002",
+      "timestamp": "2026-10-12T03:51:29.407184Z",
+      "action": "approve",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-470F30A8-027",
+      "timestamp": "2026-10-12T03:51:29.407214Z",
+      "action": "write",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-470F30A8-027",
+      "timestamp": "2026-10-12T03:51:29.407218Z",
+      "action": "approve",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-FDE2D800-046",
+      "timestamp": "2026-10-12T03:51:29.407233Z",
+      "action": "write",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-FDE2D800-046",
+      "timestamp": "2026-10-12T03:51:29.407238Z",
+      "action": "approve",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-6514AC14-008",
+      "timestamp": "2026-10-12T03:51:29.407254Z",
+      "action": "write",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-6514AC14-008",
+      "timestamp": "2026-10-12T03:51:29.407260Z",
+      "action": "approve",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-478674E1-016",
+      "timestamp": "2026-10-12T03:51:29.407276Z",
+      "action": "write",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-PATH-478674E1-016",
+      "timestamp": "2026-10-12T03:51:29.407281Z",
+      "action": "approve",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-EXP-1A2B3C4D",
+      "timestamp": "2026-10-12T03:51:29.407298Z",
+      "action": "write",
+      "reason": null,
+      "previous_tid": null
+    },
+    {
+      "run_id": "RUN-SDL-E2E-001",
+      "tid": "THR-EXP-1A2B3C4D",
+      "timestamp": "2026-10-12T03:51:29.407306Z",
+      "action": "approve",
+      "reason": null,
+      "previous_tid": null
+    }
+  ],
+  "revision_history": {
+    "RUN-SDL-E2E-001": [
+      {
+        "timestamp": "2026-10-12T03:51:29.400349+00:00",
+        "reason": "Too generic: name the interface and say why existing controls fail.",
+        "scenarios": [
+          {
+            "tid": "THR-PATH-AAB20135-005",
+            "asset_id": "AS-3",
+            "stride_category": "Spoofing",
+            "attack_vector": "Impersonating a legitimate BLE device by spoofing its MAC address during firmware updates.",
+            "kb_reference": "STRIDE-S-001",
+            "evidence_chain": {
+              "exposure": "BLE interface without cryptographic pairing",
+              "matched_pattern": "STRIDE-S-001",
+              "applicability_reason": "The firmware image's lack of signature verification makes it susceptible to commands from unauthorized devices, especially those impersonating valid BLE devices.",
+              "citation": "STRIDE-S-001: Spoofing Identity via BLE Device Impersonation"
+            },
+            "confidence_score": 0.7408534591881364,
+            "status": "pending_test",
+            "created_at": "2026-10-10T15:16:43.594262Z",
+            "run_id": "RUN-SDL-E2E-001",
+            "use_case_id": "UC-6E516A54",
+            "asset_version": "1.0",
+            "kb_snapshot_version": "latest",
+            "validation_status": "passed"
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-12T03:51:29.402429+00:00",
+        "action": "prune",
+        "reason": "Out of scope for this product variant.",
+        "scenarios": [
+          {
+            "tid": "THR-PATH-B55517B0-009",
+            "asset_id": "AS-3",
+            "stride_category": "Tampering",
+            "attack_vector": "Exploitation of unsecured firmware update interface to initiate firmware update mode.",
+            "kb_reference": "ATT&CK-T0800",
+            "evidence_chain": {
+              "exposure": "BLE OTA interface with no signature verification",
+              "matched_pattern": "ATT&CK-T0800",
+              "applicability_reason": "The firmware image lacks signature verification and rollback protection, allowing unauthorized updates via the BLE OTA interface.",
+              "citation": "ATT&CK T0800: Activate Firmware Update Mode"
+            },
+            "confidence_score": 0.730121316895328,
+            "status": "pending_test",
+            "created_at": "2026-10-10T15:14:08.085846Z",
+            "run_id": "RUN-SDL-E2E-001",
+            "use_case_id": "UC-6E516A54",
+            "asset_version": "1.0",
+            "kb_snapshot_version": "latest",
+            "validation_status": "passed"
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-12T03:51:29.404859+00:00",
+        "action": "add",
+        "reason": "Known weakness class for this product family.",
+        "scenarios": [
+          {
+            "tid": "THR-EXP-1A2B3C4D",
+            "asset_id": "AS-1",
+            "stride_category": "Spoofing",
+            "attack_vector": "Impersonation of a legitimate caller to the Unlock Command through an unauthenticated management interface (identity spoofing)",
+            "kb_reference": "CWE-306",
+            "evidence_chain": {
+              "exposure": "Unlock Command interface accepts requests without caller authentication",
+              "matched_pattern": "CWE-306",
+              "applicability_reason": "The Unlock Command is reachable over its interface and no caller authentication is enforced before the critical function runs.",
+              "citation": "CWE-306: Missing Authentication for Critical Function"
+            },
+            "confidence_score": 1.0,
+            "status": "pending_test",
+            "created_at": "2026-10-12T03:51:29.404788Z",
+            "run_id": "RUN-SDL-E2E-001",
+            "use_case_id": "UC-6E516A54",
+            "asset_version": "1.0",
+            "kb_snapshot_version": "latest",
+            "validation_status": "expert_added"
+          }
+        ]
+      }
+    ]
+  }
+}

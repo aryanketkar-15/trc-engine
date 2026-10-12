@@ -1,0 +1,67 @@
+{
+  "description": "Immutable record of a write action into the SCRS.\n\nWHY THIS EXISTS:\nEvery write to the SCRS must be auditable.  Capturing run_id, tid,\ntimestamp, and action gives reviewers a queryable history of what was\nwritten, when, and by which pipeline run \u2014 without relying on external\nlogging infrastructure being available.",
+  "properties": {
+    "run_id": {
+      "description": "Unique identifier for the pipeline run.",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "tid": {
+      "description": "Threat ID that was acted upon.",
+      "title": "Tid",
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "UTC timestamp of the write action.",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "action": {
+      "default": "write",
+      "description": "Action performed.",
+      "enum": [
+        "write",
+        "reject",
+        "revise",
+        "approve",
+        "prune",
+        "add"
+      ],
+      "title": "Action",
+      "type": "string"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional human-provided reason or context for the action.",
+      "title": "Reason"
+    },
+    "previous_tid": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional reference to previous threat ID if revised.",
+      "title": "Previous Tid"
+    }
+  },
+  "required": [
+    "run_id",
+    "tid"
+  ],
+  "title": "AuditLogEntry",
+  "type": "object"
+}

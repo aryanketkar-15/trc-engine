@@ -1,0 +1,188 @@
+{
+  "$defs": {
+    "EvidenceChain": {
+      "description": "Structured evidence linking a KB pattern to a specific asset.\n\nThis model is the explainability backbone of every ThreatScenario.\nThe validator (validator.py) checks each field individually for\nnon-emptiness and non-genericity before allowing a scenario to advance\nfrom ``pending_test`` to ``pending_human``.\n\nEvidence-completeness score (used by scorer.py \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00e2\u20ac\u00a1\u00c3\u0192\u00c2\u00b6 Section 2.6):\n    +1.0  all three prose fields are non-empty and non-generic\n    +0.5  one field is empty or flagged as generic\n    +0.0  two or more fields fail the completeness check",
+      "properties": {
+        "exposure": {
+          "description": "The concrete asset attribute, configuration, or interface property that creates the attack surface.  Must reference a real field from the system model \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00e2\u20ac\u00a1\u00c3\u0192\u00c2\u00b6 not a generic placeholder such as 'unknown exposure' or 'N/A'.",
+          "minLength": 1,
+          "title": "Exposure",
+          "type": "string"
+        },
+        "matched_pattern": {
+          "description": "The canonical KB pattern identifier that was matched to this exposure, e.g. 'CAPEC-94', 'ATT&CK T1190', 'CWE-306'.  Must resolve to a real entry in the KB store \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00e2\u20ac\u00a1\u00c3\u0192\u00c2\u00b6 validated by the Protocol Invariant Validator.",
+          "minLength": 1,
+          "title": "Matched Pattern",
+          "type": "string"
+        },
+        "applicability_reason": {
+          "description": "LLM-generated prose that explicitly explains WHY the matched pattern applies to this specific asset and exposure \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00e2\u20ac\u00a1\u00c3\u0192\u00c2\u00b6 not a generic restatement of the pattern description.  Minimum 20 characters enforced to deter single-word placeholders; the Validator performs a deeper genericity check at runtime.",
+          "minLength": 20,
+          "title": "Applicability Reason",
+          "type": "string"
+        },
+        "citation": {
+          "description": "Human-readable citation for the KB entry, e.g.: 'CAPEC-94: Adversary in the Middle (CAPEC v3.9)' or 'MITRE ATT&CK T1190: Exploit Public-Facing Application (v14.1)'.  Must be non-empty; used by the human reviewer to verify the evidence without accessing the raw KB.",
+          "minLength": 1,
+          "title": "Citation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "exposure",
+        "matched_pattern",
+        "applicability_reason",
+        "citation"
+      ],
+      "title": "EvidenceChain",
+      "type": "object"
+    },
+    "STRIDECategory": {
+      "description": "STRIDE threat-category taxonomy.\n\nEach value corresponds to one of the six canonical STRIDE classes defined\nin Microsoft's threat-modelling methodology.  Using a typed enum instead of\na raw string prevents generator / validator divergence at the schema level.",
+      "enum": [
+        "Spoofing",
+        "Tampering",
+        "Repudiation",
+        "InformationDisclosure",
+        "DenialOfService",
+        "ElevationOfPrivilege"
+      ],
+      "title": "STRIDECategory",
+      "type": "string"
+    },
+    "ThreatStatus": {
+      "description": "Lifecycle state of a ThreatScenario.\n\nState transitions (enforced by validator.py / router.py \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00e2\u20ac\u00a1\u00c3\u0192\u00c2\u00b6 not here):\n\n    pending_test  \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00a5\u00c3\u0192\u00e2\u20ac\u00a0  pending_human  (Protocol Invariant Validator passed)\n                  \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00a5\u00c3\u0192\u00c2\u00bf  pending_test   (retry, max 3 times)\n    pending_human \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00a5\u00c3\u0192\u00e2\u20ac\u00a0  approved       (human approves)\n                  \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00a5\u00c3\u0192\u00e2\u20ac\u00a0  rejected       (human rejects \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00a5\u00c3\u0192\u00e2\u20ac\u00a0 retry or escalate)",
+      "enum": [
+        "pending_test",
+        "pending_human",
+        "approved",
+        "rejected"
+      ],
+      "title": "ThreatStatus",
+      "type": "string"
+    }
+  },
+  "description": "A fully structured, evidence-backed threat scenario.\n\nProduced by generator.py, scored by scorer.py, validated by validator.py,\nand written to the SCRS by state_manager.py after human approval.\n\nLifecycle enforced externally (validator.py / router.py):\n    pending_test  \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00a5\u00c3\u0192\u00e2\u20ac\u00a0  [Validator pass]  \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00a5\u00c3\u0192\u00e2\u20ac\u00a0  pending_human\n    pending_human \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00a5\u00c3\u0192\u00e2\u20ac\u00a0  [Human approve]   \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00a5\u00c3\u0192\u00e2\u20ac\u00a0  approved\n    pending_human \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00a5\u00c3\u0192\u00e2\u20ac\u00a0  [Human reject]    \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00a5\u00c3\u0192\u00e2\u20ac\u00a0  rejected (retry or escalate)\n    pending_test  \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00a5\u00c3\u0192\u00e2\u20ac\u00a0  [Validator fail]  \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00a5\u00c3\u0192\u00e2\u20ac\u00a0  pending_test (retry \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00ab\u00c3\u0192\u00c2\u00b1 3 times)\n\nImmutability:\n    The model is frozen.  State transitions are performed by producing a\n    new instance via ``model.model_copy(update={\"status\": new_status})``.",
+  "properties": {
+    "tid": {
+      "description": "Unique threat identifier within this run.  Convention: 'THR-<run_id>-<zero-padded sequence>', e.g. 'THR-abc123-001'. Generated by generator.py; immutable after creation.",
+      "minLength": 1,
+      "title": "Tid",
+      "type": "string"
+    },
+    "asset_id": {
+      "description": "Identifier of the system-model asset this scenario targets.  Must correspond to an asset declared in the originating ThreatAgentInput.system_model \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00e2\u20ac\u00a1\u00c3\u0192\u00c2\u00b6 validated by validator.py.",
+      "minLength": 1,
+      "title": "Asset Id",
+      "type": "string"
+    },
+    "stride_category": {
+      "$ref": "#/$defs/STRIDECategory",
+      "description": "STRIDE classification of the threat.  Using the enum (not a raw string) ensures generator/validator agreement without string comparison."
+    },
+    "attack_vector": {
+      "description": "Human-readable description of the technical attack vector, e.g. 'Unauthenticated BLE advertisement replay' or 'SQL injection via unvalidated REST query parameter'.  Must be specific to the asset \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00e2\u20ac\u00a1\u00c3\u0192\u00c2\u00b6 not a copy of the KB pattern title.",
+      "minLength": 1,
+      "title": "Attack Vector",
+      "type": "string"
+    },
+    "kb_reference": {
+      "description": "Primary KB entry identifier this scenario is grounded in, e.g. 'CAPEC-94', 'ATT&CK T1190', 'CWE-306'.  The validator confirms this ID resolves to a real KB entry.",
+      "minLength": 1,
+      "title": "Kb Reference",
+      "type": "string"
+    },
+    "evidence_chain": {
+      "$ref": "#/$defs/EvidenceChain",
+      "description": "Structured evidence that links the KB pattern to the specific asset and explains applicability.  Required; a ThreatScenario without evidence is not permitted."
+    },
+    "confidence_score": {
+      "description": "Weighted confidence score \u00c3\u017d\u00e2\u20ac\u0153\u00c3\u0192\u00c2\u00aa\u00c3\u0192\u00c2\u00aa [0.0, 1.0] computed per the Section 2.6 formula:\n  0.4 \u00c3\u00a2\u00e2\u20ac\u009d\u00c5\u201c\u00c3\u0192\u00c2\u00b9 retrieval_match_strength\n+ 0.4 \u00c3\u00a2\u00e2\u20ac\u009d\u00c5\u201c\u00c3\u0192\u00c2\u00b9 self_consistency\n+ 0.2 \u00c3\u00a2\u00e2\u20ac\u009d\u00c5\u201c\u00c3\u0192\u00c2\u00b9 evidence_completeness\nScores below 0.4 are considered low-confidence and will trigger a validator warning (not an automatic rejection).",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence Score",
+      "type": "number"
+    },
+    "status": {
+      "$ref": "#/$defs/ThreatStatus",
+      "default": "pending_test",
+      "description": "Lifecycle state.  Always starts as 'pending_test'; transitions are driven by validator.py and router.py, never mutated inside generator.py or scorer.py."
+    },
+    "created_at": {
+      "description": "UTC timestamp of scenario creation (auto-set).",
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "run_id": {
+      "description": "Identifier of the ThreatAgent run that produced this scenario.  Ties the scenario to its audit log entry in common/logging.py and to the SCRS write record.",
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "use_case_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Traceability: id of the use case this scenario was generated for.",
+      "title": "Use Case Id"
+    },
+    "asset_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Traceability: version of the asset record the scenario targets.",
+      "title": "Asset Version"
+    },
+    "kb_snapshot_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Traceability: KB snapshot version used for retrieval.",
+      "title": "Kb Snapshot Version"
+    },
+    "validation_status": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Validation outcome for this scenario: 'passed' when all invariant checks pass, or 'escalated_after_retries' when retry attempts were exhausted and human review was required.",
+      "title": "Validation Status"
+    }
+  },
+  "required": [
+    "tid",
+    "asset_id",
+    "stride_category",
+    "attack_vector",
+    "kb_reference",
+    "evidence_chain",
+    "confidence_score",
+    "run_id"
+  ],
+  "title": "ThreatScenario",
+  "type": "object"
+}

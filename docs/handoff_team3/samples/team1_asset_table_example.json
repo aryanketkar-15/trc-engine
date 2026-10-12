@@ -1,0 +1,454 @@
+{
+  "_ILLUSTRATIVE": "Hand-written by Team 2 from the SRS section 2.4 door-lock example using the field names of Team 1's Phase 7 AssetTable schema. NOT exported from Team 1's system. Values (attributes, sources) are plausible examples, not Team 1 results.",
+  "session_id": "SESSION-EXAMPLE-0001",
+  "usecase_id": "UC-01",
+  "diagram_id": "DIAGRAM-EXAMPLE-0001",
+  "diagram_version": 1,
+  "assets": [
+    {
+      "id": "AS-1",
+      "name": "Unlock command",
+      "location": "Cloud<->Lock channel",
+      "description": "",
+      "attributes": [
+        "I",
+        "Auth"
+      ],
+      "attribute_evidence": [
+        {
+          "attribute": "I",
+          "status": "engineer",
+          "level": null,
+          "basis": [
+            "clarification:asset.security_attributes"
+          ],
+          "quote": null
+        },
+        {
+          "attribute": "Auth",
+          "status": "engineer",
+          "level": null,
+          "basis": [
+            "clarification:asset.security_attributes"
+          ],
+          "quote": null
+        }
+      ],
+      "is_message": true,
+      "authenticity_required": true,
+      "damage_scenarios": [
+        {
+          "violated_attribute": null,
+          "scenario": "Unauthorised entry",
+          "severity": null,
+          "impact_categories": [],
+          "derived_from": [
+            "clarification:asset.damage_scenarios"
+          ]
+        }
+      ],
+      "kb_citations": [
+        {
+          "source": "CAPEC",
+          "reference_id": "CAPEC-94",
+          "description": "Adversary in the Middle (AiTM)",
+          "url": "https://capec.mitre.org/data/definitions/94.html",
+          "kb_version": "3.9",
+          "entry_kind": "attack-pattern",
+          "summary": "",
+          "validated": true,
+          "validated_at": null,
+          "selected_by": "model",
+          "retrieval_query": [
+            "replay unlock command"
+          ],
+          "rationale": "",
+          "kb_scopes": [
+            "Integrity"
+          ]
+        }
+      ],
+      "kb_candidates": [],
+      "rejected_citations": [],
+      "source": {
+        "kind": "flow",
+        "element_id": "F5",
+        "element_name": "Unlock cmd",
+        "element_type": "flow",
+        "elements": [
+          "F5"
+        ],
+        "diagram": "dfd",
+        "derived_from": [
+          "diagram.data_flows[F5]"
+        ],
+        "upstream": [],
+        "identified_by": "approved_model",
+        "rationale": ""
+      },
+      "source_key": "flow:F5",
+      "confidence": 0.95,
+      "needs_review": false,
+      "ai_rationale": "",
+      "unresolved": []
+    },
+    {
+      "id": "AS-2",
+      "name": "E-key credential",
+      "location": "Cloud DB, App, Lock",
+      "description": "",
+      "attributes": [
+        "C",
+        "I"
+      ],
+      "attribute_evidence": [
+        {
+          "attribute": "C",
+          "status": "engineer",
+          "level": null,
+          "basis": [
+            "clarification:asset.security_attributes"
+          ],
+          "quote": null
+        },
+        {
+          "attribute": "I",
+          "status": "engineer",
+          "level": null,
+          "basis": [
+            "clarification:asset.security_attributes"
+          ],
+          "quote": null
+        }
+      ],
+      "is_message": false,
+      "authenticity_required": null,
+      "damage_scenarios": [
+        {
+          "violated_attribute": null,
+          "scenario": "Cloning, unauthorised entry",
+          "severity": null,
+          "impact_categories": [],
+          "derived_from": [
+            "clarification:asset.damage_scenarios"
+          ]
+        }
+      ],
+      "kb_citations": [],
+      "kb_candidates": [],
+      "rejected_citations": [],
+      "source": {
+        "kind": "entity",
+        "element_id": "DS1",
+        "element_name": "Cloud database",
+        "element_type": "data_store",
+        "elements": [
+          "DS1"
+        ],
+        "diagram": "dfd",
+        "derived_from": [
+          "diagram.entities[DS1]"
+        ],
+        "upstream": [],
+        "identified_by": "approved_model",
+        "rationale": ""
+      },
+      "source_key": "entity:DS1",
+      "confidence": 0.6,
+      "needs_review": false,
+      "ai_rationale": "",
+      "unresolved": [
+        "kb_references"
+      ]
+    },
+    {
+      "id": "AS-3",
+      "name": "Firmware image",
+      "location": "OTA, Lock flash",
+      "description": "",
+      "attributes": [
+        "I",
+        "Auth"
+      ],
+      "attribute_evidence": [
+        {
+          "attribute": "I",
+          "status": "engineer",
+          "level": null,
+          "basis": [
+            "clarification:asset.security_attributes"
+          ],
+          "quote": null
+        },
+        {
+          "attribute": "Auth",
+          "status": "engineer",
+          "level": null,
+          "basis": [
+            "clarification:asset.security_attributes"
+          ],
+          "quote": null
+        }
+      ],
+      "is_message": true,
+      "authenticity_required": true,
+      "damage_scenarios": [
+        {
+          "violated_attribute": null,
+          "scenario": "Persistent device compromise",
+          "severity": null,
+          "impact_categories": [],
+          "derived_from": [
+            "clarification:asset.damage_scenarios"
+          ]
+        }
+      ],
+      "kb_citations": [],
+      "kb_candidates": [],
+      "rejected_citations": [],
+      "source": {
+        "kind": "engineer",
+        "element_id": null,
+        "element_name": "Firmware image",
+        "element_type": null,
+        "elements": [],
+        "diagram": null,
+        "derived_from": [
+          "clarification:asset.assets"
+        ],
+        "upstream": [],
+        "identified_by": "engineer",
+        "rationale": ""
+      },
+      "source_key": "engineer:Firmware image",
+      "confidence": 0.6,
+      "needs_review": false,
+      "ai_rationale": "",
+      "unresolved": [
+        "kb_references"
+      ]
+    },
+    {
+      "id": "AS-4",
+      "name": "Audit log",
+      "location": "Lock, Cloud",
+      "description": "",
+      "attributes": [
+        "I",
+        "A"
+      ],
+      "attribute_evidence": [
+        {
+          "attribute": "I",
+          "status": "engineer",
+          "level": null,
+          "basis": [
+            "clarification:asset.security_attributes"
+          ],
+          "quote": null
+        },
+        {
+          "attribute": "A",
+          "status": "engineer",
+          "level": null,
+          "basis": [
+            "clarification:asset.security_attributes"
+          ],
+          "quote": null
+        }
+      ],
+      "is_message": false,
+      "authenticity_required": null,
+      "damage_scenarios": [
+        {
+          "violated_attribute": null,
+          "scenario": "Loss of forensic evidence",
+          "severity": null,
+          "impact_categories": [],
+          "derived_from": [
+            "clarification:asset.damage_scenarios"
+          ]
+        }
+      ],
+      "kb_citations": [],
+      "kb_candidates": [],
+      "rejected_citations": [],
+      "source": {
+        "kind": "entity",
+        "element_id": "DS3",
+        "element_name": "Audit log",
+        "element_type": "data_store",
+        "elements": [
+          "DS3"
+        ],
+        "diagram": "dfd",
+        "derived_from": [
+          "diagram.entities[DS3]"
+        ],
+        "upstream": [],
+        "identified_by": "approved_model",
+        "rationale": ""
+      },
+      "source_key": "entity:DS3",
+      "confidence": 0.6,
+      "needs_review": false,
+      "ai_rationale": "",
+      "unresolved": [
+        "kb_references"
+      ]
+    },
+    {
+      "id": "AS-5",
+      "name": "User PII (schedule, address)",
+      "location": "Cloud, App",
+      "description": "",
+      "attributes": [
+        "C"
+      ],
+      "attribute_evidence": [
+        {
+          "attribute": "C",
+          "status": "engineer",
+          "level": null,
+          "basis": [
+            "clarification:asset.security_attributes"
+          ],
+          "quote": null
+        }
+      ],
+      "is_message": false,
+      "authenticity_required": null,
+      "damage_scenarios": [
+        {
+          "violated_attribute": null,
+          "scenario": "Privacy breach, stalking risk",
+          "severity": null,
+          "impact_categories": [],
+          "derived_from": [
+            "clarification:asset.damage_scenarios"
+          ]
+        }
+      ],
+      "kb_citations": [],
+      "kb_candidates": [],
+      "rejected_citations": [],
+      "source": {
+        "kind": "engineer",
+        "element_id": null,
+        "element_name": "User PII",
+        "element_type": null,
+        "elements": [],
+        "diagram": null,
+        "derived_from": [
+          "clarification:asset.assets"
+        ],
+        "upstream": [],
+        "identified_by": "engineer",
+        "rationale": ""
+      },
+      "source_key": "engineer:User PII (schedule, address)",
+      "confidence": 0.6,
+      "needs_review": false,
+      "ai_rationale": "",
+      "unresolved": [
+        "kb_references"
+      ]
+    },
+    {
+      "id": "AS-6",
+      "name": "Cryptographic keys",
+      "location": "Secure element",
+      "description": "",
+      "attributes": [
+        "C",
+        "I"
+      ],
+      "attribute_evidence": [
+        {
+          "attribute": "C",
+          "status": "engineer",
+          "level": null,
+          "basis": [
+            "clarification:asset.security_attributes"
+          ],
+          "quote": null
+        },
+        {
+          "attribute": "I",
+          "status": "engineer",
+          "level": null,
+          "basis": [
+            "clarification:asset.security_attributes"
+          ],
+          "quote": null
+        }
+      ],
+      "is_message": false,
+      "authenticity_required": null,
+      "damage_scenarios": [
+        {
+          "violated_attribute": null,
+          "scenario": "Full system compromise",
+          "severity": null,
+          "impact_categories": [],
+          "derived_from": [
+            "clarification:asset.damage_scenarios"
+          ]
+        }
+      ],
+      "kb_citations": [],
+      "kb_candidates": [],
+      "rejected_citations": [],
+      "source": {
+        "kind": "entity",
+        "element_id": "DS2",
+        "element_name": "Secure element",
+        "element_type": "data_store",
+        "elements": [
+          "DS2"
+        ],
+        "diagram": "dfd",
+        "derived_from": [
+          "diagram.entities[DS2]"
+        ],
+        "upstream": [],
+        "identified_by": "approved_model",
+        "rationale": ""
+      },
+      "source_key": "entity:DS2",
+      "confidence": 0.6,
+      "needs_review": false,
+      "ai_rationale": "",
+      "unresolved": [
+        "kb_references"
+      ]
+    }
+  ],
+  "excluded": [
+    {
+      "element": "P1",
+      "name": "Mobile App",
+      "reason": "A component is not an asset by itself.",
+      "derived_from": [
+        "diagram.entities[P1]"
+      ]
+    }
+  ],
+  "kb_releases": [
+    {
+      "family": "CAPEC",
+      "version": "3.9"
+    },
+    {
+      "family": "ATT&CK",
+      "version": "19.2"
+    }
+  ],
+  "version": 1,
+  "parent_version_id": null,
+  "approval_status": "approved",
+  "approved_by": "expert_reviewer",
+  "approved_at": "2026-10-11T10:00:00Z",
+  "confidence": 0.8,
+  "needs_review": false
+}
