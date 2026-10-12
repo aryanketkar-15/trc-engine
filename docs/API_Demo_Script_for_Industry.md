@@ -97,6 +97,10 @@ FROM threat_agent_runs r, jsonb_array_elements(r.scenarios) s WHERE r.run_id = '
 
 ### Step 5: The human corrects the draft (2 minutes)
 
+> **Order matters:** a rejection regenerates the whole list (1–3 minutes) and replaces the scenario ids, so it also
+> wipes earlier prune/add edits. Do the **reject first (once)**, then prune and add. Full click-by-click steps are in
+> `docs/API_Demo_Runbook.md`; ready-to-paste request bodies are in `docs/api_demo/`.
+
 `[POST /{run_id}/scenarios/{tid}/prune: choose one id, give a reason, Execute]`
 
 > "The expert removes one scenario and **must give a reason**."

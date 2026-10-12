@@ -1,0 +1,13 @@
+{
+  "asset_id": "AS-1",
+  "stride_category": "Tampering",
+  "attack_vector": "Tampering with the dosage control firmware by installing a modified, unsigned firmware image through the update interface",
+  "kb_reference": "CAPEC-186",
+  "evidence_chain": {
+    "exposure": "Firmware update interface accepts images without signature verification",
+    "matched_pattern": "CAPEC-186",
+    "applicability_reason": "The dosage control firmware can be replaced through the update interface because the image signature is not verified before installation.",
+    "citation": "CAPEC-186: Malicious Software Update"
+  },
+  "justification": "Known weakness class for connected infusion pumps."
+}

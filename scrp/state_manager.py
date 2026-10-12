@@ -331,6 +331,7 @@ class StateManager:
         atomic-ish write pattern on most OSes, protecting against partial
         writes corrupting the file.
         """
+        self._scrs_path.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = self._scrs_path.with_suffix(".json.tmp")
         payload = self._state.model_dump(mode="json")
         tmp_path.write_text(
