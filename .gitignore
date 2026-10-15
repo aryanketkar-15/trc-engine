@@ -45,3 +45,8 @@ Thumbs.db
 kb/data/full/
 kb/data/standards/
 demo_output/
+
+# Knowledge-base package: large data stays out of Git (rebuild with the export steps)
+kb_package/data/*.npy
+kb_package/data/*.jsonl
+kb_package/db/

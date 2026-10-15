@@ -1,0 +1,64 @@
+{
+  "created_utc": "2026-10-15T05:07:29.537285+00:00",
+  "exported_from": "PostgreSQL database trc_engine_fullkb (tables threat_patterns, standards_chunks)",
+  "embedding_model": "all-MiniLM-L6-v2",
+  "embedding_dim": 384,
+  "embeddings_normalized": true,
+  "patterns": {
+    "count": 2300,
+    "by_source": {
+      "CAPEC": 556,
+      "CWE": 944,
+      "ATT&CK": 794,
+      "STRIDE": 6
+    },
+    "domain_tag_counts": {
+      "wireless": 1257,
+      "web": 927,
+      "credentials": 510,
+      "network": 497,
+      "cloud": 465,
+      "crypto": 333,
+      "hardware": 281,
+      "ics": 117,
+      "firmware": 80,
+      "physical": 69,
+      "mobile": 35,
+      "automotive": 1
+    }
+  },
+  "standards_chunks": {
+    "count": 5097,
+    "by_doc": {
+      "CC:2022 R1 Part 1": 551,
+      "CC:2022 R1 Part 2": 1017,
+      "CC:2022 R1 Part 3": 735,
+      "CC:2022 R1 Part 4": 93,
+      "CC:2022 R1 Part 5": 104,
+      "CEM:2022 R1": 1907,
+      "JIL Application of Attack Potential to Smartcards v3.2.1": 221,
+      "Regulation (EU) 2024/2847": 469
+    }
+  },
+  "source_file_sha256": {
+    "capec_latest.xml": "70279a2dff0cb0ad79e546adb07828335a704ad5210e047e09e986172fc9e34d",
+    "cwec_latest.xml": "1f5a78bd62e00f86436b4fe32d5034a57e8f0da88e4063b2072b664ae510912e",
+    "cwec_latest.xml.zip": "3976f599e5e5200219a3108bb896d06e2a88fbb293369e1883cb423a5e9d7d50",
+    "enterprise-attack.json": "dc1639caa5501d720e280cf1cbd8fbe009884a0c9b3e6e9ed9d0c25166c3d8f4",
+    "ics-attack.json": "08b83d2cea6b6d6752468ef0e62e2ab2a53c9443ef72c439ecccb07ab9e89da9",
+    "CC2022PART1R1.pdf": "62cccce618919ea3458fa4bf701cbff5ecf908a6f89f43f9c87cfbf2563452f2",
+    "CC2022PART2R1.pdf": "16c853ad1ccf6eb10120726b15fe9ecfa95ac381f85d8edb84c12b0d0ecf1b01",
+    "CC2022PART3R1.pdf": "96d471dec3b1d79da2429dd71cbde379b31d6d866be8ae3e5b2b081d6846a5b8",
+    "CC2022PART4R1.pdf": "fd57a19ef0f623fc8376c23a583fde47547c05ab634228269cebd3243af75e96",
+    "CC2022PART5R1.pdf": "c64f45dd82cfc6f8e4c289d4faad79f75e759f14e17c27b4c8cb2b69ff96daf6",
+    "CEM2022R1.pdf": "da5b991a457eb32040a15849bfe6d8da1870aef91f6b7255f767f0b186e89a83",
+    "CRA-2024-2847.xhtml": "fe0cca4a0caec50e7cf5a91432b94a19b211f86be8584fdba56372bdcea571ed",
+    "JIL-Attack-Potential-Smartcards-v3.2.1.pdf": "c0adb27591b4e83981f09ebe3052e653d32edb32b1397e8bcbc601a1b401fd82"
+  },
+  "data_file_sha256": {
+    "standards_chunks.jsonl": "36012347f154f9bbd571c471a07842aae25b43eb1b18749fd7f0de2960db581b",
+    "standards_chunks_embeddings.npy": "aff1a249654123320b24283a43a2e332ef6ef5ed015b847eae340c6bea1730fb",
+    "threat_patterns.jsonl": "945cd984c908d6a5be7c05513263472558ea22f214e9030e89f14f3b3809ab31",
+    "threat_patterns_embeddings.npy": "cdb8e959d0bd01e1276f5c81fb9cc7486c47c53d1d582c65e4804e1c55c305bc"
+  }
+}
