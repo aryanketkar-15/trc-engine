@@ -122,12 +122,18 @@ def discover_projects() -> list[tuple[str, Path]]:
     return found
 
 
-def load_project(path: Path) -> Any:
-    from agents.threat_agent.schemas import ThreatAgentInput
+def load_runs(path: Path) -> list[Any]:
+    """One input per use case (a single-run file gives one), each with a fresh run id."""
+    from agents.threat_agent.project import load_inputs
 
-    data = json.loads(path.read_text(encoding="utf-8"))
-    agent_input = ThreatAgentInput.model_validate(data)
-    return agent_input.model_copy(update={"run_id": f"RUN-{uuid.uuid4().hex[:6].upper()}"})
+    return [
+        i.model_copy(
+            update={"run_id": f"{i.run_id.rsplit('-', 1)[0]}-{uuid.uuid4().hex[:6].upper()}"}
+        )
+        if i.project_id
+        else i.model_copy(update={"run_id": f"RUN-{uuid.uuid4().hex[:6].upper()}"})
+        for i in load_inputs(path)
+    ]
 
 
 def choose_project(args: argparse.Namespace) -> tuple[str, Path]:
@@ -210,16 +216,6 @@ class Replay:
 # ---------------------------------------------------------------------- session
 
 
-def project_key(agent_input: Any) -> str:
-    """Stable id of a project (same rule the pipeline uses for use_case_id)."""
-    import hashlib
-
-    return str(
-        agent_input.use_case_id
-        or "UC-" + hashlib.sha256(agent_input.use_case.encode("utf-8")).hexdigest()[:8].upper()
-    )
-
-
 class Session:
     def __init__(
         self, agent_input: Any, mode: str, scrs_path: Path, max_paths: int, explain: bool = True
@@ -255,15 +251,20 @@ class Session:
     def load_previous(self) -> None:
         """Approved scenarios of this project saved by earlier runs (kept, never re-reviewed)."""
         from agents.threat_agent.schemas import ThreatScenario
+        from agents.threat_agent.staleness import use_case_key
 
-        key = project_key(self.agent_input)
+        key = use_case_key(self.agent_input)
         found = []
         for raw in self.sm.get_threat_scenarios().values():
             try:
                 sc = ThreatScenario.model_validate(raw)
             except Exception:  # noqa: S112
                 continue
-            if sc.use_case_id == key and str(sc.status) in {"approved", "ThreatStatus.APPROVED"}:
+            if (
+                sc.use_case_id == key
+                and sc.project_id == self.agent_input.project_id
+                and str(sc.status) in {"approved", "ThreatStatus.APPROVED"}
+            ):
                 found.append(sc)
         found.sort(key=lambda x: x.created_at)
         self.previous = found
@@ -307,23 +308,28 @@ class Session:
                 1,
                 "Understanding the system",
                 "The agent reads every asset: what it is, which interfaces it exposes and which "
-                "security properties it must keep (confidentiality, integrity, availability, "
-                "authenticity).",
+                "security properties it must keep. For each property the answer is simply "
+                "yes or no: "
+                "is it required for this asset?",
             )
             console.print(f"  Use case: {short(ai.use_case, 110)}")
             t = Table(box=box.SIMPLE_HEAD, header_style="bold")
-            for col in ("Asset", "Name", "Must protect", "Interfaces"):
+            for col in ("Asset", "Name"):
                 t.add_column(col)
+            for col in ("Conf.", "Integ.", "Avail.", "Auth."):
+                t.add_column(col, justify="center")
+            t.add_column("Interfaces")
             for a in ai.assets:
-                needs = [
-                    k.capitalize()
-                    for k in ("confidentiality", "integrity", "availability", "authenticity")
+                yn = [
+                    "[green]yes[/green]"
                     if getattr(a.security_attributes, k, False)
+                    else "[dim]no[/dim]"
+                    for k in ("confidentiality", "integrity", "availability", "authenticity")
                 ]
                 t.add_row(
                     a.asset_id,
                     a.name,
-                    ", ".join(needs) or "-",
+                    *yn,
                     short(", ".join(a.dfd_context.interfaces), 40),
                 )
             console.print(t)
@@ -631,6 +637,7 @@ def add_expert_scenario(session: Session) -> Any | None:
         ThreatScenario,
         ThreatStatus,
     )
+    from agents.threat_agent.staleness import traceability_stamp
     from agents.threat_agent.validator import Validator
 
     ai = session.agent_input
@@ -669,9 +676,7 @@ def add_expert_scenario(session: Session) -> Any | None:
             confidence_score=1.0,
             status=ThreatStatus.PENDING_TEST,
             validation_status="passed",
-            use_case_id=session.scenarios[0].use_case_id if session.scenarios else None,
-            asset_version=next((a.version for a in ai.assets if a.asset_id == asset_id), None),
-            kb_snapshot_version=ai.kb_snapshot_version,
+            **traceability_stamp(ai, asset_id),
         )
     except Exception as exc:
         err(short(str(exc), 160))
@@ -840,30 +845,129 @@ def write_results(
     ok(f"Report saved to {report_path.relative_to(_ROOT)}")
 
 
-def run_once(args: argparse.Namespace, settings: Any) -> bool:
-    name, path = choose_project(args)
-    args.project = None
-    args.input = None
-    agent_input = load_project(path)
-    folder = path.parent.name
+def approved_for(scrs_path: Path, agent_input: Any) -> list[Any]:
+    """Approved scenarios saved for this use case (project + use case id)."""
+    from agents.threat_agent.schemas import ThreatScenario
+    from agents.threat_agent.staleness import use_case_key
+    from scrp.state_manager import StateManager
+
+    key = use_case_key(agent_input)
+    out = []
+    for raw in StateManager(scrs_path).get_threat_scenarios().values():
+        try:
+            sc = ThreatScenario.model_validate(raw)
+        except Exception:  # noqa: S112
+            continue
+        if sc.use_case_id == key and sc.project_id == agent_input.project_id:
+            out.append(sc)
+    return out
+
+
+def choose_use_cases(runs: list[Any], scrs_path: Path, args: argparse.Namespace) -> list[Any]:
+    """A product with several use cases: show them and let the user pick one (or all)."""
+    if len(runs) == 1:
+        return runs
+    table = Table(box=box.SIMPLE_HEAD, header_style="bold", title="Use cases of this product")
+    table.add_column("#", justify="right")
+    table.add_column("Use case")
+    table.add_column("Title")
+    table.add_column("Assets", justify="right")
+    table.add_column("Approved so far", justify="right")
+    for i, r in enumerate(runs, 1):
+        title = r.use_case.split(".")[0]
+        table.add_row(
+            str(i),
+            str(r.use_case_id),
+            title,
+            str(len(r.assets)),
+            str(len(approved_for(scrs_path, r))),
+        )
+    console.print(table)
+    choice = args.use_case or (
+        "1" if args.auto else ask("Select a use case (number, id or 'all')", "1")
+    )
+    choice = choice.strip()
+    if choice.lower() == "all":
+        return runs
+    for i, r in enumerate(runs, 1):
+        if choice == str(i) or choice.upper() == str(r.use_case_id).upper():
+            return [r]
+    sys.exit(f"Unknown use case '{choice}'.")
+
+
+def handle_staleness(agent_input: Any, scrs_path: Path, args: argparse.Namespace) -> Any:
+    """Go back one step: if approved threats no longer match their upstream data, offer to retire
+    them and re-run only the affected assets. Returns the input to analyse."""
+    from agents.threat_agent.staleness import check_staleness
+    from scrp.state_manager import StateManager
+
+    previous = approved_for(scrs_path, agent_input)
+    if not previous:
+        return agent_input
+    report = check_staleness(agent_input, previous)
+    if not report.has_changes:
+        return agent_input
+    console.print()
+    t = Table(
+        box=box.SIMPLE_HEAD, header_style="bold", title="Upstream data changed since you approved"
+    )
+    t.add_column("Scenario")
+    t.add_column("Asset")
+    t.add_column("Why it is out of date")
+    for item in report.stale:
+        t.add_row(short(item.tid, 28), item.asset_id, item.reason)
+    console.print(t)
+    warn(
+        f"{len(report.stale)} approved scenario(s) no longer match the current assets "
+        "or system model."
+    )
+    answer = "y" if args.auto else ask("Retire them and re-run the affected assets? (y/n)", "y")
+    if answer.strip().lower() not in {"y", "yes"}:
+        warn("Kept as they are. They stay in the shared state and are marked here as out of date.")
+        return agent_input
+    sm = StateManager(scrs_path)
+    by_reason: dict[str, list[str]] = {}
+    for item in report.stale:
+        by_reason.setdefault(item.reason, []).append(item.tid)
+    for reason, tids in by_reason.items():
+        sm.retire_scenarios(tids, f"Upstream data changed: {reason}")
+    ok(f"Retired {len(report.stale)} scenario(s) into the history. New proposals follow.")
+    affected = set(report.affected_assets)
+    only = [a for a in agent_input.assets if a.asset_id in affected]
+    if only and len(only) < len(agent_input.assets):
+        info("Re-running only the affected assets: " + ", ".join(sorted(affected)))
+        return agent_input.model_copy(update={"assets": only})
+    return agent_input
+
+
+def replay_available(path: Path, agent_input: Any) -> bool:
+    return path.parent.name in REPLAY_PROJECTS or agent_input.project_id == "CSDL-100"
+
+
+def run_use_case(
+    agent_input: Any,
+    name: str,
+    path: Path,
+    args: argparse.Namespace,
+    settings: Any,
+    scrs_path: Path,
+    report_path: Path,
+) -> bool:
     mode = args.mode
     if mode == "auto":
-        mode = "replay" if folder in REPLAY_PROJECTS else "live"
-    if mode == "replay" and folder not in REPLAY_PROJECTS:
+        mode = "replay" if replay_available(path, agent_input) else "live"
+    if mode == "replay" and not replay_available(path, agent_input):
         sys.exit("No recorded output for this project; use --mode live.")
-
-    if args.fresh or args.auto:
-        shutil.rmtree(OUT_DIR, ignore_errors=True)
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    scrs_path, report_path = OUT_DIR / "SCRS_demo.json", OUT_DIR / "run_report.json"
 
     db = settings.DATABASE_URL.rsplit("/", 1)[-1].split("?")[0]
     source = "recorded model output" if mode == "replay" else f"model {settings.OPENAI_MODEL}"
+    uc = f"   use case [bold]{agent_input.use_case_id}[/bold]" if agent_input.use_case_id else ""
     console.print(
-        f"\nProject [bold]{name}[/bold]   {len(agent_input.assets)} assets   "
+        f"\nProject [bold]{name}[/bold]{uc}   {len(agent_input.assets)} assets   "
         f"knowledge base {db}   {source}\n"
     )
 
+    agent_input = handle_staleness(agent_input, scrs_path, args)
     session = Session(agent_input, mode, scrs_path, args.max_paths, not args.quiet)
     show_previous(session)
     session.run_pipeline()
@@ -871,7 +975,7 @@ def run_once(args: argparse.Namespace, settings: Any) -> bool:
         err("No scenarios were produced.")
         return False
     if not session.scenarios:
-        warn("No new proposals: every retrieved pattern is already approved for this project.")
+        warn("No new proposals: every retrieved pattern is already approved for this use case.")
 
     console.print()
     if session.scenarios:
@@ -896,12 +1000,37 @@ def run_once(args: argparse.Namespace, settings: Any) -> bool:
     return True
 
 
+def run_once(args: argparse.Namespace, settings: Any) -> bool:
+    name, path = choose_project(args)
+    args.project = None
+    args.input = None
+    runs = load_runs(path)
+
+    if args.fresh or args.auto:
+        shutil.rmtree(OUT_DIR, ignore_errors=True)
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    scrs_path = OUT_DIR / "SCRS_demo.json"
+
+    chosen = choose_use_cases(runs, scrs_path, args)
+    args.use_case = None
+    result = True
+    for run in chosen:
+        report = OUT_DIR / (
+            f"run_report_{run.use_case_id}.json" if len(runs) > 1 else "run_report.json"
+        )
+        result = run_use_case(run, name, path, args, settings, scrs_path, report) and result
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("--project", help="project number from the menu")
     parser.add_argument("--input", help="path to a project JSON file")
+    parser.add_argument(
+        "--use-case", help="for a product with several use cases: id (UC-02), number or 'all'"
+    )
     parser.add_argument(
         "--mode",
         choices=["auto", "replay", "live"],

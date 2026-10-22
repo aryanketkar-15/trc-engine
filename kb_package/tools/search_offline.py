@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Search the knowledge base with NO database (numpy + sentence-transformers only).
 
     pip install numpy sentence-transformers

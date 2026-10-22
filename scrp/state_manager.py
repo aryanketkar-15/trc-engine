@@ -74,9 +74,7 @@ class StateManager:
     # Public write interface
     # ------------------------------------------------------------------
 
-    def write_threat_scenario(
-        self, scenario: ThreatScenario, run_id: str
-    ) -> bool:
+    def write_threat_scenario(self, scenario: ThreatScenario, run_id: str) -> bool:
         """
         Write an approved ThreatScenario into the SCRS.
 
@@ -110,9 +108,7 @@ class StateManager:
         )
         return True
 
-    def commit_approved_run(
-        self, run_id: str, scenarios: list[ThreatScenario]
-    ) -> int:
+    def commit_approved_run(self, run_id: str, scenarios: list[ThreatScenario]) -> int:
         """Write every scenario of an approved run in ONE all-or-nothing file write.
 
         Each scenario gets a ``write`` audit entry, plus one ``approve`` entry,
@@ -170,6 +166,41 @@ class StateManager:
         )
         self._persist()
         logger.info("SCRS edit logged: run_id=%s tid=%s action=%s", run_id, tid, action)
+
+    def retire_scenarios(self, tids: list[str], reason: str) -> int:
+        """Take approved scenarios out of the active set because their upstream data changed.
+
+        Nothing is deleted: each scenario is moved into ``revision_history`` (action ``stale``)
+        with the reason, and an audit entry is written.  Returns how many were retired.
+        """
+        retired = 0
+        for tid in tids:
+            raw = self._state.threat_scenarios.pop(tid, None)
+            if raw is None:
+                continue
+            run_id = str(raw.get("run_id", "unknown")) if isinstance(raw, dict) else "unknown"
+            self._state.revision_history.setdefault(run_id, []).append(
+                {
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "action": "stale",
+                    "reason": reason,
+                    "scenarios": [raw],
+                }
+            )
+            self._state.audit_log.append(
+                AuditLogEntry(
+                    run_id=run_id,
+                    tid=tid,
+                    timestamp=datetime.now(UTC),
+                    action="stale",
+                    reason=reason,
+                )
+            )
+            retired += 1
+        if retired:
+            self._persist()
+            logger.info("SCRS retired %d stale scenario(s): %s", retired, reason)
+        return retired
 
     def _apply_write(self, scenario: ThreatScenario, run_id: str) -> AuditLogEntry:
         """Gate-check and stage one scenario in memory (does not persist)."""
@@ -229,8 +260,7 @@ class StateManager:
         """
         raw_scenarios = rejected_scenarios or []
         scenarios_payload = [
-            s.model_dump(mode="json") if hasattr(s, "model_dump") else s
-            for s in raw_scenarios
+            s.model_dump(mode="json") if hasattr(s, "model_dump") else s for s in raw_scenarios
         ]
 
         history_entry: dict[str, object] = {
@@ -242,11 +272,7 @@ class StateManager:
 
         if scenarios_payload:
             for item in scenarios_payload:
-                tid = (
-                    str(item.get("tid", "UNKNOWN"))
-                    if isinstance(item, dict)
-                    else "UNKNOWN"
-                )
+                tid = str(item.get("tid", "UNKNOWN")) if isinstance(item, dict) else "UNKNOWN"
                 self._state.audit_log.append(
                     AuditLogEntry(
                         run_id=run_id,
@@ -334,7 +360,5 @@ class StateManager:
         self._scrs_path.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = self._scrs_path.with_suffix(".json.tmp")
         payload = self._state.model_dump(mode="json")
-        tmp_path.write_text(
-            json.dumps(payload, indent=2, default=str), encoding="utf-8"
-        )
+        tmp_path.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
         tmp_path.replace(self._scrs_path)

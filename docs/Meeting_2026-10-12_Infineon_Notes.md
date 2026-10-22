@@ -82,3 +82,13 @@ for "requirement"). Company speaker: **Munjuluri Bala Nagendra Raja** (Infineon,
 | Multi-step attack chains? | **Not discussed** |
 | CAPEC-189 vs CAPEC-622, internal patterns, expert judgements, risk tables | **Still open**; ask by email |
 | Who approved (audit identity), tamper-proof audit | **Not discussed** |
+
+## 8. Status update, 22 Oct 2026
+
+| Action from section 6 | Status |
+|---|---|
+| 1. One shared example (smart door lock) | **Done on our side**: `docs/shared_example/` (IDs AS-1..AS-6, UC-01..UC-04, yes/no properties). Team 1 and Team 3 still have to adopt it |
+| 4. Several use cases per product | **Done**: product file format, one run and one result set per use case (`project_id` + `use_case_id`), CLI and API (`expand-project`) |
+| 5. "Go back one step and re-run" | **Done on our side**: stale-threat detection (fingerprints), retire to history, re-run only affected assets; CLI prompt and API (`staleness`, `retire-stale`). Hooking it to Team 1's database is part of the integration |
+| Yes/no security properties | Our input already used yes/no; Step 1 of the CLI now shows yes/no per property |
+| 3, 6, 8, 9, 10 | Open (Infineon's threat sources were not shared; Phase 2 treatment/residual risk; diagrams; objectives; email) |

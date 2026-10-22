@@ -46,6 +46,7 @@ try:
     from rich.panel import Panel
     from rich.prompt import Prompt
     from rich.table import Table
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -112,15 +113,11 @@ def load_smart_door_lock_input() -> ThreatAgentInput:
         / "input.json"
     )
     if fixture_path.exists():
-        return ThreatAgentInput.model_validate_json(
-            fixture_path.read_text(encoding="utf-8")
-        )
+        return ThreatAgentInput.model_validate_json(fixture_path.read_text(encoding="utf-8"))
 
     return ThreatAgentInput(
         run_id="DEMO-SDL-001",
-        use_case=(
-            "Consumer smart door lock with BLE unlock, cloud management, and OTA updates."
-        ),
+        use_case=("Consumer smart door lock with BLE unlock, cloud management, and OTA updates."),
         system_model=(
             '{"trust_boundaries": ["phone-lock BLE", "lock-cloud TLS"], '
             '"data_flows": ["unlock_command", "ota_update", "e_key_sync"]}'
@@ -132,8 +129,10 @@ def load_smart_door_lock_input() -> ThreatAgentInput:
                 asset_type="embedded firmware",
                 location="on-device",
                 security_attributes=SecurityAttributes(
-                    confidentiality=False, integrity=True,
-                    availability=True, authenticity=True,
+                    confidentiality=False,
+                    integrity=True,
+                    availability=True,
+                    authenticity=True,
                 ),
                 damage_scenario=(
                     "Unauthorised physical entry to premises via BLE replay or spoofing."
@@ -155,8 +154,10 @@ def load_smart_door_lock_input() -> ThreatAgentInput:
                 asset_type="hardware security module",
                 location="on-device",
                 security_attributes=SecurityAttributes(
-                    confidentiality=True, integrity=True,
-                    availability=False, authenticity=True,
+                    confidentiality=True,
+                    integrity=True,
+                    availability=False,
+                    authenticity=True,
                 ),
                 damage_scenario=(
                     "Cryptographic key exfiltration enabling permanent device compromise."
@@ -174,8 +175,10 @@ def load_smart_door_lock_input() -> ThreatAgentInput:
                 asset_type="cloud api server",
                 location="cloud-hosted",
                 security_attributes=SecurityAttributes(
-                    confidentiality=True, integrity=True,
-                    availability=True, authenticity=True,
+                    confidentiality=True,
+                    integrity=True,
+                    availability=True,
+                    authenticity=True,
                 ),
                 damage_scenario="Mass compromise of all registered locks via cloud API takeover.",
                 dfd_context=DFDContext(
@@ -201,9 +204,7 @@ def load_infusion_pump_input() -> ThreatAgentInput:
         / "input.json"
     )
     if fixture_path.exists():
-        return ThreatAgentInput.model_validate_json(
-            fixture_path.read_text(encoding="utf-8")
-        )
+        return ThreatAgentInput.model_validate_json(fixture_path.read_text(encoding="utf-8"))
 
     return ThreatAgentInput(
         run_id="DEMO-INF-001",
@@ -221,8 +222,10 @@ def load_infusion_pump_input() -> ThreatAgentInput:
                 asset_type="safety-critical embedded firmware",
                 location="on-device",
                 security_attributes=SecurityAttributes(
-                    confidentiality=False, integrity=True,
-                    availability=True, authenticity=True,
+                    confidentiality=False,
+                    integrity=True,
+                    availability=True,
+                    authenticity=True,
                 ),
                 damage_scenario=(
                     "Incorrect drug dosage delivered to patient due to firmware tampering."
@@ -243,8 +246,10 @@ def load_infusion_pump_input() -> ThreatAgentInput:
                 asset_type="network endpoint",
                 location="internal VLAN",
                 security_attributes=SecurityAttributes(
-                    confidentiality=True, integrity=True,
-                    availability=True, authenticity=False,
+                    confidentiality=True,
+                    integrity=True,
+                    availability=True,
+                    authenticity=False,
                 ),
                 damage_scenario=(
                     "Lateral movement through flat hospital network enabling attack "
@@ -658,9 +663,7 @@ def run_demo() -> None:
         is_low_conf = conf < LOW_CONFIDENCE_THRESHOLD
 
         if console:
-            console.print(
-                "\n[bold cyan]Stage 6: Human-in-the-Loop Approval Gate[/bold cyan]"
-            )
+            console.print("\n[bold cyan]Stage 6: Human-in-the-Loop Approval Gate[/bold cyan]")
             if is_low_conf:
                 console.print(
                     f"  [bold red]⚠ LOW CONFIDENCE: {conf:.4f} "
@@ -676,9 +679,7 @@ def run_demo() -> None:
             approve = Prompt.ask(prompt_text, choices=["y", "n"], default="y")
         else:
             warn_text = (
-                f" [⚠ LOW CONFIDENCE: {conf:.4f}]"
-                if is_low_conf
-                else f" [Confidence: {conf:.4f}]"
+                f" [⚠ LOW CONFIDENCE: {conf:.4f}]" if is_low_conf else f" [Confidence: {conf:.4f}]"
             )
             prompt_msg = (
                 f"\nApprove ThreatScenario {target_scenario.tid}{warn_text} "
@@ -692,9 +693,7 @@ def run_demo() -> None:
                     update={"status": ThreatStatus.APPROVED}
                 )
                 state_mgr = StateManager()
-                state_mgr.write_threat_scenario(
-                    target_scenario, run_id=agent_input.run_id
-                )
+                state_mgr.write_threat_scenario(target_scenario, run_id=agent_input.run_id)
                 if console:
                     console.print(
                         f"[bold green][+] Scenario {target_scenario.tid} "
@@ -726,9 +725,7 @@ def run_demo() -> None:
             logger.warning("Failed to log rejection to SCRS: %s", exc)
 
         if rejection_count >= MAX_HUMAN_REJECTIONS:
-            target_scenario = target_scenario.model_copy(
-                update={"status": ThreatStatus.REJECTED}
-            )
+            target_scenario = target_scenario.model_copy(update={"status": ThreatStatus.REJECTED})
             msg = (
                 f"[-] Scenario {target_scenario.tid} rejected {rejection_count} "
                 "time(s) — retry cap reached, escalating without further "

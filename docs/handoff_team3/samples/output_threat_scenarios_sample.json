@@ -13,11 +13,14 @@
     },
     "confidence_score": 1.0,
     "status": "approved",
-    "created_at": "2026-10-12T03:51:29.404788Z",
+    "created_at": "2026-10-22T17:52:27.988559Z",
     "run_id": "RUN-SDL-E2E-001",
     "use_case_id": "UC-6E516A54",
     "asset_version": "1.0",
     "kb_snapshot_version": "latest",
+    "project_id": null,
+    "asset_fingerprint": "ae9c3fabcb48",
+    "context_fingerprint": "2e8252f8cc46",
     "validation_status": "expert_added"
   },
   {
@@ -39,6 +42,9 @@
     "use_case_id": "UC-6E516A54",
     "asset_version": "1.0",
     "kb_snapshot_version": "latest",
+    "project_id": null,
+    "asset_fingerprint": "ae9c3fabcb48",
+    "context_fingerprint": "2e8252f8cc46",
     "validation_status": "passed"
   },
   {
@@ -60,6 +66,9 @@
     "use_case_id": "UC-6E516A54",
     "asset_version": "1.0",
     "kb_snapshot_version": "latest",
+    "project_id": null,
+    "asset_fingerprint": "ae9c3fabcb48",
+    "context_fingerprint": "2e8252f8cc46",
     "validation_status": "passed"
   },
   {
@@ -81,6 +90,9 @@
     "use_case_id": "UC-6E516A54",
     "asset_version": "1.0",
     "kb_snapshot_version": "latest",
+    "project_id": null,
+    "asset_fingerprint": "01b6e8646ecb",
+    "context_fingerprint": "2e8252f8cc46",
     "validation_status": "passed"
   },
   {
@@ -102,6 +114,9 @@
     "use_case_id": "UC-6E516A54",
     "asset_version": "1.0",
     "kb_snapshot_version": "latest",
+    "project_id": null,
+    "asset_fingerprint": "b40b4954199b",
+    "context_fingerprint": "2e8252f8cc46",
     "validation_status": "passed"
   },
   {
@@ -123,6 +138,9 @@
     "use_case_id": "UC-6E516A54",
     "asset_version": "1.0",
     "kb_snapshot_version": "latest",
+    "project_id": null,
+    "asset_fingerprint": "b40b4954199b",
+    "context_fingerprint": "2e8252f8cc46",
     "validation_status": "passed"
   },
   {
@@ -144,6 +162,9 @@
     "use_case_id": "UC-6E516A54",
     "asset_version": "1.0",
     "kb_snapshot_version": "latest",
+    "project_id": null,
+    "asset_fingerprint": "3611f6b77548",
+    "context_fingerprint": "2e8252f8cc46",
     "validation_status": "passed"
   },
   {
@@ -165,6 +186,9 @@
     "use_case_id": "UC-6E516A54",
     "asset_version": "1.0",
     "kb_snapshot_version": "latest",
+    "project_id": null,
+    "asset_fingerprint": "3611f6b77548",
+    "context_fingerprint": "2e8252f8cc46",
     "validation_status": "passed"
   },
   {
@@ -186,6 +210,9 @@
     "use_case_id": "UC-6E516A54",
     "asset_version": "1.0",
     "kb_snapshot_version": "latest",
+    "project_id": null,
+    "asset_fingerprint": "b226285db3d9",
+    "context_fingerprint": "2e8252f8cc46",
     "validation_status": "passed"
   },
   {
@@ -207,6 +234,9 @@
     "use_case_id": "UC-6E516A54",
     "asset_version": "1.0",
     "kb_snapshot_version": "latest",
+    "project_id": null,
+    "asset_fingerprint": "b226285db3d9",
+    "context_fingerprint": "2e8252f8cc46",
     "validation_status": "passed"
   },
   {
@@ -228,6 +258,9 @@
     "use_case_id": "UC-6E516A54",
     "asset_version": "1.0",
     "kb_snapshot_version": "latest",
+    "project_id": null,
+    "asset_fingerprint": "3f2e2165a161",
+    "context_fingerprint": "2e8252f8cc46",
     "validation_status": "passed"
   },
   {
@@ -249,6 +282,9 @@
     "use_case_id": "UC-6E516A54",
     "asset_version": "1.0",
     "kb_snapshot_version": "latest",
+    "project_id": null,
+    "asset_fingerprint": "3f2e2165a161",
+    "context_fingerprint": "2e8252f8cc46",
     "validation_status": "passed"
   }
 ]

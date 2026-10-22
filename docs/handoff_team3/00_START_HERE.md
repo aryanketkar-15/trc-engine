@@ -61,8 +61,10 @@ samples/
   output_threat_scenarios_sample.json / .csv              12 approved scenarios, all attributes (real output)
   output_scrs_state_sample.json                           shared state: scenarios + audit log + history
   output_example_flagged_scenario.json                    a scenario that failed an automatic check
+  input_product_with_use_cases.json                       a product (smart door lock) with 4 use cases, assets listed once
 schemas/
   threat_schemas.py, scrs_schemas.py                      the exact Pydantic models (import them)
+  project_schema.py, staleness.py                         product-with-use-cases format; out-of-date-threat check
   *.schema.json                                           the same as JSON Schema (any language)
 tools/
   check_handoff.py                                        validates the samples and prints a trace matrix

@@ -38,7 +38,7 @@ class AuditLogEntry(BaseModel):
         default_factory=lambda: datetime.now(UTC),
         description="UTC timestamp of the write action.",
     )
-    action: Literal["write", "reject", "revise", "approve", "prune", "add"] = Field(
+    action: Literal["write", "reject", "revise", "approve", "prune", "add", "stale"] = Field(
         default="write",
         description="Action performed.",
     )
@@ -73,4 +73,3 @@ class SCRSState(BaseModel):
         default_factory=dict,
         description="Keyed by run_id; lists previous iterations of rejected scenarios.",
     )
-

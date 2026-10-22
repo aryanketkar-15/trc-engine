@@ -9,6 +9,8 @@
 | Safety rules | redaction of secrets/PII before the AI call; no invented citations; every decision logged |
 | Command-line demo | `python scripts/scrp_demo.py` (pick a project, review scenarios, approve/reject, run again) |
 | REST API | working (`/api/v1/threat-agent/...`) |
+| Several use cases per product | **working** (12 Oct company request): one run and one result set per use case, keyed by `project_id` + `use_case_id` |
+| "Go back one step" | **working on our side**: out-of-date approved threats are detected (asset or system model changed), retired to the history, and only the affected assets are re-run. Reading Team 1's database for this is part of the integration |
 | Link to Team 1 (real asset tables) | **not built**: needs their latest branches merged and an adapter (file 01) |
 | Writing results into Team 1's database and audit chain | **not built** |
 | Risk Agent / Compliance Agent | **not built** (file 04 is a proposal) |

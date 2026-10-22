@@ -1,0 +1,222 @@
+{
+  "_about": "Shared example for ALL teams: Connected Smart Door Lock (CSDL-100), one product with several use cases. Assets AS-1..AS-6 follow the company document section 2.4. UC-01 is the company's use case (section 2.2). UC-02..UC-04 were written by Team 2 as realistic examples (the company said a product has many use cases) and are not part of the company document.",
+  "project_id": "CSDL-100",
+  "product_name": "Connected Smart Door Lock (CSDL-100)",
+  "kb_snapshot_version": "latest",
+  "assets": [
+    {
+      "asset_id": "AS-1",
+      "name": "Unlock Command",
+      "asset_type": "control command",
+      "location": "Cloud<->Lock channel",
+      "security_attributes": {
+        "confidentiality": false,
+        "integrity": true,
+        "availability": true,
+        "authenticity": true
+      },
+      "damage_scenario": "Unauthorised entry",
+      "dfd_context": {
+        "interfaces": [
+          "BLE 5.0",
+          "GATT",
+          "Cloud API"
+        ],
+        "trust_zone": "untrusted",
+        "data_flows": [
+          "unlock_command"
+        ]
+      },
+      "device_config": {
+        "auth": "PIN-only",
+        "encryption": "none",
+        "pairing": "unauthenticated"
+      }
+    },
+    {
+      "asset_id": "AS-2",
+      "name": "E-Key Credential",
+      "asset_type": "access credential",
+      "location": "Cloud DB, App, Lock",
+      "security_attributes": {
+        "confidentiality": true,
+        "integrity": true,
+        "availability": false,
+        "authenticity": true
+      },
+      "damage_scenario": "Cloning, unauthorised entry",
+      "dfd_context": {
+        "interfaces": [
+          "HTTPS",
+          "REST",
+          "OAuth 2.0"
+        ],
+        "trust_zone": "external",
+        "data_flows": [
+          "e_key_sync"
+        ]
+      },
+      "device_config": {
+        "auth": "JWT",
+        "storage": "cloud_db",
+        "token_type": "bearer"
+      }
+    },
+    {
+      "asset_id": "AS-3",
+      "name": "Firmware Image",
+      "asset_type": "embedded firmware",
+      "location": "OTA, Lock flash",
+      "security_attributes": {
+        "confidentiality": false,
+        "integrity": true,
+        "availability": true,
+        "authenticity": true
+      },
+      "damage_scenario": "Persistent device compromise",
+      "dfd_context": {
+        "interfaces": [
+          "BLE OTA",
+          "UART"
+        ],
+        "trust_zone": "untrusted",
+        "data_flows": [
+          "ota_update"
+        ]
+      },
+      "device_config": {
+        "signature_verification": "none",
+        "rollback_protection": "false"
+      }
+    },
+    {
+      "asset_id": "AS-4",
+      "name": "Audit Log",
+      "asset_type": "event log",
+      "location": "Lock, Cloud",
+      "security_attributes": {
+        "confidentiality": false,
+        "integrity": true,
+        "availability": true,
+        "authenticity": false
+      },
+      "damage_scenario": "Loss of forensic evidence",
+      "dfd_context": {
+        "interfaces": [
+          "SPI Flash",
+          "Internal Bus"
+        ],
+        "trust_zone": "trusted",
+        "data_flows": [
+          "audit_event_sync"
+        ]
+      },
+      "device_config": {
+        "storage": "flash_memory",
+        "tamper_protection": "none"
+      }
+    },
+    {
+      "asset_id": "AS-5",
+      "name": "User PII (schedule, address)",
+      "asset_type": "user data",
+      "location": "Cloud, App",
+      "security_attributes": {
+        "confidentiality": true,
+        "integrity": false,
+        "availability": false,
+        "authenticity": false
+      },
+      "damage_scenario": "Privacy breach, stalking risk",
+      "dfd_context": {
+        "interfaces": [
+          "BLE Broadcast",
+          "HTTPS",
+          "REST"
+        ],
+        "trust_zone": "external",
+        "data_flows": [
+          "schedule_sync"
+        ]
+      },
+      "device_config": {
+        "encryption": "none",
+        "classification": "PII"
+      }
+    },
+    {
+      "asset_id": "AS-6",
+      "name": "Cryptographic Keys",
+      "asset_type": "cryptographic key material",
+      "location": "Secure element",
+      "security_attributes": {
+        "confidentiality": true,
+        "integrity": true,
+        "availability": false,
+        "authenticity": true
+      },
+      "damage_scenario": "Full system compromise",
+      "dfd_context": {
+        "interfaces": [
+          "I2C",
+          "SPI"
+        ],
+        "trust_zone": "trusted",
+        "data_flows": []
+      },
+      "device_config": {
+        "key_storage": "persistent",
+        "tamper": "physical",
+        "side_channel_countermeasures": "none"
+      }
+    }
+  ],
+  "use_cases": [
+    {
+      "use_case_id": "UC-01",
+      "title": "Remote unlock by homeowner",
+      "description": "Lock paired and online; the homeowner is authenticated in the app with MFA. The homeowner taps Unlock, the mobile app requests the command via the cloud, the cloud backend authorises and forwards it to the lock, the lock verifies and unlocks, and an audit event is logged.",
+      "system_model": "{\"trust_boundaries\": [\"phone-cloud TLS\", \"cloud-lock TLS\", \"device-hardware physical\"], \"data_flows\": [\"unlock_command\", \"audit_event_sync\"]}",
+      "asset_ids": [
+        "AS-1",
+        "AS-2",
+        "AS-4",
+        "AS-6"
+      ]
+    },
+    {
+      "use_case_id": "UC-02",
+      "title": "Issue a time-bound guest e-key",
+      "description": "The homeowner creates a time-bound e-key for a guest in the app. The cloud backend stores the credential and its schedule, sends it to the guest's phone, and the lock receives the credential data so it can verify the guest later.",
+      "system_model": "{\"trust_boundaries\": [\"phone-cloud TLS\", \"cloud-lock TLS\", \"phone-lock BLE\"], \"data_flows\": [\"e_key_sync\", \"schedule_sync\", \"audit_event_sync\"]}",
+      "asset_ids": [
+        "AS-2",
+        "AS-4",
+        "AS-5",
+        "AS-6"
+      ]
+    },
+    {
+      "use_case_id": "UC-03",
+      "title": "Revoke a lost or stolen e-key",
+      "description": "The homeowner reports a lost phone or key. The cloud backend marks the e-key as revoked, pushes the revocation to the lock, and the lock rejects further use of that credential. The revocation is logged.",
+      "system_model": "{\"trust_boundaries\": [\"phone-cloud TLS\", \"cloud-lock TLS\"], \"data_flows\": [\"e_key_sync\", \"audit_event_sync\"]}",
+      "asset_ids": [
+        "AS-2",
+        "AS-4",
+        "AS-5"
+      ]
+    },
+    {
+      "use_case_id": "UC-04",
+      "title": "Over-the-air firmware update",
+      "description": "The cloud backend offers a new signed firmware image. The lock downloads it over the OTA channel, verifies the signature, installs it using key material from the secure element, and reports the result. The update is logged.",
+      "system_model": "{\"trust_boundaries\": [\"cloud-lock TLS\", \"phone-lock BLE\", \"device-hardware physical\"], \"data_flows\": [\"ota_update\", \"audit_event_sync\"]}",
+      "asset_ids": [
+        "AS-3",
+        "AS-4",
+        "AS-6"
+      ]
+    }
+  ]
+}

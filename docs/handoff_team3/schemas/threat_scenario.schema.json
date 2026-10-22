@@ -159,6 +159,45 @@
       "description": "Traceability: KB snapshot version used for retrieval.",
       "title": "Kb Snapshot Version"
     },
+    "project_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Traceability: the product/project this scenario belongs to. Together with use_case_id it identifies a use case when one product has several.",
+      "title": "Project Id"
+    },
+    "asset_fingerprint": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Traceability: short hash of the asset facts this threat was derived from. If the asset changes later, the threat is out of date (staleness check).",
+      "title": "Asset Fingerprint"
+    },
+    "context_fingerprint": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Traceability: short hash of the use-case text and system model used. A change means every threat of the use case may be out of date.",
+      "title": "Context Fingerprint"
+    },
     "validation_status": {
       "anyOf": [
         {

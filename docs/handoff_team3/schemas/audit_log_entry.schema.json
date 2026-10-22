@@ -26,7 +26,8 @@
         "revise",
         "approve",
         "prune",
-        "add"
+        "add",
+        "stale"
       ],
       "title": "Action",
       "type": "string"

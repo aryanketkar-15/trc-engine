@@ -9,7 +9,8 @@ use case     asset (Team 1)            threat (us)     risk (us, later)       re
 
 | Key | Where it lives | Use it to |
 |---|---|---|
-| `use_case_id` | on every threat | link the threat to Team 1's use case |
+| `project_id` + `use_case_id` | on every threat | link the threat to Team 1's use case. **A product has several use cases** (UC-01, UC-02 …); always use the pair |
+| `asset_fingerprint`, `context_fingerprint` | on every threat | detect that the asset or the use case changed after approval (stale threat). `schemas/staleness.py` shows how to compare |
 | `asset_id` + `asset_version` | on every threat | link to the exact asset row; if the asset's version later increases, the threat may be stale |
 | `tid` | on every threat; unique | the key your requirements should point to |
 | `kb_reference` | on every threat | link to the attack catalogue entry (CAPEC / ATT&CK / CWE / STRIDE rule) |
@@ -48,6 +49,7 @@ A requirement can cover several threats and a threat can lead to several require
 | `revise` | A scenario replaced an earlier one; `previous_tid` points to the old one | – |
 | `prune` | A human discarded a scenario | the reason (required) |
 | `add` | A human expert added their own scenario | why it was added |
+| `stale` | An approved scenario was **retired** because its upstream data (asset or system model) changed; it moves to `revision_history`, it is not deleted | "Upstream data changed: asset facts changed" (or similar) |
 
 ### `revision_history`
 

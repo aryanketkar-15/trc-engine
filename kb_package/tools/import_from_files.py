@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Load the knowledge base into a PostgreSQL database with pgvector, from the JSONL/NPY files.
 
 Use this if you cannot restore the SQL dump. It creates two tables in the database you give it.

@@ -52,6 +52,7 @@ from agents.threat_agent.orchestrator import (
     generate_and_validate_with_retry,
     regenerate_after_human_rejection,
 )
+from agents.threat_agent.project import ProjectInput, expand_project
 from agents.threat_agent.retrieval import kb_reference_exists
 from agents.threat_agent.run_store import (
     InvalidStateTransitionError,
@@ -70,6 +71,7 @@ from agents.threat_agent.schemas import (
     ThreatStatus,
     ValidationResult,
 )
+from agents.threat_agent.staleness import check_staleness, traceability_stamp
 from agents.threat_agent.validator import Validator
 from config.settings import get_settings
 from scrp.state_manager import StateManager
@@ -129,10 +131,8 @@ def get_regenerator(
     automatically delegates to the injected orchestrator.
     """
     if orchestrator is not generate_and_validate_with_retry:
-        return (
-            lambda agent_input, human_feedback, previous_scenarios=None, **kwargs: (
-                orchestrator(agent_input)
-            )
+        return lambda agent_input, human_feedback, previous_scenarios=None, **kwargs: orchestrator(
+            agent_input
         )
     return regenerate_after_human_rejection
 
@@ -145,7 +145,6 @@ def get_scrs_path() -> FilePath:
 def get_state_manager() -> StateManager:
     """Fresh StateManager bound to the configured SCRS file."""
     return StateManager(get_scrs_path())
-
 
 
 def verify_api_key(
@@ -201,9 +200,7 @@ def _get_run_or_404(run_id: str, store: RunRegistryStore | None = None) -> RunRe
                 active_store.set_run(record)
                 return record
     except Exception as exc:
-        logger.debug(
-            "Failed to read historical SCRS state for run %s: %s", run_id, exc
-        )
+        logger.debug("Failed to read historical SCRS state for run %s: %s", run_id, exc)
 
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
@@ -218,9 +215,7 @@ def _raise_invalid_transition(
     """Map InvalidStateTransitionError to HTTP 409 with exact expected details."""
     if action == "approve":
         if exc.current_status == ThreatStatus.APPROVED:
-            detail = (
-                f"Run '{exc.run_id}' is already approved and cannot be approved again."
-            )
+            detail = f"Run '{exc.run_id}' is already approved and cannot be approved again."
         elif exc.current_status == ThreatStatus.REJECTED:
             detail = f"Run '{exc.run_id}' has been rejected and cannot be approved."
         else:
@@ -232,9 +227,7 @@ def _raise_invalid_transition(
         if exc.current_status == ThreatStatus.APPROVED:
             detail = f"Run '{exc.run_id}' is already approved and cannot be rejected."
         elif exc.current_status == ThreatStatus.REJECTED:
-            detail = (
-                f"Run '{exc.run_id}' is already rejected and cannot be rejected again."
-            )
+            detail = f"Run '{exc.run_id}' is already rejected and cannot be rejected again."
         else:
             detail = (
                 f"Run '{exc.run_id}' is in status '{exc.current_status.value}', "
@@ -390,9 +383,7 @@ class RejectResponse(BaseModel):
     run_id: Annotated[str, Field(description="Run identifier.")]
     status: Annotated[
         ThreatStatus,
-        Field(
-            description="State after rejection — 'pending_test' (retry) or 'rejected'."
-        ),
+        Field(description="State after rejection — 'pending_test' (retry) or 'rejected'."),
     ]
     retry_count: Annotated[
         int,
@@ -528,8 +519,7 @@ async def analyze(
         # Execute automated retrieval, generation, and validation retry loop
         scenarios, validator_retries, validation_status = orchestrator(payload)
         scenarios_dicts = [
-            s.model_dump(mode="json") if hasattr(s, "model_dump") else s
-            for s in scenarios
+            s.model_dump(mode="json") if hasattr(s, "model_dump") else s for s in scenarios
         ]
 
         # Register accepted run into state tracking (advances to pending_human awaiting review)
@@ -566,9 +556,7 @@ async def analyze(
         ) from exc
 
     except Exception as exc:
-        logger.exception(
-            "Unexpected error in analyze", extra={"run_id": payload.run_id}
-        )
+        logger.exception("Unexpected error in analyze", extra={"run_id": payload.run_id})
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error — check logs for run_id.",
@@ -679,9 +667,7 @@ async def approve_run(
 
         # The post-transition list is authoritative (it includes any expert edits).
         try:
-            written = state_mgr.commit_approved_run(
-                run_id, _approved_scenarios(run.scenarios)
-            )
+            written = state_mgr.commit_approved_run(run_id, _approved_scenarios(run.scenarios))
         except Exception as exc:
             logger.exception("SCRS write failed after approval", extra={"run_id": run_id})
             raise HTTPException(
@@ -781,9 +767,7 @@ async def reject_run(
         if run.status == ThreatStatus.APPROVED:
             detail = f"Run '{run_id}' is already approved and cannot be rejected."
         elif run.status == ThreatStatus.REJECTED:
-            detail = (
-                f"Run '{run_id}' is already rejected and cannot be rejected again."
-            )
+            detail = f"Run '{run_id}' is already rejected and cannot be rejected again."
         else:
             detail = (
                 f"Run '{run_id}' is in status '{run.status.value}', "
@@ -802,9 +786,7 @@ async def reject_run(
             rejected_scenarios=run.scenarios,
         )
     except Exception as exc:
-        logger.warning(
-            "Failed to log rejection to SCRS for run %s: %s", run_id, exc
-        )
+        logger.warning("Failed to log rejection to SCRS for run %s: %s", run_id, exc)
 
     current_rejections = run.human_rejection_count
 
@@ -858,8 +840,7 @@ async def reject_run(
             previous_scenarios=run.scenarios,
         )
         scenarios_dicts = [
-            s.model_dump(mode="json") if hasattr(s, "model_dump") else s
-            for s in new_scenarios
+            s.model_dump(mode="json") if hasattr(s, "model_dump") else s for s in new_scenarios
         ]
 
         updated_run = store.transition_run(
@@ -968,6 +949,16 @@ async def prune_scenario(
     )
 
 
+def _run_stamp(run: RunRecord, asset_id: str) -> dict[str, object]:
+    """Traceability fields for an expert-added scenario, from the run's stored input."""
+    if not run.agent_input:
+        return {}
+    try:
+        return traceability_stamp(ThreatAgentInput.model_validate(run.agent_input), asset_id)
+    except Exception:
+        return {}
+
+
 @router.post(
     "/{run_id}/scenarios",
     response_model=AddScenarioResponse,
@@ -1020,6 +1011,7 @@ async def add_scenario(
         confidence_score=1.0,
         status=ThreatStatus.PENDING_TEST,
         validation_status="expert_added",
+        **_run_stamp(run, body.asset_id),
     )
     result = Validator().validate(scenario)
     if not result.passed:
@@ -1109,3 +1101,62 @@ async def get_scenarios(
         )
 
     return run.scenarios
+
+
+# ---------------------------------------------------------------------------
+# Multi-use-case projects and "go back one step" (staleness)
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/expand-project",
+    response_model=list[ThreatAgentInput],
+    summary="Split a product with several use cases into one ready-to-run input per use case",
+    dependencies=[Depends(verify_api_key)],
+)
+async def expand_project_endpoint(
+    project: Annotated[ProjectInput, Body(description="Assets once, plus the list of use cases.")],
+) -> list[ThreatAgentInput]:
+    """No AI is used. Submit each returned input to ``POST /analyze`` separately; the results of
+    every use case are kept apart (keyed by ``project_id`` + ``use_case_id``)."""
+    return expand_project(project)
+
+
+@router.post(
+    "/staleness",
+    summary="Which approved threats are out of date for this input? (read-only)",
+    dependencies=[Depends(verify_api_key)],
+)
+async def staleness_endpoint(
+    payload: Annotated[ThreatAgentInput, Body(description="The CURRENT input of a use case.")],
+    state_mgr: Annotated[StateManager, Depends(get_state_manager)],
+) -> dict[str, object]:
+    """Compare the approved scenarios of this use case with the current assets and system model.
+
+    A scenario is stale when its asset was removed or changed, or when the use-case / system
+    model text changed. ``affected_assets`` lists the assets that need new threats.
+    """
+    report = check_staleness(payload, state_mgr.get_threat_scenarios().values())
+    return report.summary()
+
+
+@router.post(
+    "/retire-stale",
+    summary="Move out-of-date approved threats into the history so they can be re-run",
+    dependencies=[Depends(verify_api_key)],
+)
+async def retire_stale_endpoint(
+    payload: Annotated[ThreatAgentInput, Body(description="The CURRENT input of a use case.")],
+    state_mgr: Annotated[StateManager, Depends(get_state_manager)],
+) -> dict[str, object]:
+    """Retire stale approved scenarios (never deleted: they move to the revision history with the
+    reason). Afterwards call ``POST /analyze`` for the use case; use the returned
+    ``affected_assets`` to send only the assets that changed."""
+    report = check_staleness(payload, state_mgr.get_threat_scenarios().values())
+    by_reason: dict[str, list[str]] = {}
+    for item in report.stale:
+        by_reason.setdefault(item.reason, []).append(item.tid)
+    retired = 0
+    for reason, tids in by_reason.items():
+        retired += state_mgr.retire_scenarios(tids, f"Upstream data changed: {reason}")
+    return {"retired": retired, "affected_assets": report.affected_assets, **report.summary()}

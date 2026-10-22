@@ -109,9 +109,7 @@ class Validator:
     # Individual checks
     # ------------------------------------------------------------------
 
-    def citation_presence_check(
-        self, scenario: ThreatScenario
-    ) -> tuple[bool, FailedCheck | None]:
+    def citation_presence_check(self, scenario: ThreatScenario) -> tuple[bool, FailedCheck | None]:
         """
         Check: evidence_chain.citation must be non-empty and not a placeholder.
 
@@ -292,9 +290,7 @@ class Validator:
             return False, FailedCheck(
                 check_id=CHECK_EVIDENCE_GENERIC,
                 affected_tid=scenario.tid,
-                detail=(
-                    "evidence_completeness_check: " + " | ".join(failures)
-                ),
+                detail=("evidence_completeness_check: " + " | ".join(failures)),
             )
         return True, None
 

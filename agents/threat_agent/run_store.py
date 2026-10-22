@@ -118,19 +118,13 @@ def _row_to_run_record(row: dict[str, Any]) -> RunRecord:
     human_rej_cnt = row.get("human_rejection_count", retry_cnt)
 
     agent_in = row.get("agent_input")
-    agent_input_dict: dict[str, object] = (
-        agent_in if isinstance(agent_in, dict) else {}
-    )
+    agent_input_dict: dict[str, object] = agent_in if isinstance(agent_in, dict) else {}
 
     rej_hist = row.get("rejection_history")
-    rejection_history_list: list[dict[str, object]] = (
-        rej_hist if isinstance(rej_hist, list) else []
-    )
+    rejection_history_list: list[dict[str, object]] = rej_hist if isinstance(rej_hist, list) else []
 
     edit_hist = row.get("edit_history")
-    edit_history_list: list[dict[str, object]] = (
-        edit_hist if isinstance(edit_hist, list) else []
-    )
+    edit_history_list: list[dict[str, object]] = edit_hist if isinstance(edit_hist, list) else []
 
     return RunRecord(
         run_id=row["run_id"],
@@ -455,9 +449,7 @@ class PostgresRunRegistryStore(RunRegistryStore):
                         "human_rejection_count": effective_rejections,
                         "validation_status": validation_status,
                         "scrs_entry_id": scrs_entry_id,
-                        "agent_input": Jsonb(
-                            agent_in, dumps=lambda x: json.dumps(x, default=str)
-                        ),
+                        "agent_input": Jsonb(agent_in, dumps=lambda x: json.dumps(x, default=str)),
                         "rejection_history": Jsonb(
                             rej_hist, dumps=lambda x: json.dumps(x, default=str)
                         ),
@@ -571,7 +563,7 @@ class PostgresRunRegistryStore(RunRegistryStore):
 
                 query = f"""
                     UPDATE threat_agent_runs
-                    SET {', '.join(set_clauses)}
+                    SET {", ".join(set_clauses)}
                     WHERE run_id = %(run_id)s AND status = %(expected_status)s
                     RETURNING *;
                 """  # noqa: S608
@@ -635,9 +627,7 @@ class PostgresRunRegistryStore(RunRegistryStore):
                     """,
                     {
                         "run_id": run_id,
-                        "scenarios": Jsonb(
-                            new_list, dumps=lambda x: json.dumps(x, default=str)
-                        ),
+                        "scenarios": Jsonb(new_list, dumps=lambda x: json.dumps(x, default=str)),
                         "entry": json.dumps([entry], default=str),
                     },
                 )

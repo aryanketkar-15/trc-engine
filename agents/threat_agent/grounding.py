@@ -63,8 +63,15 @@ def _words(text: str) -> set[str]:
 
 
 def _asset_vocabulary(asset: AssetModel) -> set[str]:
-    parts = [asset.name, asset.asset_type, asset.location, asset.dfd_context.trust_zone,
-             asset.damage_scenario, *asset.dfd_context.interfaces, *asset.dfd_context.data_flows]
+    parts = [
+        asset.name,
+        asset.asset_type,
+        asset.location,
+        asset.dfd_context.trust_zone,
+        asset.damage_scenario,
+        *asset.dfd_context.interfaces,
+        *asset.dfd_context.data_flows,
+    ]
     for key, value in asset.device_config.items():
         parts.extend((key.replace("_", " "), value))
     return _words(" ".join(parts))
@@ -86,49 +93,64 @@ def check_grounding(
     if path is not None and not any(
         _ref_matches(scenario.kb_reference, step.pattern_id) for step in path.steps
     ):
-        fails.append(GroundingFailure(
-            "CITATION_NOT_RETRIEVED", tid,
-            f"kb_reference '{scenario.kb_reference}' is not one of the retrieved patterns "
-            f"for this attack path ({', '.join(s.pattern_id for s in path.steps)}). "
-            "Cite only a pattern you were given.",
-        ))
+        fails.append(
+            GroundingFailure(
+                "CITATION_NOT_RETRIEVED",
+                tid,
+                f"kb_reference '{scenario.kb_reference}' is not one of the retrieved patterns "
+                f"for this attack path ({', '.join(s.pattern_id for s in path.steps)}). "
+                "Cite only a pattern you were given.",
+            )
+        )
 
     by_id = {a.asset_id: a for a in assets}
     asset = by_id.get(scenario.asset_id)
     if assets and asset is None:
-        fails.append(GroundingFailure(
-            "ASSET_NOT_IN_INPUT", tid,
-            f"asset_id '{scenario.asset_id}' is not an asset of the system model "
-            f"({', '.join(sorted(by_id))}).",
-        ))
+        fails.append(
+            GroundingFailure(
+                "ASSET_NOT_IN_INPUT",
+                tid,
+                f"asset_id '{scenario.asset_id}' is not an asset of the system model "
+                f"({', '.join(sorted(by_id))}).",
+            )
+        )
 
     ev = scenario.evidence_chain
     core = _core(scenario.kb_reference)
-    citation_has_id = re.search(rf"(?<![A-Z0-9]){re.escape(core)}(?![A-Z0-9])",
-                                ev.citation.upper()) is not None
+    citation_has_id = (
+        re.search(rf"(?<![A-Z0-9]){re.escape(core)}(?![A-Z0-9])", ev.citation.upper()) is not None
+    )
     # The citation may name kb_reference or another pattern retrieved for the same path
     # (e.g. a STRIDE rule backed by its CAPEC); it may never name something not retrieved.
     cited_ok = citation_has_id or (
         path is not None
         and any(
-            re.search(rf"(?<![A-Z0-9]){re.escape(_core(step.pattern_id))}(?![A-Z0-9])",
-                      ev.citation.upper())
+            re.search(
+                rf"(?<![A-Z0-9]){re.escape(_core(step.pattern_id))}(?![A-Z0-9])",
+                ev.citation.upper(),
+            )
             for step in path.steps
         )
     )
     if not _ref_matches(ev.matched_pattern, scenario.kb_reference) or not cited_ok:
-        fails.append(GroundingFailure(
-            "CITATION_MISMATCH", tid,
-            f"matched_pattern '{ev.matched_pattern}' and citation must name the same pattern "
-            f"as kb_reference '{scenario.kb_reference}'.",
-        ))
+        fails.append(
+            GroundingFailure(
+                "CITATION_MISMATCH",
+                tid,
+                f"matched_pattern '{ev.matched_pattern}' and citation must name the same pattern "
+                f"as kb_reference '{scenario.kb_reference}'.",
+            )
+        )
 
     if asset is not None:
         vocab = _asset_vocabulary(asset)
         if vocab and not (_words(ev.exposure) & vocab):
-            fails.append(GroundingFailure(
-                "EXPOSURE_NOT_GROUNDED", tid,
-                "exposure must reference a real property of the asset (its interfaces, "
-                "configuration or role); it shares no term with the asset description.",
-            ))
+            fails.append(
+                GroundingFailure(
+                    "EXPOSURE_NOT_GROUNDED",
+                    tid,
+                    "exposure must reference a real property of the asset (its interfaces, "
+                    "configuration or role); it shares no term with the asset description.",
+                )
+            )
     return fails

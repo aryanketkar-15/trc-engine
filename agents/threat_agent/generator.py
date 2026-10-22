@@ -206,7 +206,7 @@ def _build_user_prompt(
         clean_name, c_name = redact_pii_with_count(a.name)
         clean_cfg, c_cfg = redact_structure(a.device_config or {})
         clean_dmg, c_dmg = redact_pii_with_count(getattr(a, "damage_scenario", ""))
-        total_redactions += (c_name + c_cfg + c_dmg)
+        total_redactions += c_name + c_cfg + c_dmg
 
         asset_dict: dict[str, Any] = {
             "asset_id": a.asset_id,
@@ -333,8 +333,7 @@ def _deterministic_fallback_for_path(
         )
         if len(applicability_reason) < 20:
             applicability_reason = (
-                f"Vulnerability {step.pattern_id} applies directly to {asset_name} "
-                f"via {kw} vector."
+                f"Vulnerability {step.pattern_id} applies directly to {asset_name} via {kw} vector."
             )
 
         items.append(
@@ -606,9 +605,7 @@ def generate_scenarios(
     # Prepend failure context on retry so LLM knows what to fix.
     retry_preamble = ""
     if validation_failure_context:
-        failure_lines = "\n".join(
-            f"  - {detail}" for detail in validation_failure_context
-        )
+        failure_lines = "\n".join(f"  - {detail}" for detail in validation_failure_context)
         retry_preamble = (
             "IMPORTANT — THIS IS A RETRY.  The previous generation attempt "
             "failed the Protocol Invariant Validator.  You MUST fix ALL of "

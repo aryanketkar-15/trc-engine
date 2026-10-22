@@ -59,3 +59,13 @@ always starts clean.
   regenerates from your reason.
 * Each attack path is a single retrieved pattern; multi-step chaining is not implemented yet.
 * First retrieval takes about 30-50 s while the embedding model loads.
+
+## Several use cases and out-of-date threats (added 22 Oct 2026)
+
+A product can have several use cases (Infineon feedback). The project **"Smart Door Lock Multi Use Case"** (menu item 3, file
+`projects/smart_door_lock_multi_use_case.json`) has four: UC-01 remote unlock, UC-02 issue a guest e-key, UC-03 revoke a lost
+e-key, UC-04 OTA update. Choose one with the menu or `--use-case UC-02` (a number, an id, or `all`). Results are kept per use case.
+
+**Going back one step:** edit an asset or the system model in the project file and run the same use case again. The tool
+lists the approved scenarios that are now out of date and why; answer `y` to retire them and re-run only the affected assets.
+Details: `docs/Multi_UseCase_and_Rerun.md`. Security properties are shown as yes/no in Step 1.

@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Check that the data files in this package are complete and unchanged.
 
     pip install numpy

@@ -369,6 +369,39 @@ class ThreatScenario(BaseModel):
         ),
     ] = None
 
+    project_id: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description=(
+                "Traceability: the product/project this scenario belongs to. Together with "
+                "use_case_id it identifies a use case when one product has several."
+            ),
+        ),
+    ] = None
+
+    asset_fingerprint: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description=(
+                "Traceability: short hash of the asset facts this threat was derived from. "
+                "If the asset changes later, the threat is out of date (staleness check)."
+            ),
+        ),
+    ] = None
+
+    context_fingerprint: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description=(
+                "Traceability: short hash of the use-case text and system model used. "
+                "A change means every threat of the use case may be out of date."
+            ),
+        ),
+    ] = None
+
     validation_status: Annotated[
         str | None,
         Field(
@@ -994,6 +1027,17 @@ class ThreatAgentInput(BaseModel):
             ),
         ),
     ]
+
+    project_id: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description=(
+                "Optional product/project identifier. A product can have several use cases "
+                "(UC-01, UC-02, ...); each use case is analysed in its own run."
+            ),
+        ),
+    ] = None
 
     use_case_id: Annotated[
         str | None,

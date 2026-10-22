@@ -19,6 +19,9 @@
       "use_case_id": "UC-6E516A54",
       "asset_version": "1.0",
       "kb_snapshot_version": "latest",
+      "project_id": null,
+      "asset_fingerprint": "ae9c3fabcb48",
+      "context_fingerprint": "2e8252f8cc46",
       "validation_status": "passed"
     },
     "THR-PATH-9DE0C2D5-023": {
@@ -40,6 +43,9 @@
       "use_case_id": "UC-6E516A54",
       "asset_version": "1.0",
       "kb_snapshot_version": "latest",
+      "project_id": null,
+      "asset_fingerprint": "ae9c3fabcb48",
+      "context_fingerprint": "2e8252f8cc46",
       "validation_status": "passed"
     },
     "THR-PATH-05064984-037": {
@@ -61,6 +67,9 @@
       "use_case_id": "UC-6E516A54",
       "asset_version": "1.0",
       "kb_snapshot_version": "latest",
+      "project_id": null,
+      "asset_fingerprint": "01b6e8646ecb",
+      "context_fingerprint": "2e8252f8cc46",
       "validation_status": "passed"
     },
     "THR-PATH-BE5ED663-004": {
@@ -82,6 +91,9 @@
       "use_case_id": "UC-6E516A54",
       "asset_version": "1.0",
       "kb_snapshot_version": "latest",
+      "project_id": null,
+      "asset_fingerprint": "b40b4954199b",
+      "context_fingerprint": "2e8252f8cc46",
       "validation_status": "passed"
     },
     "THR-PATH-4BFFE35B-003": {
@@ -103,6 +115,9 @@
       "use_case_id": "UC-6E516A54",
       "asset_version": "1.0",
       "kb_snapshot_version": "latest",
+      "project_id": null,
+      "asset_fingerprint": "b40b4954199b",
+      "context_fingerprint": "2e8252f8cc46",
       "validation_status": "passed"
     },
     "THR-PATH-FF8876D6-001": {
@@ -124,6 +139,9 @@
       "use_case_id": "UC-6E516A54",
       "asset_version": "1.0",
       "kb_snapshot_version": "latest",
+      "project_id": null,
+      "asset_fingerprint": "3611f6b77548",
+      "context_fingerprint": "2e8252f8cc46",
       "validation_status": "passed"
     },
     "THR-PATH-9F63700F-002": {
@@ -145,6 +163,9 @@
       "use_case_id": "UC-6E516A54",
       "asset_version": "1.0",
       "kb_snapshot_version": "latest",
+      "project_id": null,
+      "asset_fingerprint": "3611f6b77548",
+      "context_fingerprint": "2e8252f8cc46",
       "validation_status": "passed"
     },
     "THR-PATH-470F30A8-027": {
@@ -166,6 +187,9 @@
       "use_case_id": "UC-6E516A54",
       "asset_version": "1.0",
       "kb_snapshot_version": "latest",
+      "project_id": null,
+      "asset_fingerprint": "b226285db3d9",
+      "context_fingerprint": "2e8252f8cc46",
       "validation_status": "passed"
     },
     "THR-PATH-FDE2D800-046": {
@@ -187,6 +211,9 @@
       "use_case_id": "UC-6E516A54",
       "asset_version": "1.0",
       "kb_snapshot_version": "latest",
+      "project_id": null,
+      "asset_fingerprint": "b226285db3d9",
+      "context_fingerprint": "2e8252f8cc46",
       "validation_status": "passed"
     },
     "THR-PATH-6514AC14-008": {
@@ -208,6 +235,9 @@
       "use_case_id": "UC-6E516A54",
       "asset_version": "1.0",
       "kb_snapshot_version": "latest",
+      "project_id": null,
+      "asset_fingerprint": "3f2e2165a161",
+      "context_fingerprint": "2e8252f8cc46",
       "validation_status": "passed"
     },
     "THR-PATH-478674E1-016": {
@@ -229,6 +259,9 @@
       "use_case_id": "UC-6E516A54",
       "asset_version": "1.0",
       "kb_snapshot_version": "latest",
+      "project_id": null,
+      "asset_fingerprint": "3f2e2165a161",
+      "context_fingerprint": "2e8252f8cc46",
       "validation_status": "passed"
     },
     "THR-EXP-1A2B3C4D": {
@@ -245,27 +278,30 @@
       },
       "confidence_score": 1.0,
       "status": "approved",
-      "created_at": "2026-10-12T03:51:29.404788Z",
+      "created_at": "2026-10-22T17:52:27.988559Z",
       "run_id": "RUN-SDL-E2E-001",
       "use_case_id": "UC-6E516A54",
       "asset_version": "1.0",
       "kb_snapshot_version": "latest",
+      "project_id": null,
+      "asset_fingerprint": "ae9c3fabcb48",
+      "context_fingerprint": "2e8252f8cc46",
       "validation_status": "expert_added"
     }
   },
   "audit_log": [
     {
       "run_id": "RUN-SDL-E2E-001",
-      "tid": "THR-PATH-AAB20135-005",
-      "timestamp": "2026-10-12T03:51:29.400381Z",
+      "tid": "THR-PATH-FF8876D6-001",
+      "timestamp": "2026-10-22T17:52:27.986131Z",
       "action": "reject",
       "reason": "Too generic: name the interface and say why existing controls fail.",
       "previous_tid": null
     },
     {
       "run_id": "RUN-SDL-E2E-001",
-      "tid": "THR-PATH-B55517B0-009",
-      "timestamp": "2026-10-12T03:51:29.402450Z",
+      "tid": "THR-PATH-9F63700F-002",
+      "timestamp": "2026-10-22T17:52:27.987369Z",
       "action": "prune",
       "reason": "Out of scope for this product variant.",
       "previous_tid": null
@@ -273,7 +309,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-EXP-1A2B3C4D",
-      "timestamp": "2026-10-12T03:51:29.404895Z",
+      "timestamp": "2026-10-22T17:52:27.988594Z",
       "action": "add",
       "reason": "Known weakness class for this product family.",
       "previous_tid": null
@@ -281,7 +317,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-B12751B2-022",
-      "timestamp": "2026-10-12T03:51:29.406936Z",
+      "timestamp": "2026-10-22T17:52:27.989991Z",
       "action": "write",
       "reason": null,
       "previous_tid": null
@@ -289,7 +325,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-B12751B2-022",
-      "timestamp": "2026-10-12T03:51:29.406958Z",
+      "timestamp": "2026-10-22T17:52:27.990007Z",
       "action": "approve",
       "reason": null,
       "previous_tid": null
@@ -297,7 +333,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-9DE0C2D5-023",
-      "timestamp": "2026-10-12T03:51:29.407029Z",
+      "timestamp": "2026-10-22T17:52:27.990023Z",
       "action": "write",
       "reason": null,
       "previous_tid": null
@@ -305,7 +341,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-9DE0C2D5-023",
-      "timestamp": "2026-10-12T03:51:29.407041Z",
+      "timestamp": "2026-10-22T17:52:27.990027Z",
       "action": "approve",
       "reason": null,
       "previous_tid": null
@@ -313,7 +349,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-05064984-037",
-      "timestamp": "2026-10-12T03:51:29.407060Z",
+      "timestamp": "2026-10-22T17:52:27.990035Z",
       "action": "write",
       "reason": null,
       "previous_tid": null
@@ -321,7 +357,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-05064984-037",
-      "timestamp": "2026-10-12T03:51:29.407066Z",
+      "timestamp": "2026-10-22T17:52:27.990038Z",
       "action": "approve",
       "reason": null,
       "previous_tid": null
@@ -329,7 +365,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-BE5ED663-004",
-      "timestamp": "2026-10-12T03:51:29.407081Z",
+      "timestamp": "2026-10-22T17:52:27.990044Z",
       "action": "write",
       "reason": null,
       "previous_tid": null
@@ -337,7 +373,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-BE5ED663-004",
-      "timestamp": "2026-10-12T03:51:29.407090Z",
+      "timestamp": "2026-10-22T17:52:27.990046Z",
       "action": "approve",
       "reason": null,
       "previous_tid": null
@@ -345,7 +381,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-4BFFE35B-003",
-      "timestamp": "2026-10-12T03:51:29.407108Z",
+      "timestamp": "2026-10-22T17:52:27.990052Z",
       "action": "write",
       "reason": null,
       "previous_tid": null
@@ -353,7 +389,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-4BFFE35B-003",
-      "timestamp": "2026-10-12T03:51:29.407114Z",
+      "timestamp": "2026-10-22T17:52:27.990054Z",
       "action": "approve",
       "reason": null,
       "previous_tid": null
@@ -361,7 +397,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-FF8876D6-001",
-      "timestamp": "2026-10-12T03:51:29.407130Z",
+      "timestamp": "2026-10-22T17:52:27.990060Z",
       "action": "write",
       "reason": null,
       "previous_tid": null
@@ -369,7 +405,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-FF8876D6-001",
-      "timestamp": "2026-10-12T03:51:29.407136Z",
+      "timestamp": "2026-10-22T17:52:27.990062Z",
       "action": "approve",
       "reason": null,
       "previous_tid": null
@@ -377,7 +413,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-9F63700F-002",
-      "timestamp": "2026-10-12T03:51:29.407168Z",
+      "timestamp": "2026-10-22T17:52:27.990067Z",
       "action": "write",
       "reason": null,
       "previous_tid": null
@@ -385,7 +421,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-9F63700F-002",
-      "timestamp": "2026-10-12T03:51:29.407184Z",
+      "timestamp": "2026-10-22T17:52:27.990071Z",
       "action": "approve",
       "reason": null,
       "previous_tid": null
@@ -393,7 +429,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-470F30A8-027",
-      "timestamp": "2026-10-12T03:51:29.407214Z",
+      "timestamp": "2026-10-22T17:52:27.990079Z",
       "action": "write",
       "reason": null,
       "previous_tid": null
@@ -401,7 +437,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-470F30A8-027",
-      "timestamp": "2026-10-12T03:51:29.407218Z",
+      "timestamp": "2026-10-22T17:52:27.990081Z",
       "action": "approve",
       "reason": null,
       "previous_tid": null
@@ -409,7 +445,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-FDE2D800-046",
-      "timestamp": "2026-10-12T03:51:29.407233Z",
+      "timestamp": "2026-10-22T17:52:27.990087Z",
       "action": "write",
       "reason": null,
       "previous_tid": null
@@ -417,7 +453,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-FDE2D800-046",
-      "timestamp": "2026-10-12T03:51:29.407238Z",
+      "timestamp": "2026-10-22T17:52:27.990089Z",
       "action": "approve",
       "reason": null,
       "previous_tid": null
@@ -425,7 +461,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-6514AC14-008",
-      "timestamp": "2026-10-12T03:51:29.407254Z",
+      "timestamp": "2026-10-22T17:52:27.990095Z",
       "action": "write",
       "reason": null,
       "previous_tid": null
@@ -433,7 +469,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-6514AC14-008",
-      "timestamp": "2026-10-12T03:51:29.407260Z",
+      "timestamp": "2026-10-22T17:52:27.990096Z",
       "action": "approve",
       "reason": null,
       "previous_tid": null
@@ -441,7 +477,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-478674E1-016",
-      "timestamp": "2026-10-12T03:51:29.407276Z",
+      "timestamp": "2026-10-22T17:52:27.990102Z",
       "action": "write",
       "reason": null,
       "previous_tid": null
@@ -449,7 +485,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-PATH-478674E1-016",
-      "timestamp": "2026-10-12T03:51:29.407281Z",
+      "timestamp": "2026-10-22T17:52:27.990104Z",
       "action": "approve",
       "reason": null,
       "previous_tid": null
@@ -457,7 +493,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-EXP-1A2B3C4D",
-      "timestamp": "2026-10-12T03:51:29.407298Z",
+      "timestamp": "2026-10-22T17:52:27.990110Z",
       "action": "write",
       "reason": null,
       "previous_tid": null
@@ -465,7 +501,7 @@
     {
       "run_id": "RUN-SDL-E2E-001",
       "tid": "THR-EXP-1A2B3C4D",
-      "timestamp": "2026-10-12T03:51:29.407306Z",
+      "timestamp": "2026-10-22T17:52:27.990112Z",
       "action": "approve",
       "reason": null,
       "previous_tid": null
@@ -474,52 +510,55 @@
   "revision_history": {
     "RUN-SDL-E2E-001": [
       {
-        "timestamp": "2026-10-12T03:51:29.400349+00:00",
+        "timestamp": "2026-10-22T17:52:27.986118+00:00",
         "reason": "Too generic: name the interface and say why existing controls fail.",
         "scenarios": [
           {
-            "tid": "THR-PATH-AAB20135-005",
-            "asset_id": "AS-3",
-            "stride_category": "Spoofing",
-            "attack_vector": "Impersonating a legitimate BLE device by spoofing its MAC address during firmware updates.",
-            "kb_reference": "STRIDE-S-001",
+            "tid": "THR-PATH-FF8876D6-001",
+            "asset_id": "AS-4",
+            "stride_category": "Tampering",
+            "attack_vector": "Physical access to manipulate audit log firmware via SPI Flash.",
+            "kb_reference": "CAPEC-665",
             "evidence_chain": {
-              "exposure": "BLE interface without cryptographic pairing",
-              "matched_pattern": "STRIDE-S-001",
-              "applicability_reason": "The firmware image's lack of signature verification makes it susceptible to commands from unauthorized devices, especially those impersonating valid BLE devices.",
-              "citation": "STRIDE-S-001: Spoofing Identity via BLE Device Impersonation"
+              "exposure": "SPI Flash interface lacks tamper protection.",
+              "matched_pattern": "CAPEC-665",
+              "applicability_reason": "The audit log's SPI Flash interface is accessible without tamper protection, allowing potential physical manipulation.",
+              "citation": "CAPEC-665: Exploitation of Thunderbolt Protection Flaws (CAPEC v3.9)"
             },
-            "confidence_score": 0.7408534591881364,
+            "confidence_score": 0.7691975671531225,
             "status": "pending_test",
-            "created_at": "2026-10-10T15:16:43.594262Z",
+            "created_at": "2026-10-10T15:13:46.601214Z",
             "run_id": "RUN-SDL-E2E-001",
             "use_case_id": "UC-6E516A54",
             "asset_version": "1.0",
             "kb_snapshot_version": "latest",
+            "project_id": null,
+            "asset_fingerprint": null,
+            "context_fingerprint": null,
             "validation_status": "passed"
           }
         ]
       },
       {
-        "timestamp": "2026-10-12T03:51:29.402429+00:00",
+        "timestamp": "2026-10-22T17:52:27.987357+00:00",
         "action": "prune",
         "reason": "Out of scope for this product variant.",
         "scenarios": [
           {
-            "tid": "THR-PATH-B55517B0-009",
-            "asset_id": "AS-3",
+            "tid": "THR-PATH-9F63700F-002",
+            "asset_id": "AS-4",
             "stride_category": "Tampering",
-            "attack_vector": "Exploitation of unsecured firmware update interface to initiate firmware update mode.",
-            "kb_reference": "ATT&CK-T0800",
+            "attack_vector": "Inserting malicious code into the flash memory of the audit log to alter or delete entries.",
+            "kb_reference": "CAPEC-458",
             "evidence_chain": {
-              "exposure": "BLE OTA interface with no signature verification",
-              "matched_pattern": "ATT&CK-T0800",
-              "applicability_reason": "The firmware image lacks signature verification and rollback protection, allowing unauthorized updates via the BLE OTA interface.",
-              "citation": "ATT&CK T0800: Activate Firmware Update Mode"
+              "exposure": "SPI Flash interface can be targeted for direct memory manipulation.",
+              "matched_pattern": "CAPEC-458",
+              "applicability_reason": "The audit log is stored in flash memory without tamper protection, making it vulnerable to unauthorized modifications.",
+              "citation": "CAPEC-458: Flash Memory Attacks (CAPEC v3.9)"
             },
-            "confidence_score": 0.730121316895328,
+            "confidence_score": 0.761908082734575,
             "status": "pending_test",
-            "created_at": "2026-10-10T15:14:08.085846Z",
+            "created_at": "2026-10-10T15:13:49.839750Z",
             "run_id": "RUN-SDL-E2E-001",
             "use_case_id": "UC-6E516A54",
             "asset_version": "1.0",
@@ -529,7 +568,7 @@
         ]
       },
       {
-        "timestamp": "2026-10-12T03:51:29.404859+00:00",
+        "timestamp": "2026-10-22T17:52:27.988586+00:00",
         "action": "add",
         "reason": "Known weakness class for this product family.",
         "scenarios": [
@@ -547,11 +586,14 @@
             },
             "confidence_score": 1.0,
             "status": "pending_test",
-            "created_at": "2026-10-12T03:51:29.404788Z",
+            "created_at": "2026-10-22T17:52:27.988559Z",
             "run_id": "RUN-SDL-E2E-001",
             "use_case_id": "UC-6E516A54",
             "asset_version": "1.0",
             "kb_snapshot_version": "latest",
+            "project_id": null,
+            "asset_fingerprint": "ae9c3fabcb48",
+            "context_fingerprint": "2e8252f8cc46",
             "validation_status": "expert_added"
           }
         ]

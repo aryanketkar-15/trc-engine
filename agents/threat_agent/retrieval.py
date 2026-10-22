@@ -217,8 +217,7 @@ def _import_encoder() -> object:
         raise KBStoreUnreachableError(
             store_path="pgvector",
             cause=ImportError(
-                "sentence-transformers is not installed. "
-                "Run: pip install sentence-transformers"
+                "sentence-transformers is not installed. Run: pip install sentence-transformers"
             ),
         ) from err
 
@@ -351,9 +350,7 @@ def build_retrieval_plan(
 ) -> RetrievalPlan:
     """Build a structured RetrievalPlan dynamically from a ThreatAgentInput."""
     if not agent_input.assets:
-        raise ValueError(
-            "ThreatAgentInput.assets must contain at least one AssetModel."
-        )
+        raise ValueError("ThreatAgentInput.assets must contain at least one AssetModel.")
 
     queries: list[dict[str, str | list[str]]] = [
         {
@@ -391,7 +388,7 @@ def build_retrieval_plan(
 def fetch_candidates(
     plan: RetrievalPlan,
     *,
-    index_path: Path | None = None,     # kept for signature compat; unused
+    index_path: Path | None = None,  # kept for signature compat; unused
     metadata_path: Path | None = None,  # kept for signature compat; unused
     model_name: str | None = None,
 ) -> list[KBCandidate]:
@@ -569,8 +566,12 @@ def fetch_candidates(
                     if use_rerank and stride_slots > 0 and asset_stride:
                         chosen_ids = set(
                             select_top(
-                                cand_info, asset_tags, rerank_params, asset_stride,
-                                stride_slots, top_k,
+                                cand_info,
+                                asset_tags,
+                                rerank_params,
+                                asset_stride,
+                                stride_slots,
+                                top_k,
                             )
                         )
                         query_candidates = [

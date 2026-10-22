@@ -51,6 +51,9 @@ one asset, with the evidence for it. Exact definitions: `schemas/threat_schemas.
 | `use_case_id` | string or null | no | Use case the scenario belongs to | Today derived as `UC-<hash>` if the input has no ID; will be Team 1's `usecase_id` after integration |
 | `asset_version` | string or null | no | Version of the asset record the threat was derived from | Compare with the current asset version to detect stale threats |
 | `kb_snapshot_version` | string or null | no | Knowledge-base version label used | Currently the label `latest` (not yet a content hash) |
+| `project_id` | string or null | no | The product the scenario belongs to (set when the input is a product with several use cases, for example `CSDL-100`) | Together with `use_case_id` it identifies a use case; **one product has several use cases and each is analysed separately** |
+| `asset_fingerprint` | string or null | no | Short hash of the asset facts the threat was derived from | If the current asset's hash differs, the threat is **out of date** (see file 03) |
+| `context_fingerprint` | string or null | no | Short hash of the use-case text and system model used | A difference means every threat of that use case may be out of date |
 | `created_at` | datetime (UTC) | yes | When the scenario was created | |
 
 ## 3. Status lifecycle

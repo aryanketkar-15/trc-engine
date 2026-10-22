@@ -14,7 +14,9 @@ from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "schemas"))
 
+from project_schema import ProjectInput, expand_project  # noqa: E402
 from scrs_schemas import AuditLogEntry, SCRSState  # noqa: E402
+from staleness import check_staleness  # noqa: E402
 from threat_schemas import ThreatAgentInput, ThreatScenario, ThreatStatus  # noqa: E402
 
 
@@ -73,6 +75,25 @@ def main() -> int:
     t1 = load("team1_asset_table_example.json")
     print(f"\nTeam 1 AssetTable example (illustrative): {len(t1['assets'])} assets; keys per asset:",
           ", ".join(sorted(t1["assets"][0])))
+
+    # 9. A product with several use cases -> one run per use case
+    proj = ProjectInput.model_validate(load("input_product_with_use_cases.json"))
+    runs = expand_project(proj, "DEMO")
+    print(f"\nProduct {proj.project_id}: {len(runs)} use cases, assets listed once ({len(proj.assets)})")
+    for r in runs:
+        print(f"  {r.use_case_id}  {len(r.assets)} assets  run_id={r.run_id}")
+
+    # 10. "Go back one step": edit an asset upstream and see which approved threats are now stale
+    edited = [
+        a.model_copy(update={"device_config": {**a.device_config, "signature_check": "enforced"}})
+        if a.asset_id == "AS-3"
+        else a
+        for a in inp.assets
+    ]
+    report = check_staleness(inp.model_copy(update={"assets": edited}), approved)
+    print("\nStaleness demo (AS-3 edited upstream):")
+    print("  stale threats:", [(s.tid, s.reason) for s in report.stale] or "none")
+    print("  assets to re-analyse:", report.affected_assets)
 
     print("\nRESULT:", "all checks passed" if ok else "problems found")
     return 0 if ok else 1

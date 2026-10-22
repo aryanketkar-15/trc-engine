@@ -21,8 +21,6 @@ Core Invariant & Self-Correction Contract:
 
 from __future__ import annotations
 
-import hashlib
-
 from agents.threat_agent.attack_chain import build_paths, build_single_step_path
 from agents.threat_agent.exceptions import KBStoreUnreachableError
 from agents.threat_agent.generator import generate_scenarios
@@ -38,6 +36,7 @@ from agents.threat_agent.schemas import (
     ThreatScenario,
     ValidationResult,
 )
+from agents.threat_agent.staleness import traceability_stamp
 from agents.threat_agent.validator import Validator
 from common.logging import get_logger, log_step
 
@@ -176,10 +175,8 @@ def generate_and_validate_with_retry(
     paths_by_id: dict[str, AttackPath] = {}
     outcomes: dict[str, ValidationResult] = {}
 
-    use_case_id = agent_input.use_case_id or (
-        "UC-" + hashlib.sha256(agent_input.use_case.encode("utf-8")).hexdigest()[:8].upper()
-    )
-    asset_versions = {a.asset_id: a.version for a in agent_input.assets}
+    stamps = {a.asset_id: traceability_stamp(agent_input, a.asset_id) for a in agent_input.assets}
+    fallback_stamp = traceability_stamp(agent_input, "")
 
     def _stamp(scenarios: list[ThreatScenario]) -> list[ThreatScenario]:
         return [
@@ -188,9 +185,7 @@ def generate_and_validate_with_retry(
                     "validation_status": (
                         "passed" if outcomes[s.tid].passed else "escalated_after_retries"
                     ),
-                    "use_case_id": use_case_id,
-                    "asset_version": asset_versions.get(s.asset_id),
-                    "kb_snapshot_version": agent_input.kb_snapshot_version,
+                    **stamps.get(s.asset_id, fallback_stamp),
                 }
             )
             if hasattr(s, "model_copy")
@@ -219,9 +214,7 @@ def generate_and_validate_with_retry(
         if retry_paths is not None:
             scenarios = _merge_retried(last_scenarios, generated, retry_paths)
             retried_ids = {p.path_id for p in retry_paths}
-            needs_check = {
-                s.tid for s in scenarios if path_id_from_tid(s.tid) in retried_ids
-            }
+            needs_check = {s.tid for s in scenarios if path_id_from_tid(s.tid) in retried_ids}
         else:
             scenarios = generated
             outcomes = {}
@@ -384,4 +377,3 @@ def regenerate_after_human_rejection(
         validator=validator,
         initial_failure_details=[human_context],
     )
-
