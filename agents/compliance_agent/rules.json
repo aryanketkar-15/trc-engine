@@ -1,0 +1,52 @@
+{
+  "rules_version": "v1",
+  "references": [
+    "Attacker classes and the assurance component that resists them: Common Criteria CEM:2022 R1, Table B.3 (resisting Basic needs AVA_VAN.2, Enhanced-Basic AVA_VAN.3, Moderate AVA_VAN.4, High AVA_VAN.5)",
+    "JIL Application of Attack Potential to Smartcards v3.2.1, Table 14 (rating of vulnerabilities and TOE resistance)",
+    "The JIL attack potential to claim is the level one step above the attacker class to resist"
+  ],
+  "attacker_classes": ["Basic", "Enhanced-Basic", "Moderate", "High"],
+  "class_table": {
+    "Basic": {
+      "required_resistance": "Resistant to Basic attackers",
+      "jil_attack_potential": "Enhanced-Basic",
+      "assurance_component": "AVA_VAN.2",
+      "sesip_level": "SESIP 1",
+      "cc_eal": "EAL2"
+    },
+    "Enhanced-Basic": {
+      "required_resistance": "Resistant to Enhanced-Basic attackers",
+      "jil_attack_potential": "Moderate",
+      "assurance_component": "AVA_VAN.3",
+      "sesip_level": "SESIP 2",
+      "cc_eal": "EAL2+"
+    },
+    "Moderate": {
+      "required_resistance": "Resistant to Moderate attackers",
+      "jil_attack_potential": "High",
+      "assurance_component": "AVA_VAN.4",
+      "sesip_level": "SESIP 3",
+      "cc_eal": "EAL4+"
+    },
+    "High": {
+      "required_resistance": "Resistant to High attackers",
+      "jil_attack_potential": "Beyond High",
+      "assurance_component": "AVA_VAN.5",
+      "sesip_level": "SESIP 4",
+      "cc_eal": "EAL5+"
+    }
+  },
+  "risk_to_class": [
+    {"rule_id": "CR-1", "risk": "High", "attacker_class": "Moderate"},
+    {"rule_id": "CR-2", "risk": "Medium", "attacker_class": "Enhanced-Basic"},
+    {"rule_id": "CR-3", "risk": "Low", "attacker_class": "Basic"}
+  ],
+  "feasibility_floor": [
+    {
+      "rule_id": "CR-4",
+      "attack_feasibility": "Low",
+      "at_least": "Moderate",
+      "reason": "A Low feasibility means the attack already needs a skilled, equipped attacker, so the product has to resist that class"
+    }
+  ]
+}

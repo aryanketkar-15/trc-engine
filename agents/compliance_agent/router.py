@@ -58,7 +58,6 @@ def rules_info(rules: Annotated[Rules, Depends(get_rules)]) -> dict[str, Any]:
         "attacker_classes": rules.classes,
         "class_table": rules.table,
         "risk_to_class": list(rules.risk_to_class.values()),
-        "provisional": True,
     }
 
 
@@ -104,11 +103,6 @@ def confirm_mappings(
     return {
         "stored": stored,
         "records": [r.model_dump(mode="json") for r in records],
-        "incomplete": [
-            r.tid
-            for r in records
-            if "needs company value" in (r.jil_attack_potential, r.sesip_level, r.cc_eal)
-        ],
     }
 
 

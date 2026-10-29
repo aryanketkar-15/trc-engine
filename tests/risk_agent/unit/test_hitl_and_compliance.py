@@ -60,9 +60,9 @@ class TestJustification:
         a = _scored(ratings)
         text = a.justification
         assert "Overall impact is Severe" in text and "Operational" in text
-        assert "Medium" in text and "company" in text and "High risk" in text
+        assert "Medium" in text and "High risk" in text and "company" not in text
 
-    def test_points_and_provisional_cells_are_stated(self, ratings: Ratings) -> None:
+    def test_points_per_factor_are_stated(self, ratings: Ratings) -> None:
         from agents.risk_agent.schemas import FeasibilityFactors
 
         ri = RiskInput(
@@ -77,7 +77,9 @@ class TestJustification:
             ),
         )
         a = engine.score(_threat(), ri, ratings)
-        assert "add up to 2 points" in a.justification and "PROVISIONAL" in a.justification
+        assert (
+            "add up to 2 points" in a.justification and "elapsed_time 1_week (1)" in a.justification
+        )
 
 
 class TestRiskAdjustment:
@@ -202,10 +204,9 @@ class TestComplianceMapping:
     ) -> Any:
         return engine.apply_treatment(_scored(ratings, tid, feas), _reduce())
 
-    def test_company_rows_are_reproduced_by_class(self, rules: Rules) -> None:
+    def test_class_table_matches_the_worked_examples(self, rules: Rules) -> None:
         eb = rules.table["Enhanced-Basic"]
         mod = rules.table["Moderate"]
-        # company section 2.7: T1 and T3/T6
         assert (eb["jil_attack_potential"], eb["sesip_level"], eb["cc_eal"]) == (
             "Moderate",
             "SESIP 2",
@@ -226,13 +227,11 @@ class TestComplianceMapping:
             "SESIP 3",
             "EAL4+",
         )
-        assert rec.status.value == "pending_human" and rec.rule_basis == "company"
+        assert rec.status.value == "pending_human" and rec.assurance_component == "AVA_VAN.4"
         assert "rule CR-1" in rec.justification
 
-    def test_default_rule_does_not_reproduce_company_t1_and_t6_expert_overrides(
-        self, ratings: Ratings, rules: Rules
-    ) -> None:
-        """T1 is High risk but the company maps it to Enhanced-Basic; the expert overrides."""
+    def test_expert_can_override_the_suggested_class(self, ratings: Ratings, rules: Rules) -> None:
+        """A High-risk threat reachable only from Bluetooth range: the expert lowers the class."""
         risk = self._risk(ratings)
         assert cengine.propose(risk, rules).attacker_class != "Enhanced-Basic"
         rec = cengine.confirm(
@@ -260,15 +259,33 @@ class TestComplianceMapping:
                 ComplianceDecision(approver="X", attacker_class="Godlike", override_reason="no"),
             )
 
-    def test_classes_without_company_values_say_so(self, ratings: Ratings, rules: Rules) -> None:
+    def test_every_class_has_complete_values_and_a_cem_assurance_component(
+        self, ratings: Ratings, rules: Rules
+    ) -> None:
         low = engine.apply_treatment(_scored(ratings, "THR-3", Feasibility.LOW), _reduce())
         rec = cengine.confirm(
             low,
             rules,
             ComplianceDecision(approver="X", attacker_class="High", override_reason="critical key"),
         )
-        assert cengine.NEEDS_VALUE in (rec.sesip_level, rec.cc_eal, rec.jil_attack_potential)
-        assert "Missing company values" in rec.justification
+        assert (rec.jil_attack_potential, rec.assurance_component) == ("Beyond High", "AVA_VAN.5")
+        assert (rec.sesip_level, rec.cc_eal) == ("SESIP 4", "EAL5+")
+        assert {c: rules.table[c]["assurance_component"] for c in rules.classes} == {
+            "Basic": "AVA_VAN.2",
+            "Enhanced-Basic": "AVA_VAN.3",
+            "Moderate": "AVA_VAN.4",
+            "High": "AVA_VAN.5",
+        }
+
+    def test_low_feasibility_raises_the_class_to_at_least_moderate_rule_cr4(
+        self, ratings: Ratings, rules: Rules
+    ) -> None:
+        """Severe impact with Low feasibility is Medium risk (Enhanced-Basic) but needs a skilled attacker."""
+        low = engine.apply_treatment(_scored(ratings, "THR-3", Feasibility.LOW), _reduce())
+        assert low.effective_risk == RiskLevel.MEDIUM
+        rec = cengine.propose(low, rules)
+        assert (rec.attacker_class, rec.rule_id) == ("Moderate", "CR-2+CR-4")
+        assert rec.sesip_level == "SESIP 3" and "CR-2+CR-4" in rec.justification
 
     def test_only_reduce_is_mapped_by_default(self, ratings: Ratings) -> None:
         retain = engine.apply_treatment(

@@ -80,3 +80,15 @@ def test_justification_is_returned_with_every_score(env: Any) -> None:
     client, _ = env
     res = client.post("/risk-agent/score", json={"inputs": [{"tid": "THR-A", **RATING}]}).json()
     assert "Risk matrix" in res["by_asset"]["AS-1"][0]["justification"]
+
+
+def test_report_endpoint_returns_json_markdown_and_csv(env: Any) -> None:
+    client, _ = env
+    client.post("/risk-agent/approve", json={"decisions": [_decision("THR-A")]})
+    data = client.get("/risk-agent/report").json()
+    assert data["summary"]["scored"] == 1 and data["requirements_needed"] == ["THR-A"]
+    md = client.get("/risk-agent/report?format=markdown")
+    assert md.status_code == 200 and md.text.startswith("# TARA report")
+    csv_text = client.get("/risk-agent/report?format=csv").text
+    assert csv_text.splitlines()[0].startswith("asset_id,rank,tid") and "THR-A" in csv_text
+    assert client.get("/risk-agent/report?format=xml").status_code == 422

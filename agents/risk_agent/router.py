@@ -8,10 +8,10 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field, ValidationError
 
-from agents.risk_agent import engine, suggester
+from agents.risk_agent import engine, report, suggester
 from agents.risk_agent.engine import Ratings, RatingsError
 from agents.risk_agent.schemas import RiskAssessment, RiskInput, TreatmentDecision
 from agents.risk_agent.staleness import check_risk_staleness
@@ -101,15 +101,12 @@ def _score_all(
 
 @router.get("/ratings")
 def ratings_info(ratings: Annotated[Ratings, Depends(get_ratings)]) -> dict[str, Any]:
-    """The rating tables in use, with the source of every matrix cell."""
+    """The rating tables in use."""
     return {
         "ratings_version": ratings.version,
         "impact_aggregation": ratings.aggregation,
         "factor_values": _factor_values(ratings),
         "risk_matrix": ratings.matrix,
-        "provisional": any(
-            c["source"] == "provisional" for row in ratings.matrix.values() for c in row.values()
-        ),
     }
 
 
@@ -247,6 +244,22 @@ def list_assessments(
             continue
         items.append(a)
     return {"count": len(items), "by_asset": _group(engine.rank_per_asset(items))}
+
+
+@router.get("/report", response_model=None)
+def tara_report(
+    state: Annotated[StateManager, Depends(get_state_manager)],
+    project_id: Annotated[str | None, Query()] = None,
+    use_case_id: Annotated[str | None, Query()] = None,
+    fmt: Annotated[str, Query(alias="format", pattern="^(json|markdown|csv)$")] = "json",
+) -> dict[str, Any] | Response:
+    """Per-asset TARA report: ranked threats with risk, treatment, residual risk and resistance."""
+    data = report.build_report(state, project_id, use_case_id)
+    if fmt == "markdown":
+        return Response(report.to_markdown(data), media_type="text/markdown")
+    if fmt == "csv":
+        return Response(report.to_csv(data), media_type="text/csv")
+    return data
 
 
 @router.post("/staleness")

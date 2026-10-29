@@ -11,7 +11,7 @@ asset and records your treatment decision (Reduce / Share / Retain / Avoid) and 
     python scripts/risk_demo.py --input projects/smart_door_lock_multi_use_case.json
     python scripts/risk_demo.py --auto --approver "Dr. Gaikwad"     # scripted run for rehearsal
 
-The rating tables are PLACEHOLDERS until the company confirms theirs; every result says so.
+The rating tables are in agents/risk_agent/ratings.json and can be changed without touching code.
 """
 
 from __future__ import annotations
@@ -173,11 +173,10 @@ def edit_input(tid: str, ratings: Ratings, current: RiskInput) -> RiskInput:
 
 def show_score(a: RiskAssessment) -> None:
     pts = f" ({a.feasibility_points} points)" if a.feasibility_points is not None else ""
-    note = "" if a.risk_basis == "company" else f"  [dim]matrix cell is {a.risk_basis}[/dim]"
     style = RISK_STYLE[a.risk.value]
     console.print(
         f"  => overall impact [bold]{a.overall_impact.value}[/bold], feasibility "
-        f"[bold]{a.attack_feasibility.value}[/bold]{pts}, risk [{style}]{a.risk.value}[/{style}]{note}"
+        f"[bold]{a.attack_feasibility.value}[/bold]{pts}, risk [{style}]{a.risk.value}[/{style}]"
     )
     console.print(f"  [dim]why: {short(a.justification, 600)}[/dim]")
 
@@ -264,7 +263,9 @@ def main() -> int:
     parser.add_argument("--use-case", help="only the threats of this use case, e.g. UC-02")
     parser.add_argument("--approver", help="name recorded as the approver")
     parser.add_argument("--auto", action="store_true", help="accept suggestions (rehearsal)")
-    parser.add_argument("--ratings", help="rating tables JSON (default: placeholder tables)")
+    parser.add_argument(
+        "--ratings", help="rating tables JSON (default: agents/risk_agent/ratings.json)"
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
     if not args.verbose:
@@ -273,11 +274,6 @@ def main() -> int:
     ratings = Ratings.load(Path(args.ratings) if args.ratings else None)
     sm = StateManager(Path(args.scrs))
     console.print("[bold cyan]SCRP Risk Agent[/bold cyan]  Phase 2\n")
-    if ratings.version.startswith("placeholder"):
-        console.print(
-            "[yellow]Rating tables are PLACEHOLDERS (4 matrix cells from the company document, "
-            "2 derived, 6 provisional). Results are labelled accordingly.[/yellow]\n"
-        )
 
     threats = approved_threats(sm, args.use_case)
     if not threats:

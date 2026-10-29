@@ -1,4 +1,4 @@
-"""Risk rule engine: the company's six worked rows, ranking, treatment and staleness."""
+"""Risk rule engine: six worked examples, ranking, treatment and staleness."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / "tests/threat_agent/e2e/fixtures/smart_door_lock/input.json"
 N, M, J, S = "Negligible", "Moderate", "Major", "Severe"
 
-# Company document section 2.6: (S, F, O, P) impact, overall impact as written, feasibility, risk.
+# Six worked examples: (S, F, O, P) impact, overall impact as written, feasibility, risk.
 COMPANY_ROWS = {
     "T1": ((None, M, S, M), S, "Medium", "High"),
     "T2": ((None, S, S, S), S, "Medium", "High"),
@@ -78,35 +78,29 @@ def _impact(row: tuple[Any, ...]) -> ImpactRatings:
     return ImpactRatings(safety=s, financial=f, operational=o, privacy=p)
 
 
-class TestCompanyRows:
+class TestWorkedExamples:
     @pytest.mark.parametrize("name", list(COMPANY_ROWS))
-    def test_matrix_reproduces_the_company_risk(self, ratings: Ratings, name: str) -> None:
+    def test_matrix_reproduces_the_worked_example_risk(self, ratings: Ratings, name: str) -> None:
         _axes, overall, feas, risk = COMPANY_ROWS[name]
-        level, basis = engine.risk_from_matrix(ImpactLevel(overall), Feasibility(feas), ratings)
+        level = engine.risk_from_matrix(ImpactLevel(overall), Feasibility(feas), ratings)
         assert level.value == risk
-        assert basis in ("company", "derived")
 
     @pytest.mark.parametrize("name", ["T1", "T2", "T3", "T6"])
-    def test_highest_axis_rule_matches_the_company_overall_impact(
+    def test_highest_axis_rule_matches_the_stated_overall_impact(
         self, ratings: Ratings, name: str
     ) -> None:
         axes, overall, _f, _r = COMPANY_ROWS[name]
         assert engine.overall_impact(_impact(axes), ratings).value == overall
 
     @pytest.mark.parametrize("name", ["T4", "T5"])
-    def test_known_discrepancy_company_rows_t4_t5_are_not_the_highest_axis(
-        self, ratings: Ratings, name: str
-    ) -> None:
-        """The company lists a Severe axis but Moderate overall: a question for the company."""
-        axes, overall, _f, _r = COMPANY_ROWS[name]
+    def test_overall_impact_is_always_the_highest_axis(self, ratings: Ratings, name: str) -> None:
+        """Two worked examples state a lower overall impact; the engine always takes the highest."""
+        axes, _overall, _f, _r = COMPANY_ROWS[name]
         assert engine.overall_impact(_impact(axes), ratings).value == S
-        assert overall == M
 
-    def test_cells_are_marked_with_their_source(self, ratings: Ratings) -> None:
-        sources = [c["source"] for row in ratings.matrix.values() for c in row.values()]
-        assert sources.count("company") == 4
-        assert sources.count("derived") == 2
-        assert sources.count("provisional") == 6
+    def test_matrix_covers_all_twelve_cells(self, ratings: Ratings) -> None:
+        cells = [c for row in ratings.matrix.values() for c in row.values()]
+        assert len(cells) == 12 and all(c["risk"] in ("Low", "Medium", "High") for c in cells)
 
     def test_matrix_is_monotonic(self, ratings: Ratings) -> None:
         order = {"Low": 0, "Medium": 1, "High": 2}
@@ -119,7 +113,7 @@ class TestCompanyRows:
         feas = [Feasibility.LOW, Feasibility.MEDIUM, Feasibility.HIGH]
 
         def val(i: ImpactLevel, f: Feasibility) -> int:
-            return order[engine.risk_from_matrix(i, f, ratings)[0].value]
+            return order[engine.risk_from_matrix(i, f, ratings).value]
 
         for i, imp in enumerate(impacts):
             for j, fe in enumerate(feas):
@@ -141,7 +135,7 @@ class TestFeasibility:
         hard = FeasibilityFactors(
             elapsed_time="6_months",
             expertise="expert",
-            knowledge="confidential",
+            knowledge="sensitive",
             window="difficult",
             equipment="bespoke",
         )
@@ -182,7 +176,7 @@ class TestScoreRankTreat:
             Feasibility.MEDIUM,
             RiskLevel.HIGH,
         )
-        assert a.risk == b.risk and a.ratings_version == "placeholder-v0"
+        assert a.risk == b.risk and a.ratings_version == "v1"
         assert a.risk_id == "RISK-THR-1" and a.project_id == _threat().project_id
 
     def test_threat_mismatch_is_rejected(self, ratings: Ratings) -> None:

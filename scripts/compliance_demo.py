@@ -1,4 +1,3 @@
-# ruff: noqa: E501
 """SCRP attack-resistance mapping (Phase 2, step 6) - interactive command line.
 
 Takes the APPROVED risks that were treated with "Reduce", proposes the required attacker resistance
@@ -11,7 +10,7 @@ change it (with a reason) or reject it. Only confirmed records are stored.
     python scripts/compliance_demo.py --auto --approver "Dr. Gaikwad"     # scripted rehearsal
     python scripts/compliance_demo.py --all       # also map risks that are not "Reduce"
 
-The rule base is a PLACEHOLDER until the company confirms theirs; every result says so.
+The rule base is in agents/compliance_agent/rules.json and can be changed without touching code.
 """
 
 from __future__ import annotations
@@ -61,10 +60,10 @@ def show_proposal(risk: RiskAssessment, rec: ComplianceRecord, n: int, total: in
         Panel(
             f"[bold]{risk.tid}[/bold]  asset {risk.asset_id}  risk {risk.effective_risk.value}  "
             f"treatment {risk.treatment.value if risk.treatment else '-'}\n"
-            f"Proposed attacker class: [bold]{rec.attacker_class}[/bold] (rule {rec.rule_id}, "
-            f"{rec.rule_basis})\n"
+            f"Proposed attacker class: [bold]{rec.attacker_class}[/bold] (rule {rec.rule_id})\n"
             f"  required resistance : {rec.required_resistance}\n"
             f"  JIL attack potential: {rec.jil_attack_potential}\n"
+            f"  assurance component : {rec.assurance_component}\n"
             f"  SESIP level         : {rec.sesip_level}\n"
             f"  CC EAL              : {rec.cc_eal}\n"
             f"[dim]why: {rec.justification}[/dim]",
@@ -100,7 +99,9 @@ def main() -> int:
     parser.add_argument("--approver", help="name recorded as the confirming expert")
     parser.add_argument("--all", action="store_true", help="also map risks not treated with Reduce")
     parser.add_argument("--auto", action="store_true", help="confirm the proposals (rehearsal)")
-    parser.add_argument("--rules", help="rule base JSON (default: placeholder rules)")
+    parser.add_argument(
+        "--rules", help="rule base JSON (default: agents/compliance_agent/rules.json)"
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
     if not args.verbose:
@@ -109,13 +110,6 @@ def main() -> int:
     rules = Rules.load(Path(args.rules) if args.rules else None)
     sm = StateManager(Path(args.scrs))
     console.print("[bold cyan]SCRP Attack-resistance mapping[/bold cyan]  Phase 2\n")
-    if rules.version.startswith("placeholder"):
-        console.print(
-            "[yellow]Rule base is a PLACEHOLDER: the table rows for Enhanced-Basic and Moderate are "
-            "the company's example; the step from risk to attacker class is our provisional rule "
-            "and is always confirmed by you.[/yellow]\n"
-        )
-
     stale, _ = engine.check_compliance_staleness(
         sm.get_compliance_records(), sm.get_risk_assessments()
     )
@@ -185,20 +179,10 @@ def main() -> int:
 
     result_table(confirmed)
     stored = sm.commit_compliance_records([r.model_dump(mode="json") for r in confirmed])
-    incomplete = [
-        r.tid
-        for r in confirmed
-        if engine.NEEDS_VALUE in (r.jil_attack_potential, r.sesip_level, r.cc_eal)
-    ]
     console.print(
         f"\nStored {stored} confirmed mapping(s) in {args.scrs} (confirmed by {approver}); "
         f"{rejected} rejected and left unmapped."
     )
-    if incomplete:
-        console.print(
-            f"[yellow]{len(incomplete)} record(s) contain 'needs company value' (the company has not "
-            "given SESIP/EAL for that class yet).[/yellow]"
-        )
     report = Path(args.scrs).with_name("compliance_report.json")
     report.write_text(
         json.dumps(

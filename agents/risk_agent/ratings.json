@@ -1,0 +1,56 @@
+{
+  "ratings_version": "v1",
+  "references": [
+    "Attack-feasibility factors: ISO/SAE 21434 section 15.5 (elapsed time, expertise, knowledge of the item, window of opportunity, equipment)",
+    "Points per factor level: Common Criteria CEM:2022 R1, Table B.2 (calculation of attack potential)",
+    "Feasibility levels from the point total: High 0-13, Medium 14-19, Low 20 and above (higher total means a harder attack)"
+  ],
+  "impact_levels": ["Negligible", "Moderate", "Major", "Severe"],
+  "impact_aggregation": "max",
+  "feasibility_levels": ["Low", "Medium", "High"],
+  "feasibility_points": {
+    "elapsed_time": {
+      "1_day": 0,
+      "1_week": 1,
+      "2_weeks": 2,
+      "1_month": 4,
+      "2_months": 7,
+      "3_months": 10,
+      "4_months": 13,
+      "5_months": 15,
+      "6_months": 17,
+      "more_than_6_months": 19
+    },
+    "expertise": {"layman": 0, "proficient": 3, "expert": 6, "multiple_experts": 8},
+    "knowledge": {"public": 0, "restricted": 3, "sensitive": 7, "critical": 11},
+    "window": {"unlimited": 0, "easy": 1, "moderate": 4, "difficult": 10},
+    "equipment": {"standard": 0, "specialized": 4, "bespoke": 7, "multiple_bespoke": 9}
+  },
+  "feasibility_thresholds": [
+    {"max_points": 13, "feasibility": "High"},
+    {"max_points": 19, "feasibility": "Medium"},
+    {"max_points": 1000, "feasibility": "Low"}
+  ],
+  "risk_matrix": {
+    "Negligible": {
+      "Low": {"risk": "Low"},
+      "Medium": {"risk": "Low"},
+      "High": {"risk": "Low"}
+    },
+    "Moderate": {
+      "Low": {"risk": "Medium"},
+      "Medium": {"risk": "Medium"},
+      "High": {"risk": "Medium"}
+    },
+    "Major": {
+      "Low": {"risk": "Medium"},
+      "Medium": {"risk": "High"},
+      "High": {"risk": "High"}
+    },
+    "Severe": {
+      "Low": {"risk": "Medium"},
+      "Medium": {"risk": "High"},
+      "High": {"risk": "High"}
+    }
+  }
+}

@@ -1,7 +1,7 @@
 """Attack-resistance mapping (Compliance agent): a rule base, no AI inference.
 
-risk -> attacker class (provisional rule, expert confirms) -> required resistance, JIL attack
-potential, SESIP level and CC EAL (company rows). Every record is confirmed by a named expert.
+risk -> attacker class (rules CR-1 to CR-4, expert confirms) -> required resistance, JIL attack
+potential, assurance component, SESIP level and CC EAL. Every record is confirmed by a named expert.
 """
 
 from __future__ import annotations
@@ -11,14 +11,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any
 
 from pydantic import BaseModel, Field, model_validator
 
 from agents.risk_agent.schemas import RiskAssessment, RiskLevel, Treatment
 
-DEFAULT_RULES_PATH = Path(__file__).with_name("rules_placeholder.json")
-NEEDS_VALUE = "needs company value"
+DEFAULT_RULES_PATH = Path(__file__).with_name("rules.json")
 
 
 class RulesError(ValueError):
@@ -38,6 +37,7 @@ class Rules:
     classes: list[str]
     table: dict[str, dict[str, Any]]
     risk_to_class: dict[str, dict[str, str]]
+    floors: list[dict[str, str]]
 
     @classmethod
     def load(cls, path: Path | None = None) -> Rules:
@@ -47,14 +47,23 @@ class Rules:
             classes=list(data["attacker_classes"]),
             table=data["class_table"],
             risk_to_class={r["risk"]: r for r in data["risk_to_class"]},
+            floors=list(data.get("feasibility_floor", [])),
         )
+        needed = ("required_resistance", "jil_attack_potential", "assurance_component")
         for name in rules.classes:
-            if name not in rules.table:
+            row = rules.table.get(name)
+            if row is None:
                 raise RulesError(f"no table row for attacker class {name}")
+            for key in (*needed, "sesip_level", "cc_eal"):
+                if not row.get(key):
+                    raise RulesError(f"attacker class {name} has no value for {key}")
         for level in RiskLevel:
             rule = rules.risk_to_class.get(level.value)
             if rule is None or rule["attacker_class"] not in rules.classes:
                 raise RulesError(f"no rule maps {level.value} risk to an attacker class")
+        for floor in rules.floors:
+            if floor["at_least"] not in rules.classes:
+                raise RulesError(f"rule {floor['rule_id']} names an unknown attacker class")
         return rules
 
 
@@ -72,10 +81,10 @@ class ComplianceRecord(BaseModel):
     attacker_class: str
     required_resistance: str
     jil_attack_potential: str
+    assurance_component: str
     sesip_level: str
     cc_eal: str
     rule_id: str
-    rule_basis: Literal["company", "derived", "provisional"]
     overridden: bool = False
     override_reason: str | None = None
     notes: str | None = None
@@ -108,7 +117,7 @@ class ComplianceDecision(BaseModel):
 def risk_fingerprint(risk: RiskAssessment) -> str:
     """What the mapping depends on; a change means the mapping must be redone."""
     treatment = risk.treatment.value if risk.treatment else ""
-    return f"{risk.risk_id}|{risk.effective_risk.value}|{treatment}"
+    return f"{risk.risk_id}|{risk.effective_risk.value}|{risk.attack_feasibility.value}|{treatment}"
 
 
 def applies(risk: RiskAssessment, *, include_all: bool = False) -> bool:
@@ -118,17 +127,28 @@ def applies(risk: RiskAssessment, *, include_all: bool = False) -> bool:
     return include_all or risk.treatment == Treatment.REDUCE
 
 
-def _lookup(rules: Rules, attacker_class: str) -> tuple[dict[str, Any], str]:
+def _lookup(rules: Rules, attacker_class: str) -> dict[str, Any]:
     row = rules.table.get(attacker_class)
     if row is None:
         raise RulesError(f"unknown attacker class '{attacker_class}'; use one of {rules.classes}")
-    return row, str(row["source"])
+    return row
+
+
+def suggested_class(risk: RiskAssessment, rules: Rules) -> tuple[str, str]:
+    """Attacker class by rule: from the effective risk, raised by the feasibility floor."""
+    rule = rules.risk_to_class[risk.effective_risk.value]
+    chosen, rule_id = rule["attacker_class"], rule["rule_id"]
+    for floor in rules.floors:
+        raises = rules.classes.index(floor["at_least"]) > rules.classes.index(chosen)
+        if floor["attack_feasibility"] == risk.attack_feasibility.value and raises:
+            chosen, rule_id = floor["at_least"], f"{rule_id}+{floor['rule_id']}"
+    return chosen, rule_id
 
 
 def propose(risk: RiskAssessment, rules: Rules) -> ComplianceRecord:
     """Suggest the mapping for one approved risk (status pending_human)."""
-    rule = rules.risk_to_class[risk.effective_risk.value]
-    return _build(risk, rules, rule["attacker_class"], rule["rule_id"], overridden=False)
+    chosen, rule_id = suggested_class(risk, rules)
+    return _build(risk, rules, chosen, rule_id, overridden=False)
 
 
 def _build(
@@ -141,32 +161,20 @@ def _build(
     override_reason: str | None = None,
     notes: str | None = None,
 ) -> ComplianceRecord:
-    row, basis = _lookup(rules, attacker_class)
-    suggested = rules.risk_to_class[risk.effective_risk.value]["attacker_class"]
-    jil = row["jil_attack_potential"] or NEEDS_VALUE
-    sesip = row["sesip_level"] or NEEDS_VALUE
-    eal = row["cc_eal"] or NEEDS_VALUE
+    row = _lookup(rules, attacker_class)
+    suggested, _ = suggested_class(risk, rules)
     why = (
         f"Risk {risk.effective_risk.value} "
-        f"({'expert-adjusted' if risk.adjusted_risk else 'computed'})"
-        f" maps by rule {rule_id} to attacker class {suggested}."
+        f"({'expert-adjusted' if risk.adjusted_risk else 'computed'}) with attack feasibility "
+        f"{risk.attack_feasibility.value} maps by rule {rule_id} to attacker class {suggested}."
     )
     if overridden:
         why += f" The expert chose {attacker_class} instead: {override_reason}."
     why += (
-        f" Class {attacker_class} requires: {row['required_resistance']}; JIL attack potential"
-        f" {jil}; {sesip}; {eal}. Table row is {basis}"
-        + (
-            " (a value given by the company)."
-            if basis == "company"
-            else " (follows the company's pattern, not given by the company)."
-            if basis == "derived"
-            else "."
-        )
+        f" Class {attacker_class} requires: {row['required_resistance']}; JIL attack potential "
+        f"{row['jil_attack_potential']}; assurance component {row['assurance_component']}; "
+        f"{row['sesip_level']}; {row['cc_eal']}."
     )
-    missing = [n for n, v in (("JIL", jil), ("SESIP", sesip), ("EAL", eal)) if v == NEEDS_VALUE]
-    if missing:
-        why += f" Missing company values: {', '.join(missing)}."
     return ComplianceRecord(
         compliance_id=f"CMP-{risk.tid}",
         tid=risk.tid,
@@ -178,11 +186,11 @@ def _build(
         suggested_attacker_class=suggested,
         attacker_class=attacker_class,
         required_resistance=str(row["required_resistance"]),
-        jil_attack_potential=jil,
-        sesip_level=sesip,
-        cc_eal=eal,
+        jil_attack_potential=str(row["jil_attack_potential"]),
+        assurance_component=str(row["assurance_component"]),
+        sesip_level=str(row["sesip_level"]),
+        cc_eal=str(row["cc_eal"]),
         rule_id=rule_id if not overridden else "EXPERT-OVERRIDE",
-        rule_basis=basis if not overridden else "provisional",  # type: ignore[arg-type]
         overridden=overridden,
         override_reason=override_reason if overridden else None,
         notes=notes,

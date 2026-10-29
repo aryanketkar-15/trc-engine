@@ -61,10 +61,11 @@ def env(tmp_path: Path) -> tuple[TestClient, Path]:
     return TestClient(app, headers={"X-API-Key": API_KEY}), path
 
 
-def test_rules_are_reported_as_provisional(env: Any) -> None:
+def test_rules_endpoint_returns_the_rule_base(env: Any) -> None:
     client, _ = env
     body = client.get("/compliance-agent/rules").json()
-    assert body["provisional"] is True and body["class_table"]["Moderate"]["cc_eal"] == "EAL4+"
+    assert body["rules_version"] == "v1" and "provisional" not in body
+    assert body["class_table"]["Moderate"]["cc_eal"] == "EAL4+"
 
 
 def test_propose_covers_reduce_only_unless_all_is_asked(env: Any) -> None:
@@ -95,7 +96,7 @@ def test_confirm_override_reject_and_list(env: Any) -> None:
     res = client.post("/compliance-agent/confirm", json=ok).json()
     rec = res["records"][0]
     assert res["stored"] == 1 and rec["cc_eal"] == "EAL2+" and rec["overridden"] is True
-    assert rec["confirmed_by"] == "Dr. Gaikwad" and res["incomplete"] == []
+    assert rec["confirmed_by"] == "Dr. Gaikwad" and rec["assurance_component"] == "AVA_VAN.3"
     assert client.get("/compliance-agent/records").json()["count"] == 1
     miss = {"items": [{"tid": "NOPE", "decision": {"approver": "X"}}]}
     assert client.post("/compliance-agent/confirm", json=miss).status_code == 404

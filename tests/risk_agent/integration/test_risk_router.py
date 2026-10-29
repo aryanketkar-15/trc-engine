@@ -83,11 +83,12 @@ def _decision(tid: str, treatment: str = "Reduce", residual: str = "Low") -> dic
     }
 
 
-def test_ratings_endpoint_says_the_tables_are_provisional(env: Any) -> None:
+def test_ratings_endpoint_returns_the_tables_in_use(env: Any) -> None:
     client, _, _ = env
     body = client.get("/risk-agent/ratings").json()
-    assert body["ratings_version"] == "placeholder-v0" and body["provisional"] is True
-    assert body["risk_matrix"]["Severe"]["Medium"] == {"risk": "High", "source": "company"}
+    assert body["ratings_version"] == "v1" and "provisional" not in body
+    assert body["risk_matrix"]["Severe"]["Medium"] == {"risk": "High"}
+    assert body["factor_values"]["elapsed_time"][2] == "2_weeks"
 
 
 def test_suggest_covers_every_approved_threat(env: Any) -> None:
@@ -101,12 +102,7 @@ def test_score_previews_without_storing(env: Any) -> None:
     res = client.post("/risk-agent/score", json={"inputs": [{"tid": "THR-A", **RATING}]})
     assert res.status_code == 200
     row = res.json()["by_asset"]["AS-1"][0]
-    assert (row["overall_impact"], row["risk"], row["risk_basis"], row["rank_in_asset"]) == (
-        "Severe",
-        "High",
-        "company",
-        1,
-    )
+    assert (row["overall_impact"], row["risk"], row["rank_in_asset"]) == ("Severe", "High", 1)
     assert StateManager(path).get_risk_assessments() == {}
 
 

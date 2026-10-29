@@ -51,10 +51,21 @@ Need the `X-API-Key` header: `POST /risk-agent/approve`, `/risk-agent/reject`, `
 
 Request bodies: `docs/api_demo/risk_approve.json`, `risk_reject.json`, `compliance_confirm.json`.
 
-## D. Say these limits before the company does
+## D. Report and diagrams
 
-1. The rating tables and the attack-resistance rule base are placeholders; the company's own values are marked as such, and
-   every record says which cells are company, derived or provisional.
-2. Two of the company's six rows (T4, T5) do not follow "highest axis"; we asked how overall impact is formed.
-3. Residual risk is the expert's judgement.
-4. No login: the approver is the name typed in.
+```bash
+python scripts/tara_report.py --use-case UC-01
+```
+Writes `demo_output/tara_report_UC-01.md` (also `.csv`, `.json`): per asset, ranked threats with risk, treatment, residual risk and
+required resistance, the threats that need security requirements, the residual risk, and any approved threat not yet scored.
+API: `GET /api/v1/risk-agent/report?use_case_id=UC-01&format=markdown`.
+
+Diagrams for the meeting: `docs/diagrams/agent_architecture.svg` (who produces what and where people decide) and
+`docs/diagrams/security_flow.svg` (security objectives to security requirements, with the change loop).
+
+## E. Limits to state in the demo
+
+1. Without a live model key the rule-based suggestion gives every threat the same feasibility, so the expert's edits matter.
+2. Residual risk is the expert's judgement; there is no control-effectiveness model.
+3. No login: the approver is the name typed in; the audit file is not tamper-evident.
+4. Each threat is based on one catalogue pattern; multi-step attack chains are not modelled.

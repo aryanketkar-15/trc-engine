@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Annotated, Literal
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
@@ -110,7 +110,6 @@ class RiskAssessment(BaseModel):
     feasibility_points: int | None = None
     attack_feasibility: Feasibility
     risk: RiskLevel
-    risk_basis: Literal["company", "derived", "provisional"]
     justification: str = ""
     adjusted_risk: RiskLevel | None = None
     adjustment_reason: str | None = None

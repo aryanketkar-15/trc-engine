@@ -20,7 +20,7 @@ from agents.risk_agent.schemas import (
 )
 from agents.threat_agent.schemas import ThreatScenario
 
-DEFAULT_RATINGS_PATH = Path(__file__).with_name("ratings_placeholder.json")
+DEFAULT_RATINGS_PATH = Path(__file__).with_name("ratings.json")
 
 _RISK_ORDER = {RiskLevel.HIGH: 0, RiskLevel.MEDIUM: 1, RiskLevel.LOW: 2}
 _IMPACT_ORDER = {
@@ -77,10 +77,6 @@ class Ratings:
                         f"risk matrix has no value for {impact.value} x {feas.value}"
                     )
                 RiskLevel(cell["risk"])
-                if cell.get("source") not in ("company", "derived", "provisional"):
-                    raise RatingsError(
-                        f"risk matrix cell {impact.value} x {feas.value} has no source"
-                    )
         if self.aggregation not in ("max",):
             raise RatingsError(f"unknown impact aggregation '{self.aggregation}'")
 
@@ -109,11 +105,9 @@ def feasibility_from_factors(
     raise RatingsError("no feasibility threshold covers the point total")
 
 
-def risk_from_matrix(
-    impact: ImpactLevel, feasibility: Feasibility, ratings: Ratings
-) -> tuple[RiskLevel, str]:
+def risk_from_matrix(impact: ImpactLevel, feasibility: Feasibility, ratings: Ratings) -> RiskLevel:
     cell = ratings.matrix[impact.value][feasibility.value]
-    return RiskLevel(cell["risk"]), str(cell["source"])
+    return RiskLevel(cell["risk"])
 
 
 def risk_id_for(tid: str) -> str:
@@ -137,7 +131,7 @@ def score(
     else:
         assert risk_input.attack_feasibility is not None
         feasibility = risk_input.attack_feasibility
-    level, basis = risk_from_matrix(overall, feasibility, ratings)
+    level = risk_from_matrix(overall, feasibility, ratings)
     return RiskAssessment(
         risk_id=risk_id_for(scenario.tid),
         tid=scenario.tid,
@@ -150,10 +144,7 @@ def score(
         feasibility_points=points,
         attack_feasibility=feasibility,
         risk=level,
-        risk_basis=basis,  # type: ignore[arg-type]
-        justification=build_justification(
-            risk_input, overall, points, feasibility, level, basis, ratings
-        ),
+        justification=build_justification(risk_input, overall, points, feasibility, level, ratings),
         ai_suggested=risk_input.ai_suggested,
         suggestion_basis=risk_input.suggestion_basis,
         threat_fingerprint=threat_fingerprint
@@ -169,7 +160,6 @@ def build_justification(
     points: int | None,
     feasibility: Feasibility,
     risk: RiskLevel,
-    basis: str,
     ratings: Ratings,
 ) -> str:
     """Plain-language reasons for the score, built only from the ratings and the tables."""
@@ -192,14 +182,9 @@ def build_justification(
         )
     else:
         parts.append(f"Attack feasibility {feasibility.value} was rated directly by the expert.")
-    cell = {
-        "company": "a value given by the company",
-        "derived": "a value forced by the company's neighbouring values",
-        "provisional": "a PROVISIONAL value (not yet confirmed by the company)",
-    }[basis]
     parts.append(
         f"Risk matrix: {overall.value} impact with {feasibility.value} feasibility gives "
-        f"{risk.value} risk, {cell}."
+        f"{risk.value} risk."
     )
     if risk_input.suggestion_basis:
         origin = "AI suggestion" if risk_input.ai_suggested else "Starting point"
