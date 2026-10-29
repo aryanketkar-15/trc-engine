@@ -22,6 +22,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from agents.risk_agent.router import router as risk_agent_router
 from agents.threat_agent.router import router as threat_agent_router
 from agents.threat_agent.run_store import (
     init_postgres_run_store_schema,
@@ -101,6 +102,7 @@ app = FastAPI(
 # ──────────────────────────────────────────────────────────────────────────────
 
 app.include_router(threat_agent_router, prefix="/api/v1")
+app.include_router(risk_agent_router, prefix="/api/v1")
 
 # TODO (Week 2): mount additional routers as they are built:
 #   from common.middleware import PiiRedactionMiddleware

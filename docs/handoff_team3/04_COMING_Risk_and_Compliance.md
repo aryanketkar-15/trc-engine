@@ -1,4 +1,6 @@
-# 04 · Coming next: Risk and Compliance outputs (PROPOSAL, not a contract)
+# 04 · Risk and Compliance outputs
+
+> **Update 29 Oct 2026:** a first version of the Risk Agent is built (tables are placeholders). Field names and the full design are in `docs/Phase2_Risk_Agent_Design.md` in the repository. This file keeps the original proposal; the built `RiskAssessment` adds `rank_in_asset`, `residual_risk`, `risk_basis` and `approved_by`.
 
 Team 2 owns three agents. Only the **Threat Agent** exists. The next two follow the company document
 (Section 2.6 / 2.7, ISO/SAE 21434 §15.5–15.6). **Everything below is a proposal so you can tell us what you need

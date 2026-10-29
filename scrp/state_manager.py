@@ -202,6 +202,67 @@ class StateManager:
             logger.info("SCRS retired %d stale scenario(s): %s", retired, reason)
         return retired
 
+    def commit_risk_assessments(self, assessments: list[dict[str, object]]) -> int:
+        """Store approved risk assessments (keyed by tid) in one file write, with audit entries.
+
+        Raises:
+            NotApprovedError: If an assessment is not ``approved`` or has no approver.
+        """
+        for item in assessments:
+            if item.get("status") != "approved" or not item.get("approved_by"):
+                raise NotApprovedError(
+                    f"risk {item.get('risk_id')} is not approved by a named person"
+                )
+        for item in assessments:
+            tid = str(item["tid"])
+            self._state.risk_assessments[tid] = item
+            self._state.audit_log.append(
+                AuditLogEntry(
+                    run_id=str(item.get("run_id") or "unknown"),
+                    tid=tid,
+                    timestamp=datetime.now(UTC),
+                    action="risk_approve",
+                    reason=f"treatment={item.get('treatment')}; approver={item.get('approved_by')}",
+                )
+            )
+        if assessments:
+            self._persist()
+        return len(assessments)
+
+    def retire_risk_assessments(self, tids: list[str], reason: str) -> int:
+        """Move risk assessments out of the active set (their threat changed or was retired)."""
+        retired = 0
+        for tid in tids:
+            raw = self._state.risk_assessments.pop(tid, None)
+            if raw is None:
+                continue
+            run_id = str(raw.get("run_id") or "unknown") if isinstance(raw, dict) else "unknown"
+            self._state.revision_history.setdefault(f"risk:{run_id}", []).append(
+                {
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "action": "risk_stale",
+                    "reason": reason,
+                    "assessments": [raw],
+                }
+            )
+            self._state.audit_log.append(
+                AuditLogEntry(
+                    run_id=run_id,
+                    tid=tid,
+                    timestamp=datetime.now(UTC),
+                    action="risk_stale",
+                    reason=reason,
+                )
+            )
+            retired += 1
+        if retired:
+            self._persist()
+        return retired
+
+    def get_risk_assessments(self) -> dict[str, object]:
+        """Return a shallow copy of all approved risk assessments (read-only)."""
+        return dict(self._state.risk_assessments)
+
     def _apply_write(self, scenario: ThreatScenario, run_id: str) -> AuditLogEntry:
         """Gate-check and stage one scenario in memory (does not persist)."""
         if scenario.status != "approved":

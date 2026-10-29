@@ -38,7 +38,17 @@ class AuditLogEntry(BaseModel):
         default_factory=lambda: datetime.now(UTC),
         description="UTC timestamp of the write action.",
     )
-    action: Literal["write", "reject", "revise", "approve", "prune", "add", "stale"] = Field(
+    action: Literal[
+        "write",
+        "reject",
+        "revise",
+        "approve",
+        "prune",
+        "add",
+        "stale",
+        "risk_approve",
+        "risk_stale",
+    ] = Field(
         default="write",
         description="Action performed.",
     )
@@ -64,6 +74,10 @@ class SCRSState(BaseModel):
     threat_scenarios: dict[str, object] = Field(
         default_factory=dict,
         description="Keyed by tid.  Value is the approved ThreatScenario dict.",
+    )
+    risk_assessments: dict[str, object] = Field(
+        default_factory=dict,
+        description="Phase 2. Keyed by tid. Value is the approved RiskAssessment dict.",
     )
     audit_log: list[AuditLogEntry] = Field(
         default_factory=list,
