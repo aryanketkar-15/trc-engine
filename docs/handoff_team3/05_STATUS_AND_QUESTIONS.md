@@ -1,5 +1,7 @@
 # 05 · Honest status, limits, and what we need from Team 3
 
+*Updated 29 Oct 2026: Risk and resistance mapping added (see file 06).*
+
 ## 1. Status (12 Oct 2026)
 
 | Area | Status |
@@ -13,7 +15,8 @@
 | "Go back one step" | **working on our side**: out-of-date approved threats are detected (asset or system model changed), retired to the history, and only the affected assets are re-run. Reading Team 1's database for this is part of the integration |
 | Link to Team 1 (real asset tables) | **not built**: needs their latest branches merged and an adapter (file 01) |
 | Writing results into Team 1's database and audit chain | **not built** |
-| Risk Agent / Compliance Agent | **not built** (file 04 is a proposal) |
+| Risk Agent | **built (29 Oct)** with placeholder tables: impact, feasibility, risk, per-asset ranking, treatment, residual risk, justification, human approve / edit / reject / adjust (file 06) |
+| Attack-resistance mapping (JIL / SESIP / EAL) | **built (29 Oct)** as a rule base with expert confirmation; only the company's two example rows are real values (file 06) |
 | Multi-step attack chains | **not built**: each scenario is based on a single catalogue pattern |
 
 ## 2. Quality: what we can and cannot say
@@ -40,7 +43,7 @@
 3. How do you want to receive data: REST API, the shared database table, or exported JSON files?
 4. Do you need only approved threats, or also rejected / pruned ones for the audit report?
 5. What ID format will your requirements use (`SR-01` as in the company document)? We will keep it in our links.
-6. Do you want us to add a field for "treatment decision" now (from Risk) or later?
+6. Treatment decision and residual risk are now in the Risk record (file 06). Is that the shape you want (`effective_risk`, `treatment`, `residual_risk`)?
 7. When Team 1's real asset tables are available, can you share the integrated test session with us?
 8. Is there a template for the TARA report so we can shape `evidence_chain` text to what you can quote?
 

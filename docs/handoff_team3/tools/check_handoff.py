@@ -14,7 +14,9 @@ from pathlib import Path
 PKG = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PKG / "schemas"))
 
+from compliance_schemas import ComplianceRecord  # noqa: E402
 from project_schema import ProjectInput, expand_project  # noqa: E402
+from risk_schemas import RiskAssessment  # noqa: E402
 from scrs_schemas import AuditLogEntry, SCRSState  # noqa: E402
 from staleness import check_staleness  # noqa: E402
 from threat_schemas import ThreatAgentInput, ThreatScenario, ThreatStatus  # noqa: E402
@@ -94,6 +96,26 @@ def main() -> int:
     print("\nStaleness demo (AS-3 edited upstream):")
     print("  stale threats:", [(s.tid, s.reason) for s in report.stale] or "none")
     print("  assets to re-analyse:", report.affected_assets)
+
+    # 11. Risk and attack-resistance records (Risk Agent and Compliance mapping)
+    risks = [RiskAssessment.model_validate(r) for r in load("output_risk_assessments_sample.json")]
+    comps = [ComplianceRecord.model_validate(c) for c in load("output_compliance_records_sample.json")]
+    print(f"\n[ok] {len(risks)} risk assessments, {len(comps)} resistance records validated")
+    print("     rule for Requirements: Reduce -> requirement; Retain / Share -> residual risk")
+    by_tid = {c.tid: c for c in comps}
+    print(f"{'threat id':<26}{'asset':<7}{'risk':<8}{'treat':<8}{'residual':<10}{'class':<16}{'SESIP':<9}EAL")
+    for r in sorted(risks, key=lambda x: (x.asset_id, x.rank_in_asset or 0)):
+        c = by_tid.get(r.tid)
+        print(
+            f"{r.tid:<26}{r.asset_id:<7}{r.effective_risk.value:<8}"
+            f"{(r.treatment.value if r.treatment else '-'):<8}"
+            f"{(r.residual_risk.value if r.residual_risk else '-'):<10}"
+            f"{(c.attacker_class if c else '-'):<16}{(c.sesip_level if c else '-'):<9}{(c.cc_eal if c else '-')}"
+        )
+        if r.approved_by is None or (c and c.confirmed_by is None):
+            ok = False
+    needs_req = [r.tid for r in risks if r.treatment and r.treatment.value == "Reduce"]
+    print(f"  threats that need a security requirement: {len(needs_req)}")
 
     print("\nRESULT:", "all checks passed" if ok else "problems found")
     return 0 if ok else 1

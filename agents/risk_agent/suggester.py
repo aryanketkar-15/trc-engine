@@ -27,6 +27,9 @@ logger = logging.getLogger(__name__)
 
 PROMPT_VERSION = "risk-suggest-v1"
 
+# A suggestion is a short JSON object; a small cap keeps the call cheap and within credit limits.
+_MAX_TOKENS = 700
+
 #: Which security property a STRIDE class mainly attacks.
 _STRIDE_PROPERTY = {
     "Spoofing": "authenticity",
@@ -85,7 +88,12 @@ def _system_prompt(valid: dict[str, list[str]]) -> str:
     )
 
 
-def _user_prompt(scenario: ThreatScenario, asset: AssetModel | None) -> str:
+def _user_prompt(
+    scenario: ThreatScenario,
+    asset: AssetModel | None,
+    feedback: str | None = None,
+    previous: RiskInput | None = None,
+) -> str:
     facts: dict[str, Any] = {
         "asset": asset.name if asset else scenario.asset_id,
         "asset_properties_required": (
@@ -97,6 +105,12 @@ def _user_prompt(scenario: ThreatScenario, asset: AssetModel | None) -> str:
         "why_applicable": scenario.evidence_chain.applicability_reason,
         "catalogue_reference": scenario.kb_reference,
     }
+    if feedback:
+        facts["expert_rejected_previous_suggestion_because"] = feedback
+        facts["previous_suggestion"] = (
+            previous.model_dump(mode="json", exclude={"suggestion_basis"}) if previous else None
+        )
+        facts["instruction"] = "Give a different suggestion that addresses the expert's reason."
     return redact_pii(json.dumps(facts, default=str))
 
 
@@ -119,30 +133,58 @@ def _parse(raw: str, valid: dict[str, list[str]], tid: str) -> RiskInput:
     )
 
 
+def _fallback(
+    scenario: ThreatScenario,
+    asset: AssetModel | None,
+    feedback: str | None,
+    previous: RiskInput | None,
+    why: str,
+) -> RiskInput:
+    base = previous or deterministic_suggestion(scenario, asset)
+    if feedback:
+        return base.model_copy(
+            update={
+                "suggestion_basis": (
+                    f"could not produce a new suggestion ({why}); the expert's reason was "
+                    f"recorded: {feedback[:200]}. Please enter the ratings manually"
+                )
+            }
+        )
+    if why == "live LLM is off":
+        return base
+    return base.model_copy(update={"suggestion_basis": f"{base.suggestion_basis} ({why})"})
+
+
 def suggest(
     scenario: ThreatScenario,
     asset: AssetModel | None,
     valid_factor_values: dict[str, list[str]],
+    *,
+    feedback: str | None = None,
+    previous: RiskInput | None = None,
 ) -> RiskInput:
-    """LLM suggestion with deterministic fallback; never raises for model problems."""
+    """LLM suggestion with deterministic fallback; never raises for model problems.
+
+    With ``feedback`` (the expert's reason for rejecting ``previous``) the model is asked for a
+    different suggestion. Without the model the previous suggestion is returned unchanged and
+    labelled so that the expert enters the ratings manually.
+    """
     settings = get_settings()
     use_live = getattr(settings, "USE_LIVE_LLM", True)
     if os.environ.get("USE_LIVE_LLM", "").lower() in ("false", "0", "no"):
         use_live = False
     if not use_live:
-        return deterministic_suggestion(scenario, asset)
+        return _fallback(scenario, asset, feedback, previous, "live LLM is off")
     try:
         raw = chat_completion(
             system_prompt=_system_prompt(valid_factor_values),
-            user_prompt=_user_prompt(scenario, asset),
+            user_prompt=_user_prompt(scenario, asset, feedback, previous),
             model=getattr(settings, "OPENAI_MODEL", None),
             prompt_version=PROMPT_VERSION,
+            max_tokens=_MAX_TOKENS,
             run_id=scenario.run_id,
         )
         return _parse(raw, valid_factor_values, scenario.tid)
     except (LLMClientError, ValueError, KeyError, json.JSONDecodeError) as exc:
         logger.warning("risk suggestion fell back to rules for %s: %s", scenario.tid, exc)
-        fallback = deterministic_suggestion(scenario, asset)
-        return fallback.model_copy(
-            update={"suggestion_basis": f"{fallback.suggestion_basis} (LLM unavailable)"}
-        )
+        return _fallback(scenario, asset, feedback, previous, "LLM unavailable")

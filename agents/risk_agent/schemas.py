@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 
 class ImpactLevel(StrEnum):
@@ -111,6 +111,9 @@ class RiskAssessment(BaseModel):
     attack_feasibility: Feasibility
     risk: RiskLevel
     risk_basis: Literal["company", "derived", "provisional"]
+    justification: str = ""
+    adjusted_risk: RiskLevel | None = None
+    adjustment_reason: str | None = None
     rank_in_asset: int | None = None
     treatment: Treatment | None = None
     treatment_rationale: str | None = None
@@ -120,10 +123,17 @@ class RiskAssessment(BaseModel):
     suggestion_basis: str | None = None
     status: RiskStatus = RiskStatus.PENDING_HUMAN
     approved_by: str | None = None
+    rejections_before_approval: int = 0
     threat_fingerprint: str | None = None
     ratings_version: str
     run_id: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def effective_risk(self) -> RiskLevel:
+        """The risk everything downstream uses: the expert's adjustment if any, else computed."""
+        return self.adjusted_risk or self.risk
 
 
 class TreatmentDecision(BaseModel):
@@ -136,6 +146,16 @@ class TreatmentDecision(BaseModel):
     residual_risk: RiskLevel
     residual_reason: str | None = None
     approver: Annotated[str, Field(min_length=1)]
+    adjusted_risk: RiskLevel | None = Field(
+        default=None, description="Expert override of the computed risk (needs a reason)."
+    )
+    adjustment_reason: str | None = None
+
+    @model_validator(mode="after")
+    def _adjustment_needs_reason(self) -> TreatmentDecision:
+        if self.adjusted_risk is not None and not (self.adjustment_reason or "").strip():
+            raise ValueError("adjusting the computed risk needs an adjustment_reason")
+        return self
 
     @model_validator(mode="after")
     def _reduce_needs_reason(self) -> TreatmentDecision:

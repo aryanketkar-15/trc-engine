@@ -48,6 +48,13 @@ class AuditLogEntry(BaseModel):
         "stale",
         "risk_approve",
         "risk_stale",
+        "risk_reject",
+        "risk_edit",
+        "risk_adjust",
+        "compliance_confirm",
+        "compliance_override",
+        "compliance_reject",
+        "compliance_stale",
     ] = Field(
         default="write",
         description="Action performed.",
@@ -78,6 +85,10 @@ class SCRSState(BaseModel):
     risk_assessments: dict[str, object] = Field(
         default_factory=dict,
         description="Phase 2. Keyed by tid. Value is the approved RiskAssessment dict.",
+    )
+    compliance_records: dict[str, object] = Field(
+        default_factory=dict,
+        description="Phase 2. Keyed by tid. Expert-confirmed attack-resistance record.",
     )
     audit_log: list[AuditLogEntry] = Field(
         default_factory=list,

@@ -21,6 +21,8 @@ from scrp.state_manager import NotApprovedError, StateManager
 
 router = APIRouter(prefix="/risk-agent", tags=["risk-agent"])
 
+MAX_RISK_REJECTIONS = 3
+
 
 def get_ratings() -> Ratings:
     """The rating tables in use (overridable in tests)."""
@@ -40,6 +42,13 @@ class ScoreRequest(BaseModel):
 class RiskDecision(BaseModel):
     risk_input: RiskInput
     decision: TreatmentDecision
+
+
+class RejectRequest(BaseModel):
+    risk_input: RiskInput
+    reason: Annotated[str, Field(min_length=5)]
+    approver: Annotated[str, Field(min_length=1)]
+    assets: list[AssetModel] = Field(default_factory=list)
 
 
 class ApproveRequest(BaseModel):
@@ -146,7 +155,12 @@ def approve_risks(
     ranked = _score_all([d.risk_input for d in body.decisions], threats, ratings)
     decisions = {d.risk_input.tid: d.decision for d in body.decisions}
     try:
-        final = [engine.apply_treatment(a, decisions[a.tid]) for a in ranked]
+        final = [
+            engine.apply_treatment(
+                a, decisions[a.tid], rejections=state.risk_rejection_count(a.tid)
+            )
+            for a in ranked
+        ]
     except RatingsError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
     try:
@@ -167,6 +181,50 @@ def approve_risks(
             if a.treatment is not None and a.treatment.value != "Reduce"
         ],
         "by_asset": _group(final),
+    }
+
+
+@router.post("/reject", dependencies=[Depends(verify_api_key)])
+def reject_suggestion(
+    body: Annotated[RejectRequest, Body()],
+    state: Annotated[StateManager, Depends(get_state_manager)],
+    ratings: Annotated[Ratings, Depends(get_ratings)],
+) -> dict[str, Any]:
+    """The expert rejects the suggested ratings with a reason; a new suggestion is produced.
+
+    The rejection is audited. After MAX_RISK_REJECTIONS the agent stops suggesting and the expert
+    must enter the ratings (``escalated``). Nothing is stored in the risk set by this call.
+    """
+    threats = _approved_threats(state, None, None)
+    threat = threats.get(body.risk_input.tid)
+    if threat is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, f"{body.risk_input.tid} is not an approved threat"
+        )
+    used = state.log_risk_rejection(threat.tid, threat.run_id, body.reason, body.approver)
+    if used >= MAX_RISK_REJECTIONS:
+        return {
+            "tid": threat.tid,
+            "rejections_used": used,
+            "escalated": True,
+            "message": (
+                f"Rejected {used} times: the agent stops suggesting. Enter the ratings yourself "
+                "and send them to /approve."
+            ),
+        }
+    assets = {a.asset_id: a for a in body.assets}
+    new = suggester.suggest(
+        threat,
+        assets.get(threat.asset_id),
+        _factor_values(ratings),
+        feedback=body.reason,
+        previous=body.risk_input,
+    )
+    return {
+        "tid": threat.tid,
+        "rejections_used": used,
+        "escalated": False,
+        "suggestion": new.model_dump(mode="json"),
     }
 
 

@@ -1,0 +1,28 @@
+{
+  "decisions": [
+    {
+      "risk_input": {
+        "tid": "REPLACE-WITH-AN-APPROVED-TID",
+        "impact": {"safety": null, "financial": "Moderate", "operational": "Severe", "privacy": "Moderate"},
+        "feasibility_factors": {
+          "elapsed_time": "1_week",
+          "expertise": "proficient",
+          "knowledge": "restricted",
+          "window": "easy",
+          "equipment": "standard"
+        },
+        "ai_suggested": false,
+        "suggestion_basis": "entered by the expert"
+      },
+      "decision": {
+        "treatment": "Reduce",
+        "rationale": "Add a fresh nonce and signature check to every unlock command.",
+        "residual_risk": "Low",
+        "residual_reason": "A replayed command is rejected; only a compromised key remains.",
+        "approver": "Dr. Vidya Gaikwad",
+        "adjusted_risk": null,
+        "adjustment_reason": null
+      }
+    }
+  ]
+}

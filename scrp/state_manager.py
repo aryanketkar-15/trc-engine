@@ -215,14 +215,41 @@ class StateManager:
                 )
         for item in assessments:
             tid = str(item["tid"])
+            run_id = str(item.get("run_id") or "unknown")
+            who = item.get("approved_by")
             self._state.risk_assessments[tid] = item
+            if item.get("ai_suggested") is False:
+                self._state.audit_log.append(
+                    AuditLogEntry(
+                        run_id=run_id,
+                        tid=tid,
+                        timestamp=datetime.now(UTC),
+                        action="risk_edit",
+                        reason=(
+                            f"ratings entered or edited by {who}: {item.get('suggestion_basis')}"
+                        ),
+                    )
+                )
+            if item.get("adjusted_risk"):
+                self._state.audit_log.append(
+                    AuditLogEntry(
+                        run_id=run_id,
+                        tid=tid,
+                        timestamp=datetime.now(UTC),
+                        action="risk_adjust",
+                        reason=(
+                            f"{who} changed computed risk {item.get('risk')} to "
+                            f"{item.get('adjusted_risk')}: {item.get('adjustment_reason')}"
+                        ),
+                    )
+                )
             self._state.audit_log.append(
                 AuditLogEntry(
-                    run_id=str(item.get("run_id") or "unknown"),
+                    run_id=run_id,
                     tid=tid,
                     timestamp=datetime.now(UTC),
                     action="risk_approve",
-                    reason=f"treatment={item.get('treatment')}; approver={item.get('approved_by')}",
+                    reason=f"treatment={item.get('treatment')}; approver={who}",
                 )
             )
         if assessments:
@@ -258,6 +285,99 @@ class StateManager:
         if retired:
             self._persist()
         return retired
+
+    def log_risk_rejection(self, tid: str, run_id: str, reason: str, approver: str) -> int:
+        """Record that the expert rejected the suggested ratings. Returns the rejection count."""
+        self._state.audit_log.append(
+            AuditLogEntry(
+                run_id=run_id or "unknown",
+                tid=tid,
+                timestamp=datetime.now(UTC),
+                action="risk_reject",
+                reason=f"{approver}: {reason}",
+            )
+        )
+        self._persist()
+        return self.risk_rejection_count(tid)
+
+    def risk_rejection_count(self, tid: str) -> int:
+        return sum(1 for e in self._state.audit_log if e.tid == tid and e.action == "risk_reject")
+
+    def commit_compliance_records(self, records: list[dict[str, object]]) -> int:
+        """Store expert-confirmed attack-resistance records (keyed by tid), with audit entries."""
+        for item in records:
+            if item.get("status") != "confirmed" or not item.get("confirmed_by"):
+                raise NotApprovedError(
+                    f"compliance record for {item.get('tid')} is not confirmed by a named person"
+                )
+        for item in records:
+            tid = str(item["tid"])
+            self._state.compliance_records[tid] = item
+            overridden = bool(item.get("overridden"))
+            self._state.audit_log.append(
+                AuditLogEntry(
+                    run_id=str(item.get("run_id") or "unknown"),
+                    tid=tid,
+                    timestamp=datetime.now(UTC),
+                    action="compliance_override" if overridden else "compliance_confirm",
+                    reason=(
+                        f"{item.get('confirmed_by')}: attacker class {item.get('attacker_class')}"
+                        f" (rule {item.get('rule_id')})"
+                        + (
+                            f"; override reason: {item.get('override_reason')}"
+                            if overridden
+                            else ""
+                        )
+                    ),
+                )
+            )
+        if records:
+            self._persist()
+        return len(records)
+
+    def retire_compliance_records(self, tids: list[str], reason: str) -> int:
+        retired = 0
+        for tid in tids:
+            raw = self._state.compliance_records.pop(tid, None)
+            if raw is None:
+                continue
+            run_id = str(raw.get("run_id") or "unknown") if isinstance(raw, dict) else "unknown"
+            self._state.revision_history.setdefault(f"compliance:{run_id}", []).append(
+                {
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "action": "compliance_stale",
+                    "reason": reason,
+                    "records": [raw],
+                }
+            )
+            self._state.audit_log.append(
+                AuditLogEntry(
+                    run_id=run_id,
+                    tid=tid,
+                    timestamp=datetime.now(UTC),
+                    action="compliance_stale",
+                    reason=reason,
+                )
+            )
+            retired += 1
+        if retired:
+            self._persist()
+        return retired
+
+    def log_compliance_rejection(self, tid: str, run_id: str, reason: str, approver: str) -> None:
+        self._state.audit_log.append(
+            AuditLogEntry(
+                run_id=run_id or "unknown",
+                tid=tid,
+                timestamp=datetime.now(UTC),
+                action="compliance_reject",
+                reason=f"{approver}: {reason}",
+            )
+        )
+        self._persist()
+
+    def get_compliance_records(self) -> dict[str, object]:
+        return dict(self._state.compliance_records)
 
     def get_risk_assessments(self) -> dict[str, object]:
         """Return a shallow copy of all approved risk assessments (read-only)."""

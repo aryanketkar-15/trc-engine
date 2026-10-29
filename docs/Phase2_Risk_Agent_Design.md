@@ -141,21 +141,35 @@ Steps 1-2 can start at once and are testable without the company.
 |---|---|
 | Schemas (`RiskInput`, `RiskAssessment`, `TreatmentDecision`) | `agents/risk_agent/schemas.py` |
 | Rating tables (placeholder, every cell labelled with its source) | `agents/risk_agent/ratings_placeholder.json` |
-| Rule engine (overall impact, feasibility points, matrix, per-asset ranking, treatment, residual risk) | `agents/risk_agent/engine.py` |
-| Suggestions: LLM with redaction and a rule-based fallback; always marked `ai_suggested` | `agents/risk_agent/suggester.py` |
-| Staleness of risks (threat retired or re-generated) | `agents/risk_agent/staleness.py` |
-| API `/api/v1/risk-agent/`: `ratings`, `suggest`, `score`, `approve`*, `assessments`, `staleness`, `retire-stale`* (*needs the API key) | `agents/risk_agent/router.py` |
-| SCRS: `risk_assessments` (approved only, with approver) and audit actions `risk_approve`, `risk_stale` | `scrp/` |
-| Command line | `python scripts/risk_demo.py` (after `scripts/scrp_demo.py`) |
-| Tests (38): six company rows, ranking, treatment rules, suggester fallback, SCRS storage, staleness, all endpoints | `tests/risk_agent/` |
+| Rule engine: overall impact, feasibility points, matrix, per-asset ranking, treatment, residual risk, **written justification** | `agents/risk_agent/engine.py` |
+| Suggestions: LLM (small token cap, personal data stripped) with rule-based fallback, regenerates after a rejection using the expert's reason | `agents/risk_agent/suggester.py` |
+| **Attack-resistance mapping** (JIL, SESIP, EAL) as a rule base, expert confirms | `agents/compliance_agent/` |
+| Staleness for risks and for resistance records | `agents/risk_agent/staleness.py`, `agents/compliance_agent/engine.py` |
+| API `/api/v1/risk-agent/*` and `/api/v1/compliance-agent/*` | `agents/*/router.py` |
+| SCRS: `risk_assessments`, `compliance_records`, audit actions for every human decision | `scrp/` |
+| Command lines | `scripts/risk_demo.py`, `scripts/compliance_demo.py` (run after `scripts/scrp_demo.py`) |
+| Tests (63): six company rows, ranking, treatment, justification, rejection and regeneration, adjustment, mapping, stale handling, all endpoints | `tests/risk_agent/` |
 
-**How it behaves**
-* Risk is stored only with a named approver; a Retain must keep the current risk as residual; Reduce and Share must say why risk remains.
-* `needs_requirement` lists the Reduce threats for Team 3; `residual` lists everything accepted, shared or avoided.
-* If an approved threat is retired or re-generated from changed data, its risk shows up in `/staleness` and can be retired and re-scored.
+### Human in the loop (what the expert can do, and what is recorded)
+
+| Step | Expert can | Recorded in the audit log |
+|---|---|---|
+| Ratings | **accept** the suggestion, **edit** impact and the five factors, **reject** it with a reason (a new suggestion is produced; after **3 rejections** the agent stops and the expert enters the ratings), **skip** | `risk_reject` (with reason and name), `risk_edit` |
+| Risk | accept the computed risk, or **adjust** it with a mandatory reason; the ranking and everything downstream use `effective_risk` | `risk_adjust` (old value, new value, reason, name) |
+| Treatment | choose Reduce / Share / Retain / Avoid, write the rationale, state the residual risk (Retain must keep the current risk; Reduce and Share must say why risk remains) | `risk_approve` (treatment and approver) |
+| Resistance | **confirm** the proposed attacker class, **override** it with a reason, or **reject** the mapping with a reason | `compliance_confirm`, `compliance_override`, `compliance_reject` |
+| Always | nothing reaches the SCRS without a named approver | |
+
+### Attack-resistance rule base (what is company data and what is ours)
+
+* The two table rows the company gave (Enhanced-Basic: JIL Moderate, SESIP 2, EAL2+; Moderate: JIL High, SESIP 3, EAL4+) are used as given.
+* The rows for Basic and High follow the company's pattern (the JIL rating needed to resist an attacker class is the next level up) but have **no SESIP/EAL value**; records show `needs company value`.
+* The step from risk to attacker class (High to Moderate, Medium to Enhanced-Basic, Low to Basic) is **our provisional rule**. The company's own rows T1, T3 and T6 cannot be produced from risk alone (T1 and T3 have the same risk but different classes), so the expert confirms or overrides each one. Only by-class values are reproduced exactly in the tests.
+* The company listed only T1, T3 and T6; we map every threat treated with Reduce. Whether that is right is a question for the company.
 
 **Known limits (be honest in the demo)**
-* Rating tables are placeholders (section 3); the six company rows are reproduced only by using the company's own overall impact for T4 and T5.
-* The rule-based suggestion is deliberately neutral (same feasibility factors for every threat); the LLM suggestion is better but is still a proposal. The expert decides.
+* Rating tables and rule base are placeholders (section 3 and above); the six company rows are reproduced only by using the company's own overall impact for T4 and T5.
+* The live LLM path was checked on the real model (2 of 6 suggestions came from it; the other 4 fell back to rules because the available OpenRouter credit ran out). Suggestion quality has not been evaluated.
+* The rule-based suggestion is deliberately neutral (same feasibility for every threat).
 * Residual risk is expert judgement; there is no control-effectiveness model.
-* The suggestion uses the asset facts only if you pass `--input` (CLI) or `assets` (API).
+* The approver is a name typed by the person; there is no login yet.

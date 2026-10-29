@@ -57,6 +57,7 @@ from scrp.state_manager import StateManager
 
 console = Console(highlight=False)
 DEFAULT_SCRS = _ROOT / "demo_output" / "SCRS_demo.json"
+MAX_REJECTIONS = 3
 AXES = ("safety", "financial", "operational", "privacy")
 LEVEL_KEYS = {
     "n": ImpactLevel.NEGLIGIBLE,
@@ -178,9 +179,17 @@ def show_score(a: RiskAssessment) -> None:
         f"  => overall impact [bold]{a.overall_impact.value}[/bold], feasibility "
         f"[bold]{a.attack_feasibility.value}[/bold]{pts}, risk [{style}]{a.risk.value}[/{style}]{note}"
     )
+    console.print(f"  [dim]why: {short(a.justification, 600)}[/dim]")
 
 
 def treatment_for(a: RiskAssessment, approver: str, auto: bool) -> TreatmentDecision:
+    adjusted: RiskLevel | None = None
+    adj_reason: str | None = None
+    if not auto and ask("  Change the computed risk? (y/n)", "n").strip().lower() == "y":
+        adjusted = RiskLevel(ask("  New risk (Low/Medium/High)", a.risk.value).strip().title())
+        while len((adj_reason or "").strip()) < 5:
+            adj_reason = ask("  Reason for the change").strip()
+    current = adjusted or a.risk
     if auto:
         if a.risk == RiskLevel.LOW:
             return TreatmentDecision(
@@ -205,7 +214,7 @@ def treatment_for(a: RiskAssessment, approver: str, auto: bool) -> TreatmentDeci
     while len(rationale) < 5:
         rationale = ask("  Rationale (why this decision)").strip()
     if treatment == Treatment.RETAIN:
-        residual = a.risk
+        residual = current
         reason = None
         console.print(f"  Retain keeps the risk as it is: residual risk = {residual.value}")
     else:
@@ -219,6 +228,8 @@ def treatment_for(a: RiskAssessment, approver: str, auto: bool) -> TreatmentDeci
         residual_risk=residual,
         residual_reason=reason or ("treated" if treatment == Treatment.AVOID else None),
         approver=approver,
+        adjusted_risk=adjusted,
+        adjustment_reason=adj_reason,
     )
 
 
@@ -227,18 +238,21 @@ def ranked_table(items: list[RiskAssessment], title: str) -> None:
     for col in ("Asset", "#", "Threat", "Impact", "Feasibility", "Risk", "Treatment", "Residual"):
         table.add_column(col)
     for a in items:
-        style = RISK_STYLE[a.risk.value]
+        shown = a.effective_risk
+        style = RISK_STYLE[shown.value]
         table.add_row(
             a.asset_id,
             str(a.rank_in_asset),
             a.tid,
             a.overall_impact.value,
             a.attack_feasibility.value,
-            f"[{style}]{a.risk.value}[/{style}]",
+            f"[{style}]{shown.value}[/{style}]" + ("*" if a.adjusted_risk else ""),
             a.treatment.value if a.treatment else "-",
             a.residual_risk.value if a.residual_risk else "-",
         )
     console.print(table)
+    if any(a.adjusted_risk for a in items):
+        console.print("  * risk adjusted by the expert (reason recorded)")
 
 
 def main() -> int:
@@ -299,9 +313,35 @@ def main() -> int:
             show_score(assessment)
             if args.auto:
                 break
-            choice = ask("  (a)ccept  (e)dit ratings  (s)kip", "a").strip().lower()
+            choice = (
+                ask("  (a)ccept  (e)dit ratings  (r)eject suggestion  (s)kip", "a").strip().lower()
+            )
             if choice == "e":
                 ri = edit_input(threat.tid, ratings, ri)
+                continue
+            if choice == "r":
+                reason = ""
+                while len(reason) < 5:
+                    reason = ask("  Why do you reject this suggestion?").strip()
+                used = sm.log_risk_rejection(threat.tid, threat.run_id, reason, approver)
+                if used >= MAX_REJECTIONS:
+                    console.print(
+                        f"  [yellow]Rejected {used} times: the agent stops suggesting. "
+                        "Please enter the ratings yourself.[/yellow]"
+                    )
+                    ri = edit_input(threat.tid, ratings, ri)
+                    continue
+                new = suggester.suggest(
+                    threat, assets.get(threat.asset_id), valid, feedback=reason, previous=ri
+                )
+                console.print(
+                    f"  [cyan]New suggestion ({used}/{MAX_REJECTIONS} rejections used):[/cyan]"
+                )
+                show_input(new)
+                if (new.suggestion_basis or "").startswith("could not produce"):
+                    ri = edit_input(threat.tid, ratings, new)
+                else:
+                    ri = new
                 continue
             if choice == "s":
                 assessment = None  # type: ignore[assignment]
@@ -316,10 +356,16 @@ def main() -> int:
 
     final: list[RiskAssessment] = []
     for a in ranked:
-        console.print(f"\n[bold]{a.tid}[/bold] ({a.asset_id}, risk {a.risk.value})")
+        console.print(f"\n[bold]{a.tid}[/bold] ({a.asset_id}, risk {a.effective_risk.value})")
         while True:
             try:
-                final.append(engine.apply_treatment(a, treatment_for(a, approver, args.auto)))
+                final.append(
+                    engine.apply_treatment(
+                        a,
+                        treatment_for(a, approver, args.auto),
+                        rejections=sm.risk_rejection_count(a.tid),
+                    )
+                )
                 break
             except (RatingsError, ValueError) as exc:
                 console.print(f"  [red]{exc}[/red]")

@@ -1,0 +1,17 @@
+{
+  "risk_input": {
+    "tid": "REPLACE-WITH-AN-APPROVED-TID",
+    "impact": {"safety": null, "financial": "Moderate", "operational": "Severe", "privacy": null},
+    "feasibility_factors": {
+      "elapsed_time": "1_month",
+      "expertise": "proficient",
+      "knowledge": "restricted",
+      "window": "moderate",
+      "equipment": "specialized"
+    },
+    "ai_suggested": true,
+    "suggestion_basis": "the suggestion being rejected"
+  },
+  "reason": "Replaying a BLE command needs only a phone and a public tool, so feasibility is higher than suggested.",
+  "approver": "Dr. Vidya Gaikwad"
+}

@@ -38,7 +38,24 @@ class AuditLogEntry(BaseModel):
         default_factory=lambda: datetime.now(UTC),
         description="UTC timestamp of the write action.",
     )
-    action: Literal["write", "reject", "revise", "approve", "prune", "add", "stale"] = Field(
+    action: Literal[
+        "write",
+        "reject",
+        "revise",
+        "approve",
+        "prune",
+        "add",
+        "stale",
+        "risk_approve",
+        "risk_stale",
+        "risk_reject",
+        "risk_edit",
+        "risk_adjust",
+        "compliance_confirm",
+        "compliance_override",
+        "compliance_reject",
+        "compliance_stale",
+    ] = Field(
         default="write",
         description="Action performed.",
     )
@@ -65,6 +82,14 @@ class SCRSState(BaseModel):
         default_factory=dict,
         description="Keyed by tid.  Value is the approved ThreatScenario dict.",
     )
+    risk_assessments: dict[str, object] = Field(
+        default_factory=dict,
+        description="Phase 2. Keyed by tid. Value is the approved RiskAssessment dict.",
+    )
+    compliance_records: dict[str, object] = Field(
+        default_factory=dict,
+        description="Phase 2. Keyed by tid. Expert-confirmed attack-resistance record.",
+    )
     audit_log: list[AuditLogEntry] = Field(
         default_factory=list,
         description="Append-only audit log of all SCRS write actions.",
@@ -73,4 +98,3 @@ class SCRSState(BaseModel):
         default_factory=dict,
         description="Keyed by run_id; lists previous iterations of rejected scenarios.",
     )
-

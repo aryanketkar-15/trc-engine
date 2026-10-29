@@ -1,0 +1,200 @@
+{
+  "$defs": {
+    "ComplianceStatus": {
+      "enum": [
+        "pending_human",
+        "confirmed",
+        "rejected",
+        "stale"
+      ],
+      "title": "ComplianceStatus",
+      "type": "string"
+    },
+    "RiskLevel": {
+      "enum": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    }
+  },
+  "description": "Required attack resistance for one threat, as confirmed by an expert.",
+  "properties": {
+    "compliance_id": {
+      "title": "Compliance Id",
+      "type": "string"
+    },
+    "tid": {
+      "title": "Tid",
+      "type": "string"
+    },
+    "risk_id": {
+      "title": "Risk Id",
+      "type": "string"
+    },
+    "project_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project Id"
+    },
+    "use_case_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Use Case Id"
+    },
+    "asset_id": {
+      "title": "Asset Id",
+      "type": "string"
+    },
+    "effective_risk": {
+      "$ref": "#/$defs/RiskLevel"
+    },
+    "suggested_attacker_class": {
+      "title": "Suggested Attacker Class",
+      "type": "string"
+    },
+    "attacker_class": {
+      "title": "Attacker Class",
+      "type": "string"
+    },
+    "required_resistance": {
+      "title": "Required Resistance",
+      "type": "string"
+    },
+    "jil_attack_potential": {
+      "title": "Jil Attack Potential",
+      "type": "string"
+    },
+    "sesip_level": {
+      "title": "Sesip Level",
+      "type": "string"
+    },
+    "cc_eal": {
+      "title": "Cc Eal",
+      "type": "string"
+    },
+    "rule_id": {
+      "title": "Rule Id",
+      "type": "string"
+    },
+    "rule_basis": {
+      "enum": [
+        "company",
+        "derived",
+        "provisional"
+      ],
+      "title": "Rule Basis",
+      "type": "string"
+    },
+    "overridden": {
+      "default": false,
+      "title": "Overridden",
+      "type": "boolean"
+    },
+    "override_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Override Reason"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    },
+    "justification": {
+      "title": "Justification",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ComplianceStatus",
+      "default": "pending_human"
+    },
+    "confirmed_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Confirmed By"
+    },
+    "risk_fingerprint": {
+      "title": "Risk Fingerprint",
+      "type": "string"
+    },
+    "rules_version": {
+      "title": "Rules Version",
+      "type": "string"
+    },
+    "run_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Run Id"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "compliance_id",
+    "tid",
+    "risk_id",
+    "asset_id",
+    "effective_risk",
+    "suggested_attacker_class",
+    "attacker_class",
+    "required_resistance",
+    "jil_attack_potential",
+    "sesip_level",
+    "cc_eal",
+    "rule_id",
+    "rule_basis",
+    "justification",
+    "risk_fingerprint",
+    "rules_version"
+  ],
+  "title": "ComplianceRecord",
+  "type": "object"
+}

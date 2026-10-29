@@ -1,0 +1,13 @@
+{
+  "items": [
+    {
+      "tid": "REPLACE-WITH-A-TID-THAT-HAS-AN-APPROVED-RISK",
+      "decision": {
+        "approver": "Dr. Vidya Gaikwad",
+        "attacker_class": "Enhanced-Basic",
+        "override_reason": "The unlock command is only reachable by an attacker within Bluetooth range.",
+        "notes": null
+      }
+    }
+  ]
+}

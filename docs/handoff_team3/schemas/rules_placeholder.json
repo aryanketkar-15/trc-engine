@@ -1,0 +1,40 @@
+{
+  "rules_version": "placeholder-v0",
+  "note": "PLACEHOLDER rule base for the required attack resistance (company document section 2.7). Class rows marked 'company' are the company's own example rows; 'derived' follows the pattern of those rows (the JIL rating needed to resist an attacker class is the next level up); null means the company has not given a value. The step from risk to attacker class is OUR provisional rule and is always confirmed by an expert.",
+  "attacker_classes": ["Basic", "Enhanced-Basic", "Moderate", "High"],
+  "class_table": {
+    "Basic": {
+      "required_resistance": "Resistant to Basic attackers",
+      "jil_attack_potential": "Enhanced-Basic",
+      "sesip_level": null,
+      "cc_eal": null,
+      "source": "derived"
+    },
+    "Enhanced-Basic": {
+      "required_resistance": "Resistant to Enhanced-Basic attackers",
+      "jil_attack_potential": "Moderate",
+      "sesip_level": "SESIP 2",
+      "cc_eal": "EAL2+",
+      "source": "company"
+    },
+    "Moderate": {
+      "required_resistance": "Resistant to Moderate attackers",
+      "jil_attack_potential": "High",
+      "sesip_level": "SESIP 3",
+      "cc_eal": "EAL4+",
+      "source": "company"
+    },
+    "High": {
+      "required_resistance": "Resistant to High attackers",
+      "jil_attack_potential": null,
+      "sesip_level": null,
+      "cc_eal": null,
+      "source": "derived"
+    }
+  },
+  "risk_to_class": [
+    {"rule_id": "CR-1", "risk": "High", "attacker_class": "Moderate", "source": "provisional"},
+    {"rule_id": "CR-2", "risk": "Medium", "attacker_class": "Enhanced-Basic", "source": "provisional"},
+    {"rule_id": "CR-3", "risk": "Low", "attacker_class": "Basic", "source": "provisional"}
+  ]
+}

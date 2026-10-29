@@ -14,6 +14,7 @@ This package answers exactly that, with real sample data. Read the files in this
 | 4 | `03_TRACEABILITY_AND_AUDIT.md` | IDs to link on, audit log, rules you must follow when reading our data | 10 min |
 | 5 | `04_COMING_Risk_and_Compliance.md` | What Risk / Compliance will add next (proposal, please comment) | 5 min |
 | 6 | `05_STATUS_AND_QUESTIONS.md` | Honest status, limits, and what we need from you | 5 min |
+| 7 | `06_RISK_AND_COMPLIANCE_OUTPUTS.md` | **NEW:** the Risk and attack-resistance records (built, tables are placeholders) | 10 min |
 | – | `samples/`, `schemas/`, `tools/` | Ready-to-use files (see section 4) | |
 
 ## 1. The pipeline in one picture
@@ -22,8 +23,8 @@ This package answers exactly that, with real sample data. Read the files in this
  Team 1                                  Team 2 (us)                              Team 3 (you)
  ─────────────────────────────────       ───────────────────────────────          ───────────────────────────
  Item definition → Use case               Threat Agent        (WORKING)           Requirements Agent
-   → System model + diagrams       ──►    Risk Agent          (PLANNED)    ──►    Trace/Audit Agent
-   → ASSET TABLE  (approved)              Compliance Agent    (LATER)             Consistency Agent
+   → System model + diagrams       ──►    Risk Agent          (BUILT)      ──►    Trace/Audit Agent
+   → ASSET TABLE  (approved)              Resistance mapping  (BUILT)              Consistency Agent
    hand-off = AssetTable                  hand-off = approved threats
                                           (+ risk, + required resistance)
 ```

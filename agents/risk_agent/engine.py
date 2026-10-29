@@ -151,6 +151,9 @@ def score(
         attack_feasibility=feasibility,
         risk=level,
         risk_basis=basis,  # type: ignore[arg-type]
+        justification=build_justification(
+            risk_input, overall, points, feasibility, level, basis, ratings
+        ),
         ai_suggested=risk_input.ai_suggested,
         suggestion_basis=risk_input.suggestion_basis,
         threat_fingerprint=threat_fingerprint
@@ -158,6 +161,50 @@ def score(
         ratings_version=ratings.version,
         run_id=scenario.run_id,
     )
+
+
+def build_justification(
+    risk_input: RiskInput,
+    overall: ImpactLevel,
+    points: int | None,
+    feasibility: Feasibility,
+    risk: RiskLevel,
+    basis: str,
+    ratings: Ratings,
+) -> str:
+    """Plain-language reasons for the score, built only from the ratings and the tables."""
+    axes = {
+        "Safety": risk_input.impact.safety,
+        "Financial": risk_input.impact.financial,
+        "Operational": risk_input.impact.operational,
+        "Privacy": risk_input.impact.privacy,
+    }
+    driving = [name for name, lv in axes.items() if lv == overall]
+    rated = ", ".join(f"{n} {lv.value}" for n, lv in axes.items() if lv) or "none"
+    parts = [
+        f"Impact: {rated}. Overall impact is {overall.value} (highest axis: {', '.join(driving)}).",
+    ]
+    if points is not None and risk_input.feasibility_factors is not None:
+        f = risk_input.feasibility_factors
+        detail = ", ".join(f"{n} {v} ({ratings.points[n][v]})" for n, v in f.model_dump().items())
+        parts.append(
+            f"Attack feasibility is {feasibility.value}: {detail} add up to {points} points."
+        )
+    else:
+        parts.append(f"Attack feasibility {feasibility.value} was rated directly by the expert.")
+    cell = {
+        "company": "a value given by the company",
+        "derived": "a value forced by the company's neighbouring values",
+        "provisional": "a PROVISIONAL value (not yet confirmed by the company)",
+    }[basis]
+    parts.append(
+        f"Risk matrix: {overall.value} impact with {feasibility.value} feasibility gives "
+        f"{risk.value} risk, {cell}."
+    )
+    if risk_input.suggestion_basis:
+        origin = "AI suggestion" if risk_input.ai_suggested else "Starting point"
+        parts.append(f"{origin}: {risk_input.suggestion_basis}")
+    return " ".join(parts)
 
 
 def rank_per_asset(assessments: list[RiskAssessment]) -> list[RiskAssessment]:
@@ -173,7 +220,7 @@ def rank_per_asset(assessments: list[RiskAssessment]) -> list[RiskAssessment]:
         ordered = sorted(
             grouped[key],
             key=lambda a: (
-                _RISK_ORDER[a.risk],
+                _RISK_ORDER[a.effective_risk],
                 _IMPACT_ORDER[a.overall_impact],
                 _FEAS_ORDER[a.attack_feasibility],
                 a.tid,
@@ -183,19 +230,27 @@ def rank_per_asset(assessments: list[RiskAssessment]) -> list[RiskAssessment]:
     return ranked
 
 
-def apply_treatment(assessment: RiskAssessment, decision: TreatmentDecision) -> RiskAssessment:
+def apply_treatment(
+    assessment: RiskAssessment, decision: TreatmentDecision, *, rejections: int = 0
+) -> RiskAssessment:
     """Record the human decision. The assessment becomes approved with the approver's name."""
+    adjusted = decision.adjusted_risk
+    if adjusted is not None and adjusted == assessment.risk:
+        adjusted = None  # nothing to adjust
+    effective = adjusted or assessment.risk
     basis = "expert judgement"
     if decision.treatment.value == "Retain":
-        # accepting a risk means the residual risk is the current risk
-        if decision.residual_risk != assessment.risk:
+        # accepting a risk means the residual risk is the current (effective) risk
+        if decision.residual_risk != effective:
             raise RatingsError(
                 "Retain keeps the risk as it is: residual risk must equal the current risk "
-                f"({assessment.risk.value})"
+                f"({effective.value})"
             )
         basis = "accepted as is"
     return assessment.model_copy(
         update={
+            "adjusted_risk": adjusted,
+            "adjustment_reason": decision.adjustment_reason if adjusted else None,
             "treatment": decision.treatment,
             "treatment_rationale": decision.rationale,
             "residual_risk": decision.residual_risk,
@@ -204,6 +259,7 @@ def apply_treatment(assessment: RiskAssessment, decision: TreatmentDecision) -> 
             else f"{basis}: {decision.residual_reason}",
             "status": RiskStatus.APPROVED,
             "approved_by": decision.approver,
+            "rejections_before_approval": rejections,
         }
     )
 

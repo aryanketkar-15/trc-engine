@@ -1,0 +1,396 @@
+{
+  "$defs": {
+    "Feasibility": {
+      "enum": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "title": "Feasibility",
+      "type": "string"
+    },
+    "FeasibilityFactors": {
+      "description": "The five ISO/SAE 21434 \u00a715.5 factors, as keys of the points table in the ratings file.",
+      "properties": {
+        "elapsed_time": {
+          "title": "Elapsed Time",
+          "type": "string"
+        },
+        "expertise": {
+          "title": "Expertise",
+          "type": "string"
+        },
+        "knowledge": {
+          "title": "Knowledge",
+          "type": "string"
+        },
+        "window": {
+          "title": "Window",
+          "type": "string"
+        },
+        "equipment": {
+          "title": "Equipment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "elapsed_time",
+        "expertise",
+        "knowledge",
+        "window",
+        "equipment"
+      ],
+      "title": "FeasibilityFactors",
+      "type": "object"
+    },
+    "ImpactLevel": {
+      "enum": [
+        "Negligible",
+        "Moderate",
+        "Major",
+        "Severe"
+      ],
+      "title": "ImpactLevel",
+      "type": "string"
+    },
+    "ImpactRatings": {
+      "description": "Impact per axis; ``None`` means the axis does not apply (shown as '-').",
+      "properties": {
+        "safety": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImpactLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "financial": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImpactLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "operational": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImpactLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "privacy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImpactLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "ImpactRatings",
+      "type": "object"
+    },
+    "RiskLevel": {
+      "enum": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    },
+    "RiskStatus": {
+      "enum": [
+        "pending_human",
+        "approved",
+        "rejected",
+        "stale"
+      ],
+      "title": "RiskStatus",
+      "type": "string"
+    },
+    "Treatment": {
+      "enum": [
+        "Reduce",
+        "Share",
+        "Retain",
+        "Avoid"
+      ],
+      "title": "Treatment",
+      "type": "string"
+    }
+  },
+  "description": "The scored risk of one approved threat, with the treatment decision and residual risk.",
+  "properties": {
+    "risk_id": {
+      "title": "Risk Id",
+      "type": "string"
+    },
+    "tid": {
+      "title": "Tid",
+      "type": "string"
+    },
+    "project_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project Id"
+    },
+    "use_case_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Use Case Id"
+    },
+    "asset_id": {
+      "title": "Asset Id",
+      "type": "string"
+    },
+    "impact": {
+      "$ref": "#/$defs/ImpactRatings"
+    },
+    "overall_impact": {
+      "$ref": "#/$defs/ImpactLevel"
+    },
+    "feasibility_factors": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FeasibilityFactors"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "feasibility_points": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Feasibility Points"
+    },
+    "attack_feasibility": {
+      "$ref": "#/$defs/Feasibility"
+    },
+    "risk": {
+      "$ref": "#/$defs/RiskLevel"
+    },
+    "risk_basis": {
+      "enum": [
+        "company",
+        "derived",
+        "provisional"
+      ],
+      "title": "Risk Basis",
+      "type": "string"
+    },
+    "justification": {
+      "default": "",
+      "title": "Justification",
+      "type": "string"
+    },
+    "adjusted_risk": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RiskLevel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "adjustment_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Adjustment Reason"
+    },
+    "rank_in_asset": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rank In Asset"
+    },
+    "treatment": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Treatment"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "treatment_rationale": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Treatment Rationale"
+    },
+    "residual_risk": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RiskLevel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "residual_basis": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Residual Basis"
+    },
+    "ai_suggested": {
+      "default": false,
+      "title": "Ai Suggested",
+      "type": "boolean"
+    },
+    "suggestion_basis": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Suggestion Basis"
+    },
+    "status": {
+      "$ref": "#/$defs/RiskStatus",
+      "default": "pending_human"
+    },
+    "approved_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approved By"
+    },
+    "rejections_before_approval": {
+      "default": 0,
+      "title": "Rejections Before Approval",
+      "type": "integer"
+    },
+    "threat_fingerprint": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Threat Fingerprint"
+    },
+    "ratings_version": {
+      "title": "Ratings Version",
+      "type": "string"
+    },
+    "run_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Run Id"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "effective_risk": {
+      "$ref": "#/$defs/RiskLevel",
+      "description": "The risk everything downstream uses: the expert's adjustment if any, else computed.",
+      "readOnly": true
+    }
+  },
+  "required": [
+    "risk_id",
+    "tid",
+    "asset_id",
+    "impact",
+    "overall_impact",
+    "attack_feasibility",
+    "risk",
+    "risk_basis",
+    "ratings_version",
+    "effective_risk"
+  ],
+  "title": "RiskAssessment",
+  "type": "object"
+}
