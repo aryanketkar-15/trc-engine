@@ -29,13 +29,20 @@ NO SECRETS IN THIS FILE.  DB credentials will live in config/settings.py
 
 from __future__ import annotations
 
+import getpass
 import json
 import logging
+import os
+import shutil
+import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 from agents.threat_agent.schemas import ThreatScenario
+from scrp.integrity import digest, field_diff, seal, verify_chain
 from scrp.schemas import AuditLogEntry, SCRSState
 
 logger = logging.getLogger(__name__)
@@ -53,22 +60,107 @@ class NotApprovedError(ValueError):
     """
 
 
+class SCRSCorruptError(RuntimeError):
+    """The state file exists but cannot be read. Nothing is overwritten until a person looks."""
+
+
+class ConcurrentWriteError(RuntimeError):
+    """Someone else saved the state after this copy was loaded. Reload and try again."""
+
+
+class WouldOverwriteError(ValueError):
+    """Approved content would change. The diff goes to a person, who supplies a reason to merge."""
+
+    def __init__(self, tid: str, diff: list[dict[str, Any]]) -> None:
+        super().__init__(f"{tid} is already approved and this would change it")
+        self.tid = tid
+        self.diff = diff
+
+
+#: Fields that change on every save and say nothing about the decision itself.
+_VOLATILE: Final[frozenset[str]] = frozenset({"created_at", "rank_in_asset"})
+_LOCK_TIMEOUT_SECONDS: Final[float] = 10.0
+_STALE_LOCK_SECONDS: Final[float] = 60.0
+
+
+def _audit_key() -> str | None:
+    from config.settings import get_settings
+
+    secret = getattr(get_settings(), "AUDIT_HMAC_KEY", None)
+    return secret.get_secret_value() if secret else None
+
+
 class StateManager:
     """
-    SCRS write interface for the Threat Agent (Phase 1).
+    SCRS write interface for the Threat, Risk and Compliance agents.
 
-    Thread-safety: NOT thread-safe in Phase 1 (single-process, single-run
-    assumption).  Phase 2 will add file locking or a proper DB transaction.
+    Safe for several processes on one host: saves take a lock file and refuse to overwrite a newer
+    version. It is not a multi-host store.
     """
 
-    def __init__(self, scrs_path: Path = DEFAULT_SCRS_PATH) -> None:
+    def __init__(self, scrs_path: Path = DEFAULT_SCRS_PATH, actor: str | None = None) -> None:
         """
         Args:
             scrs_path: Path to the SCRS_state.json file.  Overridable for
                        testing (point at a tmp file) or future config.
+            actor:     Who is making changes; recorded on every audit entry.
         """
         self._scrs_path = scrs_path
+        self._actor = actor
         self._state: SCRSState = self._load()
+
+    def set_actor(self, actor: str) -> None:
+        """Record this name on the audit entries written from now on."""
+        self._actor = actor
+
+    def _default_actor(self) -> str:
+        if self._actor:
+            return self._actor
+        try:
+            return f"local:{getpass.getuser()} (unverified)"
+        except OSError:
+            return "local (unverified)"
+
+    def _supersede(
+        self,
+        store: dict[str, object],
+        item: dict[str, object],
+        reason: str | None,
+    ) -> dict[str, object] | None:
+        """Return the record this one replaces, or raise if a person has not accepted the change."""
+        tid = str(item["tid"])
+        existing = store.get(tid)
+        if not isinstance(existing, dict):
+            return None
+        diff = field_diff(existing, item, _VOLATILE)
+        if not diff:
+            return None
+        if not (reason or "").strip():
+            raise WouldOverwriteError(tid, diff)
+        return existing
+
+    def _record_supersede(
+        self, namespace: str, item: dict[str, object], old: dict[str, object], reason: str
+    ) -> None:
+        run_id = str(item.get("run_id") or "unknown")
+        self._state.revision_history.setdefault(f"{namespace}:{run_id}", []).append(
+            {
+                "timestamp": datetime.now(UTC).isoformat(),
+                "action": f"{namespace}_supersede",
+                "reason": reason,
+                "records": [old],
+            }
+        )
+        action = "risk_supersede" if namespace == "risk" else "compliance_supersede"
+        self._state.audit_log.append(
+            AuditLogEntry(
+                run_id=run_id,
+                tid=str(item["tid"]),
+                timestamp=datetime.now(UTC),
+                action=action,  # type: ignore[arg-type]
+                reason=reason,
+            )
+        )
 
     # ------------------------------------------------------------------
     # Public write interface
@@ -202,21 +294,31 @@ class StateManager:
             logger.info("SCRS retired %d stale scenario(s): %s", retired, reason)
         return retired
 
-    def commit_risk_assessments(self, assessments: list[dict[str, object]]) -> int:
+    def commit_risk_assessments(
+        self, assessments: list[dict[str, object]], *, supersede_reason: str | None = None
+    ) -> int:
         """Store approved risk assessments (keyed by tid) in one file write, with audit entries.
 
         Raises:
             NotApprovedError: If an assessment is not ``approved`` or has no approver.
+            WouldOverwriteError: If it changes an approved one and no reason was given.
         """
         for item in assessments:
             if item.get("status") != "approved" or not item.get("approved_by"):
                 raise NotApprovedError(
                     f"risk {item.get('risk_id')} is not approved by a named person"
                 )
+        replaced = {
+            str(item["tid"]): self._supersede(self._state.risk_assessments, item, supersede_reason)
+            for item in assessments
+        }
         for item in assessments:
             tid = str(item["tid"])
             run_id = str(item.get("run_id") or "unknown")
             who = item.get("approved_by")
+            old = replaced[tid]
+            if old is not None:
+                self._record_supersede("risk", item, old, str(supersede_reason))
             self._state.risk_assessments[tid] = item
             if item.get("ai_suggested") is False:
                 self._state.audit_log.append(
@@ -250,6 +352,7 @@ class StateManager:
                     timestamp=datetime.now(UTC),
                     action="risk_approve",
                     reason=f"treatment={item.get('treatment')}; approver={who}",
+                    content_hash=digest(item, _audit_key()),
                 )
             )
         if assessments:
@@ -303,15 +406,31 @@ class StateManager:
     def risk_rejection_count(self, tid: str) -> int:
         return sum(1 for e in self._state.audit_log if e.tid == tid and e.action == "risk_reject")
 
-    def commit_compliance_records(self, records: list[dict[str, object]]) -> int:
-        """Store expert-confirmed attack-resistance records (keyed by tid), with audit entries."""
+    def commit_compliance_records(
+        self, records: list[dict[str, object]], *, supersede_reason: str | None = None
+    ) -> int:
+        """Store expert-confirmed attack-resistance records (keyed by tid), with audit entries.
+
+        Raises:
+            NotApprovedError: If a record is not ``confirmed`` or has no confirming expert.
+            WouldOverwriteError: If it changes a confirmed one and no reason was given.
+        """
         for item in records:
             if item.get("status") != "confirmed" or not item.get("confirmed_by"):
                 raise NotApprovedError(
                     f"compliance record for {item.get('tid')} is not confirmed by a named person"
                 )
+        replaced = {
+            str(item["tid"]): self._supersede(
+                self._state.compliance_records, item, supersede_reason
+            )
+            for item in records
+        }
         for item in records:
             tid = str(item["tid"])
+            old = replaced[tid]
+            if old is not None:
+                self._record_supersede("compliance", item, old, str(supersede_reason))
             self._state.compliance_records[tid] = item
             overridden = bool(item.get("overridden"))
             self._state.audit_log.append(
@@ -329,6 +448,7 @@ class StateManager:
                             else ""
                         )
                     ),
+                    content_hash=digest(item, _audit_key()),
                 )
             )
         if records:
@@ -422,6 +542,7 @@ class StateManager:
             tid=scenario.tid,
             timestamp=datetime.now(UTC),
             action="write",
+            content_hash=digest(new_dump, _audit_key()),
         )
         self._state.audit_log.append(audit_entry)
         return audit_entry
@@ -486,6 +607,51 @@ class StateManager:
     # Read helpers (Phase 1 stubs — full read interface in Phase 2)
     # ------------------------------------------------------------------
 
+    def verify_integrity(self) -> dict[str, Any]:
+        """Check the audit chain, and that active records still match what was approved."""
+        key = _audit_key()
+        chain = verify_chain(self._state.audit_log, key)
+        latest: dict[tuple[str, str], str] = {}
+        kinds = {
+            "write": "threat",
+            "risk_approve": "risk",
+            "compliance_confirm": "compliance",
+            "compliance_override": "compliance",
+        }
+        for entry in self._state.audit_log:
+            kind = kinds.get(entry.action)
+            if kind and entry.content_hash:
+                latest[(kind, entry.tid)] = entry.content_hash
+        stores = {
+            "threat": self._state.threat_scenarios,
+            "risk": self._state.risk_assessments,
+            "compliance": self._state.compliance_records,
+        }
+        changed: list[str] = []
+        unverifiable: list[str] = []
+        checked = 0
+        for kind, store in stores.items():
+            for tid, record in store.items():
+                expected = latest.get((kind, str(tid)))
+                if expected is None:
+                    unverifiable.append(f"{kind}:{tid}")
+                    continue
+                checked += 1
+                if digest(record, key) != expected:
+                    changed.append(f"{kind}:{tid}")
+        return {
+            "ok": chain["ok"] and not changed,
+            "chain": chain,
+            "keyed": bool(key),
+            "state_version": self._state.state_version,
+            "records_checked": checked,
+            "records_changed": changed,
+            "records_unverifiable": unverifiable,
+        }
+
+    def get_state_version(self) -> int:
+        return self._state.state_version
+
     def get_audit_log(self) -> list[AuditLogEntry]:
         """Return a copy of the current audit log (read-only)."""
         return list(self._state.audit_log)
@@ -510,6 +676,10 @@ class StateManager:
         """
         Load SCRS state from disk, or return a fresh empty state if the file
         does not exist yet.
+
+        Raises:
+            SCRSCorruptError: If the file exists but cannot be read. An empty state here would
+                let the next save wipe every approved result, so this stops instead.
         """
         if not self._scrs_path.exists():
             logger.info(
@@ -523,23 +693,83 @@ class StateManager:
             data = json.loads(raw)
             return SCRSState.model_validate(data)
         except (json.JSONDecodeError, ValueError) as exc:
-            logger.error(
-                "Failed to parse SCRS file at %s: %s.  Starting with empty state.",
-                self._scrs_path,
-                exc,
-            )
-            return SCRSState()
+            backup = self._scrs_path.with_suffix(".json.bak")
+            raise SCRSCorruptError(
+                f"Cannot read the shared state file {self._scrs_path}: {exc}. Nothing was changed. "
+                f"The last good copy, if any, is {backup}."
+            ) from exc
 
     def _persist(self) -> None:
         """
         Serialize the current in-memory state and write it to disk.
 
-        Writes to a .tmp file first, then renames — this is the simplest
-        atomic-ish write pattern on most OSes, protecting against partial
-        writes corrupting the file.
+        Takes a lock, refuses to overwrite a newer version, seals the audit log, keeps the
+        previous file as ``.json.bak``, then writes a flushed temp file and renames it, so a crash
+        cannot leave a half-written state.
+
+        Raises:
+            ConcurrentWriteError: If another writer saved after this copy was loaded.
         """
         self._scrs_path.parent.mkdir(parents=True, exist_ok=True)
-        tmp_path = self._scrs_path.with_suffix(".json.tmp")
-        payload = self._state.model_dump(mode="json")
-        tmp_path.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
-        tmp_path.replace(self._scrs_path)
+        with self._lock():
+            on_disk = self._version_on_disk()
+            if on_disk > self._state.state_version:
+                raise ConcurrentWriteError(
+                    f"{self._scrs_path} is at version {on_disk} but this copy was loaded at "
+                    f"{self._state.state_version}. Reload and repeat the action."
+                )
+            seal(self._state.audit_log, self._default_actor(), _audit_key())
+            self._state.state_version += 1
+            payload = self._state.model_dump(mode="json")
+            tmp_path = self._scrs_path.with_suffix(".json.tmp")
+            with tmp_path.open("w", encoding="utf-8") as handle:
+                handle.write(json.dumps(payload, indent=2, default=str))
+                handle.flush()
+                os.fsync(handle.fileno())
+            if self._scrs_path.exists():
+                shutil.copy2(self._scrs_path, self._scrs_path.with_suffix(".json.bak"))
+            self._replace(tmp_path)
+
+    def _replace(self, tmp_path: Path) -> None:
+        """Rename into place; on Windows a reader can hold the file for a moment, so retry."""
+        for attempt in range(20):
+            try:
+                tmp_path.replace(self._scrs_path)
+                return
+            except PermissionError:
+                if attempt == 19:
+                    raise
+                time.sleep(0.05)
+
+    def _version_on_disk(self) -> int:
+        if not self._scrs_path.exists():
+            return 0
+        try:
+            data = json.loads(self._scrs_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as exc:
+            raise SCRSCorruptError(f"Cannot read {self._scrs_path}: {exc}") from exc
+        return int(data.get("state_version", 0))
+
+    @contextmanager
+    def _lock(self) -> Iterator[None]:
+        lock_path = self._scrs_path.with_suffix(".json.lock")
+        deadline = time.monotonic() + _LOCK_TIMEOUT_SECONDS
+        while True:
+            try:
+                handle = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                break
+            except FileExistsError:
+                try:
+                    if time.time() - lock_path.stat().st_mtime > _STALE_LOCK_SECONDS:
+                        lock_path.unlink(missing_ok=True)
+                        continue
+                except OSError:
+                    pass
+                if time.monotonic() > deadline:
+                    raise ConcurrentWriteError(f"{lock_path} is held by another writer") from None
+                time.sleep(0.05)
+        try:
+            os.close(handle)
+            yield
+        finally:
+            lock_path.unlink(missing_ok=True)

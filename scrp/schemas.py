@@ -48,6 +48,8 @@ class AuditLogEntry(BaseModel):
         "stale",
         "risk_approve",
         "risk_stale",
+        "risk_supersede",
+        "compliance_supersede",
         "risk_reject",
         "risk_edit",
         "risk_adjust",
@@ -67,6 +69,16 @@ class AuditLogEntry(BaseModel):
         default=None,
         description="Optional reference to previous threat ID if revised.",
     )
+    actor: str | None = Field(
+        default=None,
+        description="Who did this: the logged-in user, or a name marked as unverified.",
+    )
+    content_hash: str | None = Field(
+        default=None,
+        description="Digest of the approved record, to detect later changes to it.",
+    )
+    prev_hash: str | None = Field(default=None, description="entry_hash of the previous entry.")
+    entry_hash: str | None = Field(default=None, description="Hash of this entry and prev_hash.")
 
 
 class SCRSState(BaseModel):
@@ -78,6 +90,9 @@ class SCRSState(BaseModel):
     is what matters now.
     """
 
+    state_version: int = Field(
+        default=0, description="Goes up by one on every save; detects concurrent writers."
+    )
     threat_scenarios: dict[str, object] = Field(
         default_factory=dict,
         description="Keyed by tid.  Value is the approved ThreatScenario dict.",
