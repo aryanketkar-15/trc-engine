@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import json
 import sys
-import xml.etree.ElementTree as ET  # noqa: S405
+import xml.etree.ElementTree as ET  # noqa: S405, N817
 from collections import defaultdict
 from pathlib import Path
 

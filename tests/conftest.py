@@ -23,3 +23,4 @@ def _seed_url() -> str:
 
 
 os.environ["DATABASE_URL"] = _seed_url()
+os.environ["LLM_AUDIT_PATH"] = ""

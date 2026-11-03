@@ -42,10 +42,19 @@ class TestTraceability:
     def test_scenarios_carry_use_case_asset_version_and_kb_snapshot(
         self, agent_input: ThreatAgentInput
     ) -> None:
+        agent_input = agent_input.model_copy(update={"kb_snapshot_version": "kb-2026-10"})
         sc = _run(agent_input)[0]
         assert sc.use_case_id and sc.use_case_id.startswith("UC-")
         assert sc.asset_version == "1.0"
         assert sc.kb_snapshot_version == agent_input.kb_snapshot_version
+
+    def test_explicit_kb_version_is_kept_and_latest_becomes_a_real_fingerprint(
+        self, agent_input: ThreatAgentInput
+    ) -> None:
+        pinned = agent_input.model_copy(update={"kb_snapshot_version": "kb-2026-10"})
+        assert _run(pinned)[0].kb_snapshot_version == "kb-2026-10"
+        latest = agent_input.model_copy(update={"kb_snapshot_version": "latest"})
+        assert _run(latest)[0].kb_snapshot_version != "latest"
 
     def test_explicit_use_case_id_is_kept(self, agent_input: ThreatAgentInput) -> None:
         explicit = agent_input.model_copy(update={"use_case_id": "UC-LOCK-7"})

@@ -1,20 +1,25 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "trc-engine"
-version = "0.1.0"
+version = "1.0.0"
 description = "Threat-Risk-Compliance Engine — Phase 1: Threat Agent"
 requires-python = ">=3.11"
 dependencies = [
-    "pydantic==2.7.4",
-    "pydantic-settings==2.3.4",
-    "fastapi==0.111.1",
-    "uvicorn[standard]==0.30.1",
+    "pydantic>=2.7.4,<3",
+    "pydantic-settings>=2.3.4,<3",
+    "fastapi>=0.111.1",
+    "uvicorn[standard]>=0.30.1",
     "pgvector>=0.2.5",
     "psycopg[binary,pool]>=3.1.18",
     "openai>=1.30.0",
+    "numpy>=1.26",
+    "sentence-transformers>=2.7",
+    "rich>=13.7",
+    "pypdf>=4.2",
+    "lxml>=5.2",
 ]
 
 [project.optional-dependencies]
@@ -26,7 +31,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["agents*", "scrp*", "common*", "config*"]
+include = ["agents*", "scrp*", "common*", "config*", "kb*"]
 
 # ---------------------------------------------------------------------------
 # ruff configuration

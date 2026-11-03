@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 import re
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ET  # noqa: N817
 from pathlib import Path
 
 from agents.threat_agent.schemas import KBSource, STRIDECategory

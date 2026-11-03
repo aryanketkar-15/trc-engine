@@ -28,9 +28,16 @@ from agents.threat_agent.router import router as threat_agent_router
 from agents.threat_agent.run_store import (
     init_postgres_run_store_schema,
 )
+from common.startup import (
+    check_production_settings,
+    install_handlers,
+    ops_router,
+)
 from config.settings import get_settings
+from scrp.router import router as scrs_router
 
 settings = get_settings()
+check_production_settings(settings)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Logging bootstrap
@@ -83,13 +90,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 _is_prod = settings.ENVIRONMENT == "production"
 
 app = FastAPI(
-    title="TRC Engine — Threat Agent API",
+    title="TRC Engine — Threat, Risk and Compliance API",
     description=(
-        "Phase 1 of the TRC Engine (Threat-Risk-Compliance reasoning system).  "
-        "Accepts a system model and asset list, runs the SCRP threat analysis "
-        "loop, and writes validated, human-approved threat scenarios to the SCRS."
+        "Identifies threats, assesses risk and maps the required attack resistance for a "
+        "product's assets. The AI proposes, a named expert decides, and only approved results "
+        "reach the shared state."
     ),
-    version="0.1.0",
+    version="1.0.0",
     lifespan=lifespan,
     # Disable interactive docs in production (§5 coding standards — no exposure
     # of internal API schema to untrusted networks).
@@ -105,6 +112,9 @@ app = FastAPI(
 app.include_router(threat_agent_router, prefix="/api/v1")
 app.include_router(risk_agent_router, prefix="/api/v1")
 app.include_router(compliance_agent_router, prefix="/api/v1")
+app.include_router(scrs_router, prefix="/api/v1")
+app.include_router(ops_router)
+install_handlers(app)
 
 # TODO (Week 2): mount additional routers as they are built:
 #   from common.middleware import PiiRedactionMiddleware

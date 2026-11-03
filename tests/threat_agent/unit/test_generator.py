@@ -286,6 +286,20 @@ class TestMakeScenario(unittest.TestCase):
 # ─── generate_scenarios (with mocked LLM) ────────────────────────────────────
 
 
+@pytest.fixture(autouse=True)
+def _live_llm_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests mock the model, so they must take the live path whatever the environment says.
+
+    CI runs with USE_LIVE_LLM=false; a test that wants the off switch sets it itself.
+    """
+    from agents.threat_agent import generator
+    from config.settings import get_settings
+
+    live = get_settings().model_copy(update={"USE_LIVE_LLM": True})
+    monkeypatch.setattr(generator, "get_settings", lambda: live)
+    monkeypatch.delenv("USE_LIVE_LLM", raising=False)
+
+
 class TestGenerateScenariosWithMock(unittest.TestCase):
     """Integration-style unit tests: _call_llm is mocked, rest runs real."""
 

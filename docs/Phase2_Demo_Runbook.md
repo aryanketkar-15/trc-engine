@@ -67,5 +67,5 @@ Diagrams for the meeting: `docs/diagrams/agent_architecture.svg` (who produces w
 
 1. Without a live model key the rule-based suggestion gives every threat the same feasibility, so the expert's edits matter.
 2. Residual risk is the expert's judgement; there is no control-effectiveness model.
-3. No login: the approver is the name typed in; the audit file is not tamper-evident.
-4. Each threat is based on one catalogue pattern; multi-step attack chains are not modelled.
+3. The command line records a typed name, marked unverified. Verified names come from API users (`docs/Operations_Guide.md`).
+4. Each threat rests on one catalogue pattern; multi-step chains are proposals for an expert.

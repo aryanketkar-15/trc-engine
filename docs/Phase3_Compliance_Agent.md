@@ -57,7 +57,7 @@ python scripts/compliance_demo.py --input projects/smart_door_lock_multi_use_cas
 Add `--no-ai` to skip the rationale, or `--auto --approver "Name"` for a scripted rehearsal.
 
 API under `/api/v1/compliance-agent/`: `rules`, `propose` (body: `assets`, `explain`), `confirm`\*, `reject`\*, `records`,
-`targets`, `staleness`, `retire-stale`\* (\* needs the API key). The protection targets are also in the TARA report.
+`targets`, `staleness`, `retire-stale`\* (\* needs an approver). Changing a confirmed record needs `supersede_reason`. The protection targets are also in the TARA report.
 
 ## Limits
 

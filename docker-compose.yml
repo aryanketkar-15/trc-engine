@@ -16,5 +16,21 @@ services:
       timeout: 5s
       retries: 5
 
+  # The API itself: docker compose --profile app up --build
+  api:
+    profiles: ["app"]
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-trc_user}:${POSTGRES_PASSWORD:-trc_password}@postgres:5432/trc_engine_fullkb
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - trcdata:/data
+
 volumes:
   pgdata:
+  trcdata:

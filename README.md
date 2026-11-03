@@ -1,12 +1,22 @@
-# TRC Engine — Phase 1: Threat Agent
+# TRC Engine: Threat, Risk and Compliance agents
 
 > **AI-Assisted Threat–Risk–Compliance Engine**  
 > Built on the State-Aware Cybersecurity Reasoning Protocol (SCRP)
 
 ## Overview
 
-The TRC Engine is a multi-agent AI pipeline for structured, evidence-backed threat modelling.  
-**Phase 1 (this repo)** implements the **Threat Agent** — the entry point of the full SCRP pipeline.
+The TRC Engine takes a product's assets and use cases, identifies threats (Threat Agent), assesses and ranks risk (Risk Agent) and
+maps the required attack resistance (Compliance Agent). The AI proposes, a named expert decides, and only approved results reach
+the shared state.
+
+| Read this | For |
+|---|---|
+| `docs/Company_Requirements_Matrix.md` | What the company document asks, its status, and the known limits |
+| `docs/Operations_Guide.md` | Running it, users and roles, audit, recovery |
+| `docs/Move_Laptop_and_Ollama.md` | Setting up a new machine and switching to a local model |
+| `docs/Phase2_Demo_Runbook.md` | The demo |
+
+The threat pipeline:
 
 ```
 Use Case + System Model

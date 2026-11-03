@@ -50,3 +50,9 @@ demo_output/
 kb_package/data/*.npy
 kb_package/data/*.jsonl
 kb_package/db/
+
+# Runtime records and credentials
+logs/
+secrets/
+*.json.bak
+*.json.lock

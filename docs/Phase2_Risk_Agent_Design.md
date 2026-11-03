@@ -101,5 +101,5 @@ stale; if a risk, its feasibility or its treatment changes, the resistance recor
 * Suggestions: the live model produced real suggestions in a trial (2 of 6 before the API credit ran out); the rule-based
   fallback gives the same feasibility to every threat, so the expert's review matters. Suggestion quality has not been evaluated.
 * Residual risk is the expert's judgement; there is no control-effectiveness model.
-* The approver is a name typed in; there is no login and the audit file is not tamper-evident.
-* Multi-step attack chains are not modelled; each threat is based on one catalogue pattern.
+* Without `TRC_USERS_FILE` the approver is a typed name, marked unverified. See `docs/Operations_Guide.md`.
+* Each threat rests on one catalogue pattern. Multi-step chains are rule-based proposals for an expert, not approved results.
