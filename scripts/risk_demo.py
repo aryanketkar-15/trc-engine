@@ -290,6 +290,7 @@ def main() -> int:
     approver = args.approver or (
         "Demo expert" if args.auto else ask("Your name (recorded as approver)")
     )
+    sm.set_actor(f"{approver} (command line, unverified)")
     assets = load_assets(args.input, args.use_case)
     valid = {k: list(v) for k, v in ratings.points.items()}
 

@@ -16,11 +16,14 @@ from agents.compliance_agent.engine import (
 )
 from agents.compliance_agent.explainer import AiRationale
 from agents.risk_agent.schemas import RiskAssessment
-from agents.threat_agent.router import get_state_manager, verify_api_key
+from agents.threat_agent.router import get_state_manager
 from agents.threat_agent.schemas import AssetModel
-from scrp.state_manager import NotApprovedError, StateManager
+from common.auth import Principal, decided_by, read_gate, require_approver
+from scrp.state_manager import NotApprovedError, StateManager, WouldOverwriteError
 
-router = APIRouter(prefix="/compliance-agent", tags=["compliance-agent"])
+router = APIRouter(
+    prefix="/compliance-agent", tags=["compliance-agent"], dependencies=[Depends(read_gate)]
+)
 
 
 def get_rules() -> Rules:
@@ -46,6 +49,9 @@ class ConfirmItem(BaseModel):
 class ConfirmRequest(BaseModel):
     items: Annotated[list[ConfirmItem], Field(min_length=1)]
     assets: list[AssetModel] = Field(default_factory=list)
+    supersede_reason: str | None = Field(
+        default=None, description="Needed to change an already confirmed record."
+    )
 
 
 class RejectRequest(BaseModel):
@@ -110,9 +116,10 @@ def propose_mappings(
     return {"count": len(proposals), "proposals": proposals}
 
 
-@router.post("/confirm", dependencies=[Depends(verify_api_key)])
+@router.post("/confirm")
 def confirm_mappings(
     body: Annotated[ConfirmRequest, Body()],
+    principal: Annotated[Principal, Depends(require_approver)],
     state: Annotated[StateManager, Depends(get_state_manager)],
     rules: Annotated[Rules, Depends(get_rules)],
 ) -> dict[str, Any]:
@@ -128,7 +135,10 @@ def confirm_mappings(
             )
         criticality = _criticality(body.assets, risk.asset_id, rules)
         try:
-            record = engine.confirm(risk, rules, item.decision, criticality=criticality)
+            decision = item.decision.model_copy(
+                update={"approver": decided_by(principal, item.decision.approver)}
+            )
+            record = engine.confirm(risk, rules, decision, criticality=criticality)
         except RulesError as exc:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
         final = explainer.attach(record, item.ai)
@@ -136,9 +146,20 @@ def confirm_mappings(
             dropped.append(item.tid)
         records.append(final)
     try:
-        stored = state.commit_compliance_records([r.model_dump(mode="json") for r in records])
+        stored = state.commit_compliance_records(
+            [r.model_dump(mode="json") for r in records], supersede_reason=body.supersede_reason
+        )
     except NotApprovedError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    except WouldOverwriteError as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {
+                "message": f"{exc}. Review the diff and send supersede_reason to accept it.",
+                "tid": exc.tid,
+                "diff": exc.diff,
+            },
+        ) from exc
     return {
         "stored": stored,
         "records": [r.model_dump(mode="json") for r in records],
@@ -155,7 +176,7 @@ def protection_targets(
     return engine.protection_targets(engine.load_records(state.get_compliance_records()), rules)
 
 
-@router.post("/reject", dependencies=[Depends(verify_api_key)])
+@router.post("/reject", dependencies=[Depends(require_approver)])
 def reject_mapping(
     body: Annotated[RejectRequest, Body()],
     state: Annotated[StateManager, Depends(get_state_manager)],
@@ -198,7 +219,7 @@ def compliance_staleness(
     return {"stale": [{"tid": t, "reason": r} for t, r in stale], "unmapped_risks": unmapped}
 
 
-@router.post("/retire-stale", dependencies=[Depends(verify_api_key)])
+@router.post("/retire-stale", dependencies=[Depends(require_approver)])
 def retire_stale(
     state: Annotated[StateManager, Depends(get_state_manager)],
 ) -> dict[str, Any]:

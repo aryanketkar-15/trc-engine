@@ -21,7 +21,7 @@ Core Invariant & Self-Correction Contract:
 
 from __future__ import annotations
 
-from agents.threat_agent.attack_chain import build_paths, build_single_step_path
+from agents.threat_agent.attack_chain import build_paths
 from agents.threat_agent.exceptions import KBStoreUnreachableError
 from agents.threat_agent.generator import generate_scenarios
 from agents.threat_agent.grounding import GroundingFailure, check_grounding, path_id_from_tid
@@ -38,6 +38,7 @@ from agents.threat_agent.schemas import (
 )
 from agents.threat_agent.staleness import traceability_stamp
 from agents.threat_agent.validator import Validator
+from common.kb_version import kb_fingerprint
 from common.logging import get_logger, log_step
 
 logger = get_logger(__name__)
@@ -90,12 +91,7 @@ def _execute_retrieval_and_chaining(
             for query in plan.queries
         ]
 
-    try:
-        paths = build_paths(candidates, agent_input)
-    except NotImplementedError:
-        paths = [build_single_step_path(c) for c in candidates]
-
-    return paths
+    return build_paths(candidates, agent_input)
 
 
 def _merge_retried(
@@ -177,6 +173,9 @@ def generate_and_validate_with_retry(
 
     stamps = {a.asset_id: traceability_stamp(agent_input, a.asset_id) for a in agent_input.assets}
     fallback_stamp = traceability_stamp(agent_input, "")
+    if agent_input.kb_snapshot_version == "latest" and (version := kb_fingerprint()):
+        stamps = {k: {**v, "kb_snapshot_version": version} for k, v in stamps.items()}
+        fallback_stamp = {**fallback_stamp, "kb_snapshot_version": version}
 
     def _stamp(scenarios: list[ThreatScenario]) -> list[ThreatScenario]:
         return [

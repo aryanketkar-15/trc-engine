@@ -38,7 +38,6 @@ Ruff compliance
 from __future__ import annotations
 
 import logging
-import secrets
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -73,7 +72,15 @@ from agents.threat_agent.schemas import (
 )
 from agents.threat_agent.staleness import check_staleness, traceability_stamp
 from agents.threat_agent.validator import Validator
+from common.auth import (
+    actor_label,
+    current_principal,
+    read_gate,
+    require_approver,
+    require_writer,
+)
 from config.settings import get_settings
+from scrp.integrity import diff_threats
 from scrp.state_manager import StateManager
 
 # TODO (TRC-STUB-002): update this import once feature/threat-agent-validator
@@ -90,6 +97,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/threat-agent",
     tags=["threat-agent"],
+    dependencies=[Depends(read_gate)],
 )
 
 
@@ -142,9 +150,9 @@ def get_scrs_path() -> FilePath:
     return FilePath(get_settings().SCRS_STATE_PATH)
 
 
-def get_state_manager() -> StateManager:
-    """Fresh StateManager bound to the configured SCRS file."""
-    return StateManager(get_scrs_path())
+def get_state_manager(actor: Annotated[str | None, Depends(actor_label)] = None) -> StateManager:
+    """Fresh StateManager bound to the configured SCRS file and to the calling user."""
+    return StateManager(get_scrs_path(), actor=actor)
 
 
 def verify_api_key(
@@ -152,27 +160,18 @@ def verify_api_key(
         str | None,
         Header(
             alias="X-API-Key",
-            description="Shared secret API key for state-changing endpoints.",
+            description="API key for state-changing endpoints.",
         ),
     ] = None,
 ) -> str:
-    """Validate incoming X-API-Key header against configured secret.
-
-    Enforced on state-changing endpoints (/analyze, /approve, /reject).
-    Read-only endpoints (/status, /scenarios) remain open.
+    """Accept callers who may run the agents (analyst or approver).
 
     Raises:
-        HTTPException 401: If header is missing or does not match configured key.
+        HTTPException 401: If the header is missing or the key is not valid.
+        HTTPException 403: If the key belongs to a viewer.
     """
-    settings = get_settings()
-    expected_key = settings.THREAT_AGENT_API_KEY.get_secret_value()
-    if not x_api_key or not secrets.compare_digest(x_api_key, expected_key):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid API key.",
-            headers={"WWW-Authenticate": "ApiKey"},
-        )
-    return x_api_key
+    require_writer(current_principal(x_api_key))
+    return x_api_key or ""
 
 
 def _get_run_or_404(run_id: str, store: RunRegistryStore | None = None) -> RunRecord:
@@ -614,7 +613,7 @@ async def get_run_status(
         "NotApprovedError if the ValidationResult is not in a passing state.  "
         "On success, transitions the run to 'approved' and writes to SCRS."
     ),
-    dependencies=[Depends(verify_api_key)],
+    dependencies=[Depends(require_approver)],
 )
 async def approve_run(
     run_id: Annotated[
@@ -719,7 +718,7 @@ async def approve_run(
         "with the rejection reason injected as context.  At human_rejection_count >= 3, "
         "escalates to status=rejected (human-flagged failure)."
     ),
-    dependencies=[Depends(verify_api_key)],
+    dependencies=[Depends(require_approver)],
 )
 async def reject_run(
     run_id: Annotated[
@@ -893,7 +892,7 @@ def _require_pending_human(run: RunRecord) -> None:
     response_model=PruneResponse,
     status_code=status.HTTP_200_OK,
     summary="Expert prune: remove one scenario from review (kept in the audit trail)",
-    dependencies=[Depends(verify_api_key)],
+    dependencies=[Depends(require_approver)],
 )
 async def prune_scenario(
     run_id: Annotated[str, Path(description="The run to edit.")],
@@ -964,7 +963,7 @@ def _run_stamp(run: RunRecord, asset_id: str) -> dict[str, object]:
     response_model=AddScenarioResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Expert add: insert an expert-authored scenario into the review list",
-    dependencies=[Depends(verify_api_key)],
+    dependencies=[Depends(require_approver)],
 )
 async def add_scenario(
     run_id: Annotated[str, Path(description="The run to edit.")],
@@ -1108,6 +1107,29 @@ async def get_scenarios(
 # ---------------------------------------------------------------------------
 
 
+@router.get(
+    "/{run_id}/diff",
+    summary="What would change if this run were approved (read-only)",
+)
+async def run_diff(
+    run_id: Annotated[str, Path(description="The run to compare with what is approved.")],
+    store: Annotated[RunRegistryStore, Depends(get_run_store)],
+    state_mgr: Annotated[StateManager, Depends(get_state_manager)],
+) -> dict[str, object]:
+    """Proposed changes for a person to review; approving the run is what applies them.
+
+    Threats are matched by asset and catalogue reference, within the same project and use case.
+    """
+    proposed = [s for s in _get_run_or_404(run_id, store).scenarios if isinstance(s, dict)]
+    scope = {(s.get("project_id"), s.get("use_case_id")) for s in proposed}
+    current = [
+        t
+        for t in state_mgr.get_threat_scenarios().values()
+        if isinstance(t, dict) and (t.get("project_id"), t.get("use_case_id")) in scope
+    ]
+    return diff_threats(current, proposed)
+
+
 @router.post(
     "/expand-project",
     response_model=list[ThreatAgentInput],
@@ -1143,7 +1165,7 @@ async def staleness_endpoint(
 @router.post(
     "/retire-stale",
     summary="Move out-of-date approved threats into the history so they can be re-run",
-    dependencies=[Depends(verify_api_key)],
+    dependencies=[Depends(require_approver)],
 )
 async def retire_stale_endpoint(
     payload: Annotated[ThreatAgentInput, Body(description="The CURRENT input of a use case.")],

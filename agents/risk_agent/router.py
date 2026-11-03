@@ -15,11 +15,12 @@ from agents.risk_agent import engine, report, suggester
 from agents.risk_agent.engine import Ratings, RatingsError
 from agents.risk_agent.schemas import RiskAssessment, RiskInput, TreatmentDecision
 from agents.risk_agent.staleness import check_risk_staleness
-from agents.threat_agent.router import get_state_manager, verify_api_key
+from agents.threat_agent.router import get_state_manager
 from agents.threat_agent.schemas import AssetModel, ThreatScenario
-from scrp.state_manager import NotApprovedError, StateManager
+from common.auth import Principal, decided_by, read_gate, require_approver
+from scrp.state_manager import NotApprovedError, StateManager, WouldOverwriteError
 
-router = APIRouter(prefix="/risk-agent", tags=["risk-agent"])
+router = APIRouter(prefix="/risk-agent", tags=["risk-agent"], dependencies=[Depends(read_gate)])
 
 MAX_RISK_REJECTIONS = 3
 
@@ -53,6 +54,9 @@ class RejectRequest(BaseModel):
 
 class ApproveRequest(BaseModel):
     decisions: Annotated[list[RiskDecision], Field(min_length=1)]
+    supersede_reason: str | None = Field(
+        default=None, description="Needed to change an already approved risk."
+    )
 
 
 def _approved_threats(
@@ -141,16 +145,22 @@ def preview_score(
     return {"ratings_version": ratings.version, "by_asset": _group(ranked)}
 
 
-@router.post("/approve", dependencies=[Depends(verify_api_key)])
+@router.post("/approve")
 def approve_risks(
     body: Annotated[ApproveRequest, Body()],
+    principal: Annotated[Principal, Depends(require_approver)],
     state: Annotated[StateManager, Depends(get_state_manager)],
     ratings: Annotated[Ratings, Depends(get_ratings)],
 ) -> dict[str, Any]:
     """Score, apply the human treatment decision and store the approved risks in the SCRS."""
     threats = _approved_threats(state, None, None)
     ranked = _score_all([d.risk_input for d in body.decisions], threats, ratings)
-    decisions = {d.risk_input.tid: d.decision for d in body.decisions}
+    decisions = {
+        d.risk_input.tid: d.decision.model_copy(
+            update={"approver": decided_by(principal, d.decision.approver)}
+        )
+        for d in body.decisions
+    }
     try:
         final = [
             engine.apply_treatment(
@@ -161,9 +171,20 @@ def approve_risks(
     except RatingsError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
     try:
-        stored = state.commit_risk_assessments([a.model_dump(mode="json") for a in final])
+        stored = state.commit_risk_assessments(
+            [a.model_dump(mode="json") for a in final], supersede_reason=body.supersede_reason
+        )
     except NotApprovedError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    except WouldOverwriteError as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {
+                "message": f"{exc}. Review the diff and send supersede_reason to accept it.",
+                "tid": exc.tid,
+                "diff": exc.diff,
+            },
+        ) from exc
     return {
         "stored": stored,
         "needs_requirement": [a.tid for a in final if engine.requires_requirement(a)],
@@ -181,7 +202,7 @@ def approve_risks(
     }
 
 
-@router.post("/reject", dependencies=[Depends(verify_api_key)])
+@router.post("/reject", dependencies=[Depends(require_approver)])
 def reject_suggestion(
     body: Annotated[RejectRequest, Body()],
     state: Annotated[StateManager, Depends(get_state_manager)],
@@ -279,7 +300,7 @@ def risk_staleness(
     }
 
 
-@router.post("/retire-stale", dependencies=[Depends(verify_api_key)])
+@router.post("/retire-stale", dependencies=[Depends(require_approver)])
 def retire_stale_risks(
     state: Annotated[StateManager, Depends(get_state_manager)],
     project_id: Annotated[str | None, Query()] = None,

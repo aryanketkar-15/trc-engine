@@ -33,7 +33,7 @@ Environment variable reference
                             embeddings.  Defaults to "all-MiniLM-L6-v2".
     KB_SNAPSHOT_VERSION   — Optional.  Version tag of the KB snapshot in use.
                             Defaults to "v1.0".
-    KB_DATA_DIR           — Required.  Directory containing raw + processed KB
+    KB_DATA_DIR           — Optional.  Directory containing raw + processed KB
                             files (STRIDE / CAPEC / ATT&CK / CWE).
 
 .env file
@@ -200,6 +200,7 @@ class Settings(BaseSettings):
     KB_DATA_DIR: Annotated[
         Path,
         Field(
+            default=Path("kb/data"),
             description=(
                 "Root directory containing raw and processed KB files for "
                 "all sources (STRIDE / CAPEC / ATT&CK / CWE).  "
@@ -284,6 +285,37 @@ class Settings(BaseSettings):
             default="gpt-4o-mini",
             description="OpenAI model identifier for threat scenario generation.",
         ),
+    ]
+
+    TRC_USERS_FILE: Annotated[
+        Path | None,
+        Field(
+            default=None,
+            description="JSON file of named API users. Replaces the shared key when set.",
+        ),
+    ]
+
+    REQUIRE_AUTH_FOR_READS: Annotated[
+        bool,
+        Field(default=False, description="Also require an API key on read-only endpoints."),
+    ]
+
+    AUDIT_HMAC_KEY: Annotated[
+        SecretStr | None,
+        Field(default=None, description="Secret that makes the audit hash chain keyed (HMAC)."),
+    ]
+
+    LLM_AUDIT_PATH: Annotated[
+        Path | None,
+        Field(
+            default=Path("logs/llm_audit.jsonl"),
+            description="Where every LLM prompt and answer is recorded. Empty disables it.",
+        ),
+    ]
+
+    MAX_REQUEST_BYTES: Annotated[
+        int,
+        Field(default=2_000_000, gt=0, description="Largest request body the API accepts."),
     ]
 
     LLM_TIMEOUT_SECONDS: Annotated[

@@ -40,6 +40,7 @@ from typing import Any
 
 import openai
 
+from common.llm_audit import record_call
 from common.logging import get_logger, log_step
 from config.settings import get_settings
 
@@ -194,8 +195,18 @@ def chat_completion(
     rate_limit_retries = 0
     for attempt in range(1, _MAX_ATTEMPTS + _MAX_RATE_LIMIT_RETRIES + 1):
         try:
+            started = time.perf_counter()
             response = _call_api(
                 client, resolved_model, system_prompt, user_prompt, max_tokens=max_tokens
+            )
+            record_call(
+                run_id=run_id,
+                model=resolved_model,
+                prompt_version=prompt_version,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response=response,
+                latency_ms=int((time.perf_counter() - started) * 1000),
             )
 
             log_step(

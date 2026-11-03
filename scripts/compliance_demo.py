@@ -185,6 +185,7 @@ def main() -> int:
     approver = args.approver or (
         "Demo expert" if args.auto else ask("Your name (recorded as the confirming expert)")
     )
+    sm.set_actor(f"{approver} (command line, unverified)")
     assets = load_assets(args.input)
     threats = sm.get_threat_scenarios()
     confirmed: list[ComplianceRecord] = []
