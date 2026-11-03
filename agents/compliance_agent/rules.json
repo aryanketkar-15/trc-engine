@@ -5,7 +5,31 @@
     "JIL Application of Attack Potential to Smartcards v3.2.1, Table 14 (rating of vulnerabilities and TOE resistance)",
     "The JIL attack potential to claim is the level one step above the attacker class to resist"
   ],
-  "attacker_classes": ["Basic", "Enhanced-Basic", "Moderate", "High"],
+  "citations": [
+    {
+      "standard": "Common Criteria",
+      "doc": "CEM:2022 R1",
+      "locator": "p. 464.1",
+      "supports": "Table B.3: attack potential and the AVA_VAN component that resists it"
+    },
+    {
+      "standard": "JIL",
+      "doc": "JIL Application of Attack Potential to Smartcards v3.2.1",
+      "locator": "p. 30.2",
+      "supports": "Table 14: rating of vulnerabilities and TOE resistance"
+    }
+  ],
+  "asset_criticality": {
+    "note": "Number of required security properties (confidentiality, integrity, availability, authenticity)",
+    "high_at_least": 3,
+    "medium_at_least": 2
+  },
+  "attacker_classes": [
+    "Basic",
+    "Enhanced-Basic",
+    "Moderate",
+    "High"
+  ],
   "class_table": {
     "Basic": {
       "required_resistance": "Resistant to Basic attackers",
@@ -37,9 +61,21 @@
     }
   },
   "risk_to_class": [
-    {"rule_id": "CR-1", "risk": "High", "attacker_class": "Moderate"},
-    {"rule_id": "CR-2", "risk": "Medium", "attacker_class": "Enhanced-Basic"},
-    {"rule_id": "CR-3", "risk": "Low", "attacker_class": "Basic"}
+    {
+      "rule_id": "CR-1",
+      "risk": "High",
+      "attacker_class": "Moderate"
+    },
+    {
+      "rule_id": "CR-2",
+      "risk": "Medium",
+      "attacker_class": "Enhanced-Basic"
+    },
+    {
+      "rule_id": "CR-3",
+      "risk": "Low",
+      "attacker_class": "Basic"
+    }
   ],
   "feasibility_floor": [
     {
@@ -47,6 +83,15 @@
       "attack_feasibility": "Low",
       "at_least": "Moderate",
       "reason": "A Low feasibility means the attack already needs a skilled, equipped attacker, so the product has to resist that class"
+    }
+  ],
+  "criticality_floor": [
+    {
+      "rule_id": "CR-5",
+      "asset_criticality": "High",
+      "effective_risk": "Medium",
+      "at_least": "Moderate",
+      "reason": "A Medium risk on a highly critical asset still needs resistance to skilled attackers"
     }
   ]
 }

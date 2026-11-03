@@ -1,7 +1,9 @@
 """Attack-resistance mapping (Compliance agent): a rule base, no AI inference.
 
-risk -> attacker class (rules CR-1 to CR-4, expert confirms) -> required resistance, JIL attack
-potential, assurance component, SESIP level and CC EAL. Every record is confirmed by a named expert.
+risk + asset criticality -> attacker class (rules CR-1 to CR-5, expert confirms) -> required
+resistance, JIL attack potential, assurance component, SESIP level and CC EAL. An LLM may add a
+written rationale (explainer.py) but never decides a value. Every record is confirmed by a named
+expert.
 """
 
 from __future__ import annotations
@@ -11,13 +13,17 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import BaseModel, Field, model_validator
 
 from agents.risk_agent.schemas import RiskAssessment, RiskLevel, Treatment
 
+if TYPE_CHECKING:
+    from agents.threat_agent.schemas import AssetModel
+
 DEFAULT_RULES_PATH = Path(__file__).with_name("rules.json")
+UNKNOWN = "Unknown"
 
 
 class RulesError(ValueError):
@@ -38,6 +44,10 @@ class Rules:
     table: dict[str, dict[str, Any]]
     risk_to_class: dict[str, dict[str, str]]
     floors: list[dict[str, str]]
+    criticality_floors: list[dict[str, str]]
+    citations: list[dict[str, str]]
+    high_at_least: int
+    medium_at_least: int
 
     @classmethod
     def load(cls, path: Path | None = None) -> Rules:
@@ -48,6 +58,10 @@ class Rules:
             table=data["class_table"],
             risk_to_class={r["risk"]: r for r in data["risk_to_class"]},
             floors=list(data.get("feasibility_floor", [])),
+            criticality_floors=list(data.get("criticality_floor", [])),
+            citations=list(data.get("citations", [])),
+            high_at_least=int(data.get("asset_criticality", {}).get("high_at_least", 3)),
+            medium_at_least=int(data.get("asset_criticality", {}).get("medium_at_least", 2)),
         )
         needed = ("required_resistance", "jil_attack_potential", "assurance_component")
         for name in rules.classes:
@@ -61,7 +75,7 @@ class Rules:
             rule = rules.risk_to_class.get(level.value)
             if rule is None or rule["attacker_class"] not in rules.classes:
                 raise RulesError(f"no rule maps {level.value} risk to an attacker class")
-        for floor in rules.floors:
+        for floor in (*rules.floors, *rules.criticality_floors):
             if floor["at_least"] not in rules.classes:
                 raise RulesError(f"rule {floor['rule_id']} names an unknown attacker class")
         return rules
@@ -85,6 +99,13 @@ class ComplianceRecord(BaseModel):
     sesip_level: str
     cc_eal: str
     rule_id: str
+    asset_criticality: str = UNKNOWN
+    citations: list[dict[str, str]] = Field(default_factory=list)
+    ai_rationale: str | None = None
+    ai_evidence: list[dict[str, Any]] = Field(default_factory=list)
+    ai_confidence: float | None = None
+    ai_model: str | None = None
+    ai_prompt_version: str | None = None
     overridden: bool = False
     override_reason: str | None = None
     notes: str | None = None
@@ -134,21 +155,41 @@ def _lookup(rules: Rules, attacker_class: str) -> dict[str, Any]:
     return row
 
 
-def suggested_class(risk: RiskAssessment, rules: Rules) -> tuple[str, str]:
-    """Attacker class by rule: from the effective risk, raised by the feasibility floor."""
+def asset_criticality(asset: AssetModel | None, rules: Rules) -> str:
+    """High, Medium or Low from how many security properties the asset requires."""
+    if asset is None:
+        return UNKNOWN
+    required = sum(1 for v in asset.security_attributes.model_dump().values() if v)
+    if required >= rules.high_at_least:
+        return "High"
+    return "Medium" if required >= rules.medium_at_least else "Low"
+
+
+def suggested_class(
+    risk: RiskAssessment, rules: Rules, criticality: str = UNKNOWN
+) -> tuple[str, str]:
+    """Attacker class by rule: from the effective risk, raised by the floor rules."""
     rule = rules.risk_to_class[risk.effective_risk.value]
     chosen, rule_id = rule["attacker_class"], rule["rule_id"]
     for floor in rules.floors:
         raises = rules.classes.index(floor["at_least"]) > rules.classes.index(chosen)
         if floor["attack_feasibility"] == risk.attack_feasibility.value and raises:
             chosen, rule_id = floor["at_least"], f"{rule_id}+{floor['rule_id']}"
+    for floor in rules.criticality_floors:
+        raises = rules.classes.index(floor["at_least"]) > rules.classes.index(chosen)
+        applies_here = (
+            floor["asset_criticality"] == criticality
+            and floor["effective_risk"] == risk.effective_risk.value
+        )
+        if applies_here and raises:
+            chosen, rule_id = floor["at_least"], f"{rule_id}+{floor['rule_id']}"
     return chosen, rule_id
 
 
-def propose(risk: RiskAssessment, rules: Rules) -> ComplianceRecord:
+def propose(risk: RiskAssessment, rules: Rules, *, criticality: str = UNKNOWN) -> ComplianceRecord:
     """Suggest the mapping for one approved risk (status pending_human)."""
-    chosen, rule_id = suggested_class(risk, rules)
-    return _build(risk, rules, chosen, rule_id, overridden=False)
+    chosen, rule_id = suggested_class(risk, rules, criticality)
+    return _build(risk, rules, chosen, rule_id, overridden=False, criticality=criticality)
 
 
 def _build(
@@ -160,13 +201,15 @@ def _build(
     overridden: bool,
     override_reason: str | None = None,
     notes: str | None = None,
+    criticality: str = UNKNOWN,
 ) -> ComplianceRecord:
     row = _lookup(rules, attacker_class)
-    suggested, _ = suggested_class(risk, rules)
+    suggested, _ = suggested_class(risk, rules, criticality)
     why = (
         f"Risk {risk.effective_risk.value} "
         f"({'expert-adjusted' if risk.adjusted_risk else 'computed'}) with attack feasibility "
-        f"{risk.attack_feasibility.value} maps by rule {rule_id} to attacker class {suggested}."
+        f"{risk.attack_feasibility.value} and asset criticality {criticality} maps by rule "
+        f"{rule_id} to attacker class {suggested}."
     )
     if overridden:
         why += f" The expert chose {attacker_class} instead: {override_reason}."
@@ -191,6 +234,8 @@ def _build(
         sesip_level=str(row["sesip_level"]),
         cc_eal=str(row["cc_eal"]),
         rule_id=rule_id if not overridden else "EXPERT-OVERRIDE",
+        asset_criticality=criticality,
+        citations=list(rules.citations),
         overridden=overridden,
         override_reason=override_reason if overridden else None,
         notes=notes,
@@ -201,9 +246,15 @@ def _build(
     )
 
 
-def confirm(risk: RiskAssessment, rules: Rules, decision: ComplianceDecision) -> ComplianceRecord:
+def confirm(
+    risk: RiskAssessment,
+    rules: Rules,
+    decision: ComplianceDecision,
+    *,
+    criticality: str = UNKNOWN,
+) -> ComplianceRecord:
     """Apply the expert's decision and return the confirmed record."""
-    proposed = propose(risk, rules)
+    proposed = propose(risk, rules, criticality=criticality)
     chosen = decision.attacker_class
     if chosen and chosen != proposed.suggested_attacker_class:
         record = _build(
@@ -214,12 +265,48 @@ def confirm(risk: RiskAssessment, rules: Rules, decision: ComplianceDecision) ->
             overridden=True,
             override_reason=decision.override_reason,
             notes=decision.notes,
+            criticality=criticality,
         )
     else:
         record = proposed.model_copy(update={"notes": decision.notes})
     return record.model_copy(
         update={"status": ComplianceStatus.CONFIRMED, "confirmed_by": decision.approver}
     )
+
+
+def load_records(raw: dict[str, Any]) -> list[ComplianceRecord]:
+    """Stored records as objects; records in an older format are skipped until they are redone."""
+    records: list[ComplianceRecord] = []
+    for item in raw.values():
+        try:
+            records.append(ComplianceRecord.model_validate(item))
+        except ValueError:
+            continue
+    return records
+
+
+def protection_targets(records: list[ComplianceRecord], rules: Rules) -> dict[str, Any]:
+    """Required protection level per asset and for the product: the strongest class that applies."""
+
+    def strongest(items: list[ComplianceRecord]) -> dict[str, Any]:
+        top = max(items, key=lambda r: rules.classes.index(r.attacker_class))
+        return {
+            "attacker_class": top.attacker_class,
+            "required_resistance": top.required_resistance,
+            "jil_attack_potential": top.jil_attack_potential,
+            "assurance_component": top.assurance_component,
+            "sesip_level": top.sesip_level,
+            "cc_eal": top.cc_eal,
+            "driven_by": sorted(r.tid for r in items if r.attacker_class == top.attacker_class),
+        }
+
+    grouped: dict[str, list[ComplianceRecord]] = {}
+    for rec in records:
+        grouped.setdefault(rec.asset_id, []).append(rec)
+    return {
+        "per_asset": {asset: strongest(items) for asset, items in sorted(grouped.items())},
+        "product": strongest(records) if records else None,
+    }
 
 
 def check_compliance_staleness(

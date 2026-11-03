@@ -286,6 +286,15 @@ class Settings(BaseSettings):
         ),
     ]
 
+    LLM_TIMEOUT_SECONDS: Annotated[
+        float,
+        Field(
+            default=30.0,
+            gt=0,
+            description="Seconds to wait for one LLM call. Raise it for local models (Ollama).",
+        ),
+    ]
+
     OPENAI_BASE_URL: Annotated[
         str | None,
         Field(

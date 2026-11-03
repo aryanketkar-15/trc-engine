@@ -37,6 +37,12 @@ COLUMNS = [
 ]
 
 
+def _targets(resistance: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    from agents.compliance_agent.engine import Rules, load_records, protection_targets
+
+    return protection_targets(load_records(resistance), Rules.load())
+
+
 def _match(item: dict[str, Any], project_id: str | None, use_case_id: str | None) -> bool:
     if project_id and item.get("project_id") not in (None, project_id):
         return False
@@ -121,6 +127,7 @@ def build_report(
             if not r["needs_requirement"]
         ],
         "not_yet_scored": open_threats,
+        "protection_targets": _targets(resistance),
     }
 
 
@@ -172,6 +179,19 @@ def to_markdown(report: dict[str, Any], title: str = "TARA report") -> str:
         out += ["\\* risk adjusted by the expert (reason recorded in the audit log)", ""]
     out += ["## Security requirements needed (treatment: Reduce)", ""]
     out += [f"- {t}" for t in report["requirements_needed"]] or ["- none"]
+    targets = report.get("protection_targets") or {}
+    if targets.get("product"):
+        out += ["", "## Required protection level", ""]
+        out += [
+            "| Scope | Attacker class | JIL | Assurance | SESIP | CC EAL |",
+            "|---|---|---|---|---|---|",
+        ]
+        rows_t = [*targets["per_asset"].items(), ("Product", targets["product"])]
+        for scope, t in rows_t:
+            out.append(
+                f"| {scope} | {t['attacker_class']} | {t['jil_attack_potential']} | "
+                f"{t['assurance_component']} | {t['sesip_level']} | {t['cc_eal']} |"
+            )
     out += ["", "## Residual risk (accepted, shared or avoided)", ""]
     for r in report["residual_risk"]:
         out.append(

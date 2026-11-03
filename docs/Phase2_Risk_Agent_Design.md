@@ -1,5 +1,7 @@
 # Phase 2: Risk Agent and attack-resistance mapping (design and status)
 
+> The attack-resistance mapping grew into the Compliance Agent (Phase 3). Its current rules, including CR-5, are in `docs/Phase3_Compliance_Agent.md`.
+
 Status 29 Oct 2026: built, tested (74 tests in `tests/risk_agent`), demo-ready. Tables and rules are configuration files
 (`agents/risk_agent/ratings.json`, `agents/compliance_agent/rules.json`, both version `v1`) and can be changed without code.
 

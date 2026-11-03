@@ -130,7 +130,7 @@ def chat_completion(
     model: str | None = None,
     prompt_version: str = "unversioned",
     run_id: str = "",
-    timeout_seconds: float = _DEFAULT_TIMEOUT_SECONDS,
+    timeout_seconds: float | None = None,
     max_tokens: int = _DEFAULT_MAX_TOKENS,
 ) -> str:
     """Call OpenAI chat completions and return the raw text response.
@@ -167,6 +167,8 @@ def chat_completion(
     """
     resolved_model = model or _DEFAULT_MODEL
     settings = get_settings()
+    if timeout_seconds is None:
+        timeout_seconds = float(getattr(settings, "LLM_TIMEOUT_SECONDS", _DEFAULT_TIMEOUT_SECONDS))
     api_key_val = settings.OPENAI_API_KEY.get_secret_value()
     base_url = getattr(settings, "OPENAI_BASE_URL", None)
     if not base_url and api_key_val.startswith("sk-or-"):
