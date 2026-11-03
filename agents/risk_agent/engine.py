@@ -146,6 +146,7 @@ def score(
         risk=level,
         justification=build_justification(risk_input, overall, points, feasibility, level, ratings),
         ai_suggested=risk_input.ai_suggested,
+        evidence_confidence=scenario.confidence_score,
         suggestion_basis=risk_input.suggestion_basis,
         threat_fingerprint=threat_fingerprint
         or f"{scenario.asset_fingerprint or ''}|{scenario.context_fingerprint or ''}",

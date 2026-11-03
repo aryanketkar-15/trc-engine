@@ -11,6 +11,7 @@ from typing import Any
 
 from agents.risk_agent.engine import rank_per_asset
 from agents.risk_agent.schemas import RiskAssessment
+from agents.threat_agent.chains import propose_chains
 from scrp.state_manager import StateManager
 
 COLUMNS = [
@@ -50,7 +51,10 @@ def _match(item: dict[str, Any], project_id: str | None, use_case_id: str | None
 
 
 def build_report(
-    state: StateManager, project_id: str | None = None, use_case_id: str | None = None
+    state: StateManager,
+    project_id: str | None = None,
+    use_case_id: str | None = None,
+    assets: list[Any] | None = None,
 ) -> dict[str, Any]:
     threats = {
         str(t): v
@@ -128,6 +132,15 @@ def build_report(
         ],
         "not_yet_scored": open_threats,
         "protection_targets": _targets(resistance),
+        "attack_chains": propose_chains(list(threats.values()), assets or []),
+        "versions": {
+            "state_version": state.get_state_version(),
+            "ratings_versions": sorted({r.ratings_version for r in risks}),
+            "rules_versions": sorted({str(v.get("rules_version")) for v in resistance.values()}),
+            "kb_snapshot_versions": sorted(
+                {str(v.get("kb_snapshot_version")) for v in threats.values()}
+            ),
+        },
     }
 
 
@@ -200,6 +213,23 @@ def to_markdown(report: dict[str, Any], title: str = "TARA report") -> str:
         )
     if not report["residual_risk"]:
         out.append("- none")
+    chains = report.get("attack_chains") or []
+    if chains:
+        out += ["", "## Possible attack chains (proposed, for expert review)", ""]
+        for chain in chains[:10]:
+            path = " -> ".join(f"{s['asset_id']} {s['stride']}" for s in chain["steps"])
+            out.append(f"- {path} (evidence {chain['evidence_strength']})")
+    versions = report.get("versions") or {}
+    if versions:
+        out += [
+            "",
+            "## Versions",
+            "",
+            f"State {versions['state_version']}; ratings "
+            f"{', '.join(versions['ratings_versions']) or '-'}; rules "
+            f"{', '.join(versions['rules_versions']) or '-'}; knowledge base "
+            f"{', '.join(versions['kb_snapshot_versions']) or '-'}.",
+        ]
     if report["not_yet_scored"]:
         out += ["", "## Approved threats without a risk assessment yet", ""]
         out += [f"- {t['asset_id']} {t['tid']}: {t['attack']}" for t in report["not_yet_scored"]]

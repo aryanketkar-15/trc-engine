@@ -11,12 +11,14 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from agents.risk_agent import report
+from agents.threat_agent.project import load_inputs
 from scrp.state_manager import StateManager
 
 
@@ -25,6 +27,7 @@ def main() -> int:
     parser.add_argument("--scrs", default=str(_ROOT / "demo_output" / "SCRS_demo.json"))
     parser.add_argument("--project-id")
     parser.add_argument("--use-case")
+    parser.add_argument("--input", help="project JSON, so attack chains can link across assets")
     parser.add_argument(
         "--out", help="folder for the report files (default: next to the SCRS file)"
     )
@@ -34,7 +37,13 @@ def main() -> int:
     if not scrs.exists():
         print(f"No shared state at {scrs}. Run scripts/scrp_demo.py first.")
         return 1
-    data = report.build_report(StateManager(scrs), args.project_id, args.use_case)
+    assets: list[Any] = []
+    if args.input:
+        seen: dict[str, Any] = {}
+        for run in load_inputs(Path(args.input), "REPORT"):
+            seen.update({a.asset_id: a for a in run.assets})
+        assets = list(seen.values())
+    data = report.build_report(StateManager(scrs), args.project_id, args.use_case, assets)
     if not data["summary"]["approved_threats"]:
         print("No approved threats found for this selection.")
         return 1

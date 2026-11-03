@@ -120,6 +120,9 @@ class RiskAssessment(BaseModel):
     residual_basis: str | None = None
     ai_suggested: bool = False
     suggestion_basis: str | None = None
+    evidence_confidence: float | None = Field(
+        default=None, description="Evidence-match strength of the threat this risk rests on."
+    )
     status: RiskStatus = RiskStatus.PENDING_HUMAN
     approved_by: str | None = None
     rejections_before_approval: int = 0
@@ -127,6 +130,12 @@ class RiskAssessment(BaseModel):
     ratings_version: str
     run_id: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def needs_review(self) -> bool:
+        """AI output stays flagged until a named person has approved it."""
+        return self.status != RiskStatus.APPROVED
 
     @computed_field  # type: ignore[prop-decorator]
     @property

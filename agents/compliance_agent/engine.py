@@ -15,7 +15,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 from agents.risk_agent.schemas import RiskAssessment, RiskLevel, Treatment
 
@@ -116,6 +116,12 @@ class ComplianceRecord(BaseModel):
     rules_version: str
     run_id: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def needs_review(self) -> bool:
+        """Stays flagged until a named expert has confirmed it."""
+        return self.status != ComplianceStatus.CONFIRMED
 
 
 class ComplianceDecision(BaseModel):

@@ -1,0 +1,47 @@
+{
+  "version": "v1",
+  "note": "Which kind of threat can enable which next step. Links only apply within one asset, or between assets that share a data flow or an interface. Links only run forward (disclosure, then identity, then privilege, then change or disruption), so the same two threats never appear in both orders.",
+  "max_steps": 3,
+  "links": [
+    {
+      "from": "InformationDisclosure",
+      "to": "Spoofing",
+      "because": "disclosed data or credentials let the attacker impersonate a legitimate party"
+    },
+    {
+      "from": "InformationDisclosure",
+      "to": "ElevationOfPrivilege",
+      "because": "disclosed secrets can grant rights the attacker should not have"
+    },
+    {
+      "from": "Spoofing",
+      "to": "Tampering",
+      "because": "an accepted false identity lets the attacker send or change data"
+    },
+    {
+      "from": "Spoofing",
+      "to": "ElevationOfPrivilege",
+      "because": "an accepted false identity can inherit the victim's rights"
+    },
+    {
+      "from": "ElevationOfPrivilege",
+      "to": "Tampering",
+      "because": "higher rights allow protected data or code to be changed"
+    },
+    {
+      "from": "ElevationOfPrivilege",
+      "to": "Repudiation",
+      "because": "higher rights allow traces of the attack to be removed"
+    },
+    {
+      "from": "Tampering",
+      "to": "Repudiation",
+      "because": "changed records or logs hide what happened"
+    },
+    {
+      "from": "Tampering",
+      "to": "DenialOfService",
+      "because": "changed data or code can stop the system working"
+    }
+  ]
+}

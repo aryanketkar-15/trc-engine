@@ -328,15 +328,11 @@ def build_paths(
         {"candidate_count": len(candidates)},
     )
 
-    # ── STUB — real implementation Week 2 ────────────────────────────────────
-    raise NotImplementedError(
-        "build_paths() — STUB. "
-        "Full kill-chain ordering + link validation implementation "
-        "pending (feature/threat-agent-retrieval, Week 2). "
-        "Algorithm: group by asset → sort by MITRE_TACTIC_ORDER → "
-        "validate links via chain_links.json → compute chain_confidence "
-        "as geometric mean of retrieval_scores."
-    )
+    # Every candidate stays its own path, so no threat is lost by merging. Multi-step chains are
+    # proposed from the approved threats instead, where an expert reviews them (chains.py).
+    paths = [build_single_step_path(c) for c in candidates]
+    log_step(logger, "INFO", "chain_end", system_input.run_id, {"path_count": len(paths)})
+    return paths
 
 
 def build_single_step_path(
