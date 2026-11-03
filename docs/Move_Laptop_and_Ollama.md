@@ -4,13 +4,9 @@ Everything except the model runs without changes. Only steps 5 and 6 are LLM wor
 
 ## 1. Copy what Git does not carry
 
-Take these from the current laptop on a USB drive or similar. None of them are in the repository:
+Send `docs/TRC_KB_Package.zip` (about 27 MB, the full knowledge base) by USB or a drive link. It is not in the repository.
 
-| Item | Why |
-|---|---|
-| `docs/TRC_KB_Package.zip` | The full knowledge base (2,300 patterns, 5,097 standards pieces) |
-| `.env` | Settings. It holds API keys, so do not put it in chat or commit it |
-| `company_document.pdf` | The company specification |
+Do not send the old `.env`. It holds API keys, and Ollama does not need them.
 
 ## 2. Get the code
 
@@ -50,13 +46,13 @@ docker exec trc-postgres psql -U trc_user -d trc_engine_fullkb -c "CREATE EXTENS
 gunzip -c db/trc_kb_tables.sql.gz | docker exec -i trc-postgres psql -U trc_user -d trc_engine_fullkb -q
 ```
 
-Copy `.env` into the project folder. Check the result:
+In the project folder, copy `.env.example` to `.env`. Set `USE_LIVE_LLM=false` for now, then check the result:
 
 ```bash
 python scripts/scrp_demo.py --auto --quiet --project 3 --use-case UC-01
 ```
 
-With the current `.env` this may use the hosted model; `USE_LIVE_LLM=false` runs it with no model at all.
+This runs with no model at all, so it only tests the code and the database.
 
 ## 5. Install Ollama and a model
 
