@@ -12,6 +12,7 @@ from agents.threat_agent.router import get_state_manager
 from agents.threat_agent.schemas import AssetModel
 from common.auth import read_gate
 from scrp.state_manager import StateManager
+from scrp.team_export import build_export
 from scrp.trace import build_trace
 
 router = APIRouter(prefix="/scrs", tags=["shared-state"], dependencies=[Depends(read_gate)])
@@ -54,6 +55,22 @@ def trace_one(
         if row["tid"] == tid:
             return row
     raise HTTPException(status.HTTP_404_NOT_FOUND, f"{tid} is not an approved threat")
+
+
+@router.get("/export")
+def team_export(
+    state: Annotated[StateManager, Depends(get_state_manager)],
+    use_case_id: Annotated[str, Query(description="The use case to export, e.g. UC-01")],
+    project_id: Annotated[str | None, Query()] = None,
+    session_id: Annotated[str | None, Query(description="Team 1's session id")] = None,
+) -> dict[str, Any]:
+    """Approved threats, risks and resistance levels in Team 1's and Team 3's field names."""
+    bundle = build_export(state, use_case_id, project_id=project_id, session_id=session_id)
+    if not bundle["threats"]["threats"]:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, f"No approved threats for use case {use_case_id}"
+        )
+    return bundle
 
 
 @router.post("/chains")
