@@ -43,6 +43,16 @@ class UseCaseSpec(BaseModel):
             description="Assets that take part in this use case. Empty means all assets.",
         ),
     ]
+    assets: Annotated[
+        list[AssetModel],
+        Field(
+            default_factory=list,
+            description=(
+                "This use case's own asset list, for sources that number assets per use case "
+                "(Team 1's asset tables do). When given, it is used instead of the product's list."
+            ),
+        ),
+    ]
 
 
 class ProjectInput(BaseModel):
@@ -50,7 +60,7 @@ class ProjectInput(BaseModel):
 
     project_id: Annotated[str, Field(min_length=1)]
     product_name: Annotated[str, Field(min_length=1)]
-    assets: Annotated[list[AssetModel], Field(min_length=1)]
+    assets: Annotated[list[AssetModel], Field(default_factory=list)]
     use_cases: Annotated[list[UseCaseSpec], Field(min_length=1)]
     kb_snapshot_version: str = "latest"
 
@@ -63,7 +73,15 @@ class ProjectInput(BaseModel):
         if len(known) != len(self.assets):
             raise ValueError("asset_id values must be unique within a project")
         for u in self.use_cases:
-            missing = [a for a in u.asset_ids if a not in known]
+            own = {a.asset_id for a in u.assets}
+            if len(own) != len(u.assets):
+                raise ValueError(f"{u.use_case_id} lists the same asset_id twice")
+            if not own and not self.assets:
+                raise ValueError(
+                    f"{u.use_case_id} has no assets: give it some, or list product assets"
+                )
+            pool = own or known
+            missing = [a for a in u.asset_ids if a not in pool]
             if missing:
                 raise ValueError(f"{u.use_case_id} refers to unknown assets: {missing}")
         return self
@@ -80,7 +98,11 @@ def expand_project(project: ProjectInput, run_suffix: str | None = None) -> list
     by_id = {a.asset_id: a for a in project.assets}
     inputs: list[ThreatAgentInput] = []
     for u in project.use_cases:
-        assets = [by_id[i] for i in u.asset_ids] if u.asset_ids else list(project.assets)
+        if u.assets:
+            own = {a.asset_id: a for a in u.assets}
+            assets = [own[i] for i in u.asset_ids] if u.asset_ids else list(u.assets)
+        else:
+            assets = [by_id[i] for i in u.asset_ids] if u.asset_ids else list(project.assets)
         inputs.append(
             ThreatAgentInput(
                 run_id=f"{project.project_id}-{u.use_case_id}-{suffix}",
