@@ -15,6 +15,7 @@ the shared state.
 | `docs/Operations_Guide.md` | Running it, users and roles, audit, recovery |
 | `docs/Move_Laptop_and_Ollama.md` | Setting up a new machine and switching to a local model |
 | `docs/Phase2_Demo_Runbook.md` | The demo |
+| `docs/Team1_Integration.md` | Importing Team 1's asset tables; exporting our results for Team 1 and Team 3 |
 
 The threat pipeline:
 

@@ -14,14 +14,14 @@ translating.
 
 ## 2. The agreed IDs
 
-### Use cases (UC-01 is the company document's; UC-02 to UC-04 were written by Team 2 as realistic examples)
+### Use cases (UC-01 to UC-03 use the same IDs as Team 1's worked example; UC-04 is an extra example written by Team 2)
 
 | ID | Title | Assets involved |
 |---|---|---|
 | **UC-01** | Remote unlock by homeowner (company document §2.2) | AS-1, AS-2, AS-4, AS-6 |
 | UC-02 | Issue a time-bound guest e-key | AS-2, AS-4, AS-5, AS-6 |
-| UC-03 | Revoke a lost or stolen e-key | AS-2, AS-4, AS-5 |
-| UC-04 | Over-the-air firmware update | AS-3, AS-4, AS-6 |
+| UC-03 | Over-the-air firmware update | AS-3, AS-4, AS-6 |
+| UC-04 | Revoke a lost or stolen e-key (ours, not in Team 1's example) | AS-2, AS-4, AS-5 |
 
 ### Assets (company document §2.4)
 

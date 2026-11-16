@@ -198,17 +198,6 @@
     },
     {
       "use_case_id": "UC-03",
-      "title": "Revoke a lost or stolen e-key",
-      "description": "The homeowner reports a lost phone or key. The cloud backend marks the e-key as revoked, pushes the revocation to the lock, and the lock rejects further use of that credential. The revocation is logged.",
-      "system_model": "{\"trust_boundaries\": [\"phone-cloud TLS\", \"cloud-lock TLS\"], \"data_flows\": [\"e_key_sync\", \"audit_event_sync\"]}",
-      "asset_ids": [
-        "AS-2",
-        "AS-4",
-        "AS-5"
-      ]
-    },
-    {
-      "use_case_id": "UC-04",
       "title": "Over-the-air firmware update",
       "description": "The cloud backend offers a new signed firmware image. The lock downloads it over the OTA channel, verifies the signature, installs it using key material from the secure element, and reports the result. The update is logged.",
       "system_model": "{\"trust_boundaries\": [\"cloud-lock TLS\", \"phone-lock BLE\", \"device-hardware physical\"], \"data_flows\": [\"ota_update\", \"audit_event_sync\"]}",
@@ -216,6 +205,17 @@
         "AS-3",
         "AS-4",
         "AS-6"
+      ]
+    },
+    {
+      "use_case_id": "UC-04",
+      "title": "Revoke a lost or stolen e-key",
+      "description": "The homeowner reports a lost phone or key. The cloud backend marks the e-key as revoked, pushes the revocation to the lock, and the lock rejects further use of that credential. The revocation is logged.",
+      "system_model": "{\"trust_boundaries\": [\"phone-cloud TLS\", \"cloud-lock TLS\"], \"data_flows\": [\"e_key_sync\", \"audit_event_sync\"]}",
+      "asset_ids": [
+        "AS-2",
+        "AS-4",
+        "AS-5"
       ]
     }
   ]

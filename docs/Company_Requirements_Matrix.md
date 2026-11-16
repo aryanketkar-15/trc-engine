@@ -45,7 +45,8 @@ Status is what the code does and what tests or a real run showed.
 | Item | Why it remains | Who |
 |---|---|---|
 | Ollama setup and comparison | Agreed next step; `docs/Move_Laptop_and_Ollama.md` | Friend's laptop |
-| Team 1 adapter | Needs a real session export | Team 1 and us |
+| Run against Team 1's live system | Import and export are built and tested on their worked example and their Team 3 kit (`docs/Team1_Integration.md`); a live session has not been tried | Team 1 and us |
+| Store our results in Team 1's database | Their tables exist but have no code; who writes it is undecided | Team 1 |
 
 ## Cannot be closed by code
 

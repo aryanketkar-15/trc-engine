@@ -64,7 +64,8 @@ class TestProjectExpansion:
         assert {i.project_id for i in inputs} == {"CSDL-100"}
         assert len({i.run_id for i in inputs}) == 4
         assert [a.asset_id for a in inputs[0].assets] == ["AS-1", "AS-2", "AS-4", "AS-6"]
-        assert "AS-3" in [a.asset_id for a in inputs[3].assets]
+        assert "AS-3" in [a.asset_id for a in inputs[2].assets]
+        assert "firmware" in inputs[2].use_case.lower() and "evoke" in inputs[3].use_case
 
     def test_single_run_files_still_load(self) -> None:
         assert len(load_inputs(FIXTURE)) == 1

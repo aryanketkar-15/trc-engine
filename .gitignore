@@ -56,3 +56,6 @@ logs/
 secrets/
 *.json.bak
 *.json.lock
+
+# Other teams' repositories, cloned for reference only
+external/
