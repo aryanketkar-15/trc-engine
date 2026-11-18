@@ -20,6 +20,7 @@ from agents.risk_agent.schemas import (
 )
 from agents.threat_agent.schemas import AssetModel, ThreatScenario
 from common.llm_client import LLMClientError, chat_completion
+from common.llm_json import extract_json_text
 from common.pii_redaction import redact_pii
 from config.settings import get_settings
 
@@ -115,11 +116,7 @@ def _user_prompt(
 
 
 def _parse(raw: str, valid: dict[str, list[str]], tid: str) -> RiskInput:
-    text = raw.strip()
-    if text.startswith("```"):
-        text = text.strip("`")
-        text = text[text.find("{") :]
-    data = json.loads(text)
+    data = json.loads(extract_json_text(raw))
     feas = data["feasibility"]
     for key, allowed in valid.items():
         if feas[key] not in allowed:

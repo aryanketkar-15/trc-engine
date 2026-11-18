@@ -70,6 +70,7 @@ if TYPE_CHECKING:
     pass  # common.llm_client types — wire here when replacing _call_llm() stub
 
 from common.llm_client import LLMClientError, chat_completion
+from common.llm_json import extract_json_text
 from common.logging import get_logger, log_step
 from common.pii_redaction import redact_pii_with_count, redact_structure
 from config.settings import get_settings
@@ -420,14 +421,7 @@ def _parse_llm_response(raw: str, path: AttackPath, run_id: str) -> list[dict]: 
         LLMResponseError: On JSON decode failure, wrong top-level type,
                           or missing required keys in any item.
     """
-    clean_raw = raw.strip()
-    if clean_raw.startswith("```"):
-        lines = clean_raw.splitlines()
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].startswith("```"):
-            lines = lines[:-1]
-        clean_raw = "\n".join(lines).strip()
+    clean_raw = extract_json_text(raw)
 
     try:
         data = json.loads(clean_raw, strict=False)
@@ -643,7 +637,7 @@ def generate_scenarios(
             try:
                 raw_response = _call_llm(system_prompt, user_prompt, run_id)
                 items = _parse_llm_response(raw_response, path, run_id)
-            except LLMClientError as exc:
+            except (LLMClientError, LLMResponseError) as exc:
                 log_step(
                     logger,
                     "WARNING",
@@ -674,10 +668,32 @@ def generate_scenarios(
             )
             items = _deterministic_fallback_for_path(path, context)
 
-        for item in items:
-            scenario = _make_scenario(item, path, run_id, seq)
-            scenarios.append(scenario)
-            seq += 1
+        try:
+            path_scenarios = [
+                _make_scenario(item, path, run_id, seq + i) for i, item in enumerate(items)
+            ]
+        except (ValueError, KeyError, TypeError) as exc:
+            # The model answered in valid JSON but with a value the schema rejects (for example a
+            # STRIDE category that does not exist). Local models do this; the path falls back.
+            if not use_live:
+                raise
+            log_step(
+                logger,
+                "WARNING",
+                "llm_fallback_engaged",
+                run_id,
+                {
+                    "path_id": path.path_id,
+                    "error_type": type(exc).__name__,
+                    "reason": f"model output rejected by the schema: {str(exc)[:200]}",
+                },
+            )
+            items = _deterministic_fallback_for_path(path, context)
+            path_scenarios = [
+                _make_scenario(item, path, run_id, seq + i) for i, item in enumerate(items)
+            ]
+        scenarios.extend(path_scenarios)
+        seq += len(path_scenarios)
 
         log_step(
             logger,

@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from agents.compliance_agent.engine import ComplianceRecord
 from common.db import get_db_connection
 from common.llm_client import LLMClientError, chat_completion
+from common.llm_json import extract_json_text
 from common.pii_redaction import redact_pii
 from config.settings import get_settings
 
@@ -112,11 +113,7 @@ def _prompts(
 
 
 def _parse(raw: str, record: ComplianceRecord, chunks: list[dict[str, Any]]) -> tuple[str, list]:
-    text = raw.strip()
-    if text.startswith("```"):
-        text = text.strip("`")
-        text = text[text.find("{") :]
-    data = json.loads(text)
+    data = json.loads(extract_json_text(raw))
     rationale = str(data["rationale"]).strip()[:_MAX_CHARS]
     if not rationale:
         raise ValueError("empty rationale")

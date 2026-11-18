@@ -352,28 +352,51 @@ class TestGenerateScenariosWithMock(unittest.TestCase):
             return self._mock_llm_response([_make_valid_llm_item()])
 
         with patch("agents.threat_agent.generator._call_llm", side_effect=mock_llm):
-            generate_scenarios(
-                [path], context, validation_failure_context=failure_details
-            )
+            generate_scenarios([path], context, validation_failure_context=failure_details)
 
         assert "THIS IS A RETRY" in captured_user_prompt[0]
         assert "EVIDENCE_GENERIC" in captured_user_prompt[0]
 
-    def test_llm_response_error_propagates(self):
-        """Malformed LLM response must raise LLMResponseError, not be silently
-        swallowed."""
+    def test_unparseable_model_answer_falls_back_for_that_path_instead_of_crashing(self):
+        """A local model that answers with prose must not take the whole run down."""
         candidate = _make_kb_candidate()
         path = _make_attack_path(candidate=candidate)
         context = _make_context()
 
-        with (
-            patch(
-                "agents.threat_agent.generator._call_llm",
-                return_value="TOTALLY NOT JSON",
-            ),
-            pytest.raises(LLMResponseError, match="non-JSON response"),
+        with patch(
+            "agents.threat_agent.generator._call_llm",
+            return_value="TOTALLY NOT JSON",
         ):
-            generate_scenarios([path], context)
+            scenarios = generate_scenarios([path], context)
+        assert len(scenarios) == len(path.steps)
+
+    def test_parse_error_itself_is_still_typed(self):
+        from agents.threat_agent.generator import _parse_llm_response
+
+        path = _make_attack_path(candidate=_make_kb_candidate())
+        with pytest.raises(LLMResponseError, match="non-JSON response"):
+            _parse_llm_response("TOTALLY NOT JSON", path, "RUN")
+
+    def test_a_value_the_schema_rejects_falls_back_for_that_path(self):
+        candidate = _make_kb_candidate()
+        path = _make_attack_path(candidate=candidate)
+        bad = {**_make_valid_llm_item(), "stride_category": "Hacking"}
+        with patch("agents.threat_agent.generator._call_llm", return_value=json.dumps([bad])):
+            scenarios = generate_scenarios([path], _make_context())
+        assert scenarios and all(s.stride_category.value != "Hacking" for s in scenarios)
+
+    def test_answer_wrapped_in_thinking_and_prose_is_still_used(self):
+        candidate = _make_kb_candidate()
+        path = _make_attack_path(candidate=candidate)
+        item = _make_valid_llm_item()
+        wrapped = (
+            "<think>let me reason about this</think>\nHere is the JSON:\n```json\n"
+            + json.dumps([item])
+            + "\n```\nDone."
+        )
+        with patch("agents.threat_agent.generator._call_llm", return_value=wrapped):
+            scenarios = generate_scenarios([path], _make_context())
+        assert scenarios[0].attack_vector == item["attack_vector"]
 
 
 # ─── generate_from_candidates tests ──────────────────────────────────────────
@@ -588,7 +611,9 @@ class TestLiveLLMWiringAndFallback(unittest.TestCase):
         assert "[REDACTED_IP]" in user_prompt
 
         # Assert pii_redacted_in_prompt audit event was recorded with count
-        redacted_events = [payload for event, payload in logged_events if event == "pii_redacted_in_prompt"]
+        redacted_events = [
+            payload for event, payload in logged_events if event == "pii_redacted_in_prompt"
+        ]
         assert len(redacted_events) > 0
         assert redacted_events[0]["redaction_count"] >= 4
 
@@ -616,14 +641,19 @@ class TestLiveLLMWiringAndFallback(unittest.TestCase):
         assert "</user_system_model>" in user_prompt, "Missing closing </user_system_model> tag"
 
         # Verify the malicious payload is enclosed strictly inside the delimiter tags
-        user_model_block = user_prompt.split("<user_system_model>")[1].split("</user_system_model>")[0]
+        user_model_block = user_prompt.split("<user_system_model>")[1].split(
+            "</user_system_model>"
+        )[0]
         assert malicious_payload in user_model_block
 
         # (b) Assert structural sections remain outside the delimiter tags and are not corrupted
         after_model_block = user_prompt.split("</user_system_model>")[1]
         assert "ATTACK PATH" in after_model_block
         assert "TASK:" in after_model_block
-        assert '"asset_id": "<the asset_id from TARGET ASSETS this step threatens>"' in after_model_block
+        assert (
+            '"asset_id": "<the asset_id from TARGET ASSETS this step threatens>"'
+            in after_model_block
+        )
         assert malicious_payload not in after_model_block
 
         # Assert system prompt instructs the model regarding <user_system_model> untrusted boundary
