@@ -311,6 +311,20 @@ class TestMapping:
         assert any("AS-9" in n and "not linked to any data flow" in n for n in result.notes)
         assert result.inputs[0].assets[0].dfd_context.trust_zone == "untrusted"
 
+    def test_a_flow_without_a_protocol_is_not_reported_as_unlinked(self) -> None:
+        no_protocol = {
+            **DIAGRAMS,
+            "data_flows": [{**f, "protocol": None} for f in DIAGRAMS["data_flows"]],
+        }
+        data = bundle()
+        data["usecases"]["UC-01"]["diagrams"] = artefact(no_protocol, art_id="DIAG-ART")
+        result = build_inputs(data)
+        asset_notes = [n for n in result.notes if "AS-1 (" in n]
+        assert asset_notes
+        assert all("not linked to any data flow" not in n for n in asset_notes)
+        assert any("linked to flow F5" in n and "no protocol" in n for n in asset_notes)
+        assert result.inputs[0].assets[0].dfd_context.data_flows == ["Unlock cmd"]
+
     def test_missing_system_model_is_noted(self) -> None:
         data = bundle()
         data["usecases"]["UC-01"]["diagrams"] = None

@@ -244,9 +244,15 @@ def asset_to_model(
     security, undecided = _verdicts(asset)
     interfaces = sorted({str(f["protocol"]) for f in flows if f.get("protocol")})
     asset_id = str(asset["id"])
-    if not interfaces:
+    if not flows:
         notes.append(
             f"{asset_id} ({asset.get('name')}): not linked to any data flow, so no interface is known"
+        )
+    elif not interfaces:
+        linked = ", ".join(sorted({str(f.get("id")) for f in flows}))
+        notes.append(
+            f"{asset_id} ({asset.get('name')}): linked to flow {linked}, "
+            "but Team 1 recorded no protocol for it, so no interface is known"
         )
     kb = [
         c["reference_id"]
