@@ -133,6 +133,27 @@ def _boundary_of(diagrams: dict[str, Any], element_id: str) -> str | None:
     return None
 
 
+def _distinct_flows(flows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Drop a flow when an earlier one has the same source, destination, protocol and payload.
+
+    Team 1's modelling output can hold one message twice under two ids (for example a store
+    "queries" and "returns" pair from separate answers). The first one's id and name are kept.
+    """
+    seen: set[tuple[Any, ...]] = set()
+    kept: list[dict[str, Any]] = []
+    for flow in flows:
+        key = (
+            flow.get("source"),
+            flow.get("destination"),
+            flow.get("protocol"),
+            tuple(flow.get("payload_fields") or []),
+        )
+        if key not in seen:
+            seen.add(key)
+            kept.append(flow)
+    return kept
+
+
 def _touching(
     diagrams: dict[str, Any], elements: list[str]
 ) -> tuple[list[dict[str, Any]], list[str]]:
@@ -156,7 +177,7 @@ def _touching(
             zones.append(f"{names.get(start, start)} to {names.get(end, end)}")
         else:
             zones += [names.get(b, b) for b in (start, end) if b]
-    unique_flows = list({f["id"]: f for f in found}.values())
+    unique_flows = _distinct_flows(list({f["id"]: f for f in found}.values()))
     return unique_flows, list(dict.fromkeys(zones))
 
 
@@ -321,7 +342,7 @@ def system_model_text(diagrams: dict[str, Any]) -> str:
         ]
         if needed:
             lines.append(f"{entity['id']} {entity['name']} must protect {', '.join(needed)}.")
-    for flow in diagrams.get("data_flows", []):
+    for flow in _distinct_flows(diagrams.get("data_flows", [])):
         crossing = (
             f" It crosses trust boundary {flow.get('from_boundary')} to {flow.get('to_boundary')}."
             if flow.get("crosses_trust_boundary")

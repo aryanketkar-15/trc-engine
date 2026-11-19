@@ -325,6 +325,32 @@ class TestMapping:
         assert any("linked to flow F5" in n and "no protocol" in n for n in asset_notes)
         assert result.inputs[0].assets[0].dfd_context.data_flows == ["Unlock cmd"]
 
+    def test_duplicate_flows_are_listed_once(self) -> None:
+        lookup = DIAGRAMS["data_flows"][1]
+        same_message = {**lookup, "id": "F6", "name": "Returns"}
+        other_payload = {**lookup, "id": "F7", "name": "Key rotation", "payload_fields": ["newKey"]}
+        diagrams = {
+            **DIAGRAMS,
+            "data_flows": [*DIAGRAMS["data_flows"], same_message, other_payload],
+        }
+        both = {
+            **ASSET_FLOW,
+            "id": "AS-3",
+            "source": {"kind": "flow", "element_id": "F4", "elements": ["F4", "F6"]},
+        }
+        data = bundle()
+        data["usecases"]["UC-01"]["diagrams"] = artefact(diagrams, art_id="DIAG-ART")
+        data["usecases"]["UC-01"]["assets"] = artefact({"assets": [ASSET_STORE, both]})
+        result = build_inputs(data)
+        store, flow = result.inputs[0].assets
+        assert store.dfd_context.data_flows == ["E-key lookup", "Key rotation"]
+        assert flow.dfd_context.data_flows == ["E-key lookup"]
+        text = result.inputs[0].system_model
+        assert text.count("Flow F4 E-key lookup") == 1
+        assert "Flow F6" not in text and "Flow F7 Key rotation" in text
+        detail = next(d for d in result.asset_details if d["asset_id"] == "AS-3")
+        assert detail["source_elements"] == ["F4", "F6"]
+
     def test_missing_system_model_is_noted(self) -> None:
         data = bundle()
         data["usecases"]["UC-01"]["diagrams"] = None
