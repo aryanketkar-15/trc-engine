@@ -51,10 +51,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import uuid
 from typing import TYPE_CHECKING, Any
 
 from agents.threat_agent.exceptions import EmptyAttackPathError
+from agents.threat_agent.grounding import _core, _ref_matches, _words
 from agents.threat_agent.schemas import (
     AttackPath,
     EvidenceChain,
@@ -106,6 +108,60 @@ class LLMResponseError(ValueError):
 
 
 # ─── Prompt construction ──────────────────────────────────────────────────────
+
+
+#: Plain words that the validator's STRIDE check accepts for each class (see
+#: ``STRIDE_VECTOR_VOCABULARY``). They are shown to the model so that the attack text it writes
+#: uses the vocabulary of the class it chose. A unit test keeps this list inside the vocabulary.
+STRIDE_WORDING_GUIDE: dict[str, tuple[str, ...]] = {
+    "Spoofing": ("impersonation", "forged", "fake", "replay", "session hijack"),
+    "Tampering": ("tamper", "modify", "manipulation", "injection", "alter"),
+    "Repudiation": ("audit bypass", "log deletion", "deny", "evidence removal"),
+    "InformationDisclosure": ("eavesdrop", "leak", "disclos", "intercept", "plaintext"),
+    "DenialOfService": ("flood", "resource exhaustion", "crash", "disrupt", "shutdown"),
+    "ElevationOfPrivilege": ("privilege escalation", "bypass", "unauthorized access"),
+}
+
+
+def _exposure_terms(asset_dicts: list[dict[str, Any]], limit: int = 14) -> list[str]:
+    """Words from the asset's own description that the exposure text should reuse."""
+    parts: list[str] = []
+    for a in asset_dicts:
+        parts += [str(a.get(key, "")) for key in ("name", "asset_type", "trust_zone")]
+        parts += [str(i) for i in a.get("interfaces", [])]
+        parts += [str(v) for v in (a.get("device_config") or {}).values()]
+    return sorted(_words(" ".join(parts)))[:limit]
+
+
+def _citation_text(step: Any) -> str:  # noqa: ANN401
+    """The exact citation string for a retrieved step: its id and title as in the KB."""
+    return f"{step.pattern_id}: {step.title}"
+
+
+def _canonical_references(item: dict[str, Any], path: AttackPath) -> dict[str, Any]:
+    """Write the cited pattern the way the knowledge base spells it, when it is clearly the same.
+
+    Only the form is repaired. If the model's kb_reference is a step of this path, then
+    kb_reference and matched_pattern become that step's id, and the citation becomes
+    "id: title" when it names that id or that title but not both. A citation that names a different
+    pattern, or a kb_reference that is not on the path, is left alone so that the grounding
+    check still fails it.
+    """
+    ref = str(item.get("kb_reference", ""))
+    step = next((s for s in path.steps if _ref_matches(ref, s.pattern_id)), None)
+    if step is None:
+        return item
+    fixed = dict(item)
+    fixed["kb_reference"] = step.pattern_id
+    if _ref_matches(str(item.get("matched_pattern", "")), step.pattern_id):
+        fixed["matched_pattern"] = step.pattern_id
+    citation = str(item.get("citation", "")).upper()
+    core = _core(step.pattern_id)
+    names_id = re.search(rf"(?<![A-Z0-9]){re.escape(core)}(?![A-Z0-9])", citation) is not None
+    names_title = bool(step.title) and step.title.upper() in citation
+    if (names_id or names_title) and not (names_id and names_title):
+        fixed["citation"] = _citation_text(step)
+    return fixed
 
 
 def _build_system_prompt() -> str:
@@ -190,6 +246,7 @@ def _build_user_prompt(
                 "pattern_id": step.pattern_id,
                 "source": step.source,
                 "title": step.title,
+                "citation_text": _citation_text(step),
                 "description": step.description,
                 "stride_hint": step.stride_hint,
                 "retrieval_score": step.retrieval_score,
@@ -251,6 +308,13 @@ def _build_user_prompt(
         f"Chain reasoning: {reasoning_clean}\n\n"
         f"Steps:\n{steps_json}\n\n"
         "TASK:\n"
+        "Use the step's own pattern_id for kb_reference AND matched_pattern, and copy "
+        "the step's citation_text exactly into citation. Do not mix ids from different "
+        "steps in one object. When a step has a stride_hint, use that STRIDE category "
+        "unless the attack clearly belongs to another one. The attack_vector sentence must "
+        "use plain words of the category you chose; examples per category: "
+        f"{json.dumps(STRIDE_WORDING_GUIDE)}. The exposure must reuse words from the "
+        f"asset's own description, for example: {', '.join(_exposure_terms(sanitized_assets))}.\n"
         "For EACH step in the attack path, produce one JSON object with these "
         "exact keys:\n"
         "  {\n"
@@ -486,6 +550,7 @@ def _make_scenario(
     # tid format: THR-<path_id>-<zero-padded seq>
     # Example:    THR-PATH-A1B2C3D4-001
     tid = f"THR-{path.path_id}-{seq + 1:03d}"
+    item = _canonical_references(item, path)
 
     evidence = EvidenceChain(
         exposure=item["exposure"],

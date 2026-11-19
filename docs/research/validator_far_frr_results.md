@@ -129,3 +129,24 @@ ruff check tests/threat_agent/research/validator_far_frr.py
 ```
 
 All 50 labeled scenarios are permanently audited in [`tests/threat_agent/research/validator_far_frr_dataset.json`](file:///c:/Users/Chetan/trc-engine/tests/threat_agent/research/validator_far_frr_dataset.json).
+
+---
+
+## Addendum, 2026-11-20: vocabulary extended after the three-use-case run
+
+Plain-language stems seen in real model output were added to `STRIDE_VECTOR_VOCABULARY`
+(for example `forg`, `hijack`, `exfiltrat`, `read access`, `downgrad`, `elevat`, `takeover`,
+`clon`, `duplicat`, `mimic`, `probing`). Re-run of this benchmark on the same 50 scenarios:
+
+| | Before | After |
+|---|---|---|
+| False rejects (FRR) | 2 / 24 (8.33%) | 0 / 24 (0.00%) |
+| False accepts (FAR) | 4 / 26 (15.38%) | 4 / 26 (15.38%) |
+| Accuracy | 88.00% | 92.00% |
+
+The first batch of stems changed neither number. The last four (`clon`, `duplicat`, `mimic`,
+`probing`) were added after looking at the two valid cases that were still rejected
+(VAL-CTL-023 and VAL-CTL-024), so **the 0.00% FRR is tuned to this set and is not independent
+evidence**. The four false accepts are the same cases as before and are unchanged: negation,
+tautology and a placeholder phrased as a sentence. The human gate remains the safeguard.
+

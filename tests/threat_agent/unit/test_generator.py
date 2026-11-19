@@ -663,3 +663,64 @@ class TestLiveLLMWiringAndFallback(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ─── first-pass quality: wording guide, exact citations ───────────────────────
+
+
+class TestFirstPassHelpers(unittest.TestCase):
+    def setUp(self):
+        self.path = _make_attack_path()
+
+    def test_wording_guide_stays_inside_the_validator_vocabulary(self):
+        from agents.threat_agent.generator import STRIDE_WORDING_GUIDE
+        from agents.threat_agent.retrieval import STRIDE_VECTOR_VOCABULARY
+
+        for name, words in STRIDE_WORDING_GUIDE.items():
+            allowed = STRIDE_VECTOR_VOCABULARY[STRIDECategory(name)]
+            assert words, name
+            for word in words:
+                # the validator accepts a text that contains any vocabulary fragment
+                assert any(f in word for f in allowed), f"{word!r} is not accepted for {name}"
+
+    def test_prompt_gives_the_exact_citation_and_the_wording_guide(self):
+        prompt = _build_user_prompt(self.path, _make_context(), run_id="r")
+        assert '"citation_text": "CAPEC-94: Adversary in the Middle"' in prompt
+        assert "copy the step's citation_text exactly" in prompt
+        assert "InformationDisclosure" in prompt and "eavesdrop" in prompt
+        assert "reuse words from the asset's own description" in prompt
+
+    def test_wrong_title_with_the_right_id_is_written_as_the_kb_spells_it(self):
+        item = _make_valid_llm_item()
+        item["citation"] = "CAPEC-94: Something Else Entirely"
+        result = _make_scenario(item, self.path, "r", seq=0)
+        assert result.evidence_chain.citation == "CAPEC-94: Adversary in the Middle"
+
+    def test_title_without_an_id_is_written_with_the_id(self):
+        item = _make_valid_llm_item()
+        item["citation"] = "Adversary in the Middle (CAPEC v3.9)"
+        result = _make_scenario(item, self.path, "r", seq=0)
+        assert result.evidence_chain.citation == "CAPEC-94: Adversary in the Middle"
+
+    def test_id_spelled_loosely_becomes_the_kb_id(self):
+        item = _make_valid_llm_item()
+        item["kb_reference"] = "capec 94"
+        item["matched_pattern"] = "94"
+        result = _make_scenario(item, self.path, "r", seq=0)
+        assert result.kb_reference == "CAPEC-94"
+        assert result.evidence_chain.matched_pattern == "CAPEC-94"
+
+    def test_a_citation_naming_another_pattern_is_not_repaired(self):
+        item = _make_valid_llm_item()
+        item["citation"] = "CAPEC-196: Session Credential Falsification"
+        result = _make_scenario(item, self.path, "r", seq=0)
+        assert result.evidence_chain.citation == "CAPEC-196: Session Credential Falsification"
+
+    def test_a_reference_that_is_not_on_the_path_is_not_repaired(self):
+        item = _make_valid_llm_item()
+        item["kb_reference"] = "CAPEC-665"
+        item["matched_pattern"] = "CAPEC-665"
+        item["citation"] = "CAPEC-665: Exploitation of Thunderbolt Protection Flaws"
+        result = _make_scenario(item, self.path, "r", seq=0)
+        assert result.kb_reference == "CAPEC-665"
+        assert "Thunderbolt" in result.evidence_chain.citation

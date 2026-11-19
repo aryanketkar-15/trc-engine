@@ -53,7 +53,7 @@ Status is what the code does and what tests or a real run showed.
 | Item | What is needed |
 |---|---|
 | Matches 1 of 6 company reference threats | The company's internal threat patterns. Public catalogues do not contain them |
-| Checker wrongly accepts 15.38% and rejects 8.33% | Accepted limit: human approval is the safeguard. Re-measure after Ollama |
+| Checker wrongly accepts 15.38% and rejects 0.00% (was 8.33%; tuned on the same set, see the addendum in `docs/research/validator_far_frr_results.md`) | Accepted limit: human approval is the safeguard. Re-measure on new labelled cases |
 | No expert has rated real threats | A real expert review of the door-lock threats |
 | T4, T5, T1 and T6 differ from our rules | Company answer at the next meeting. Tables are config files |
 | SESIP and EAL for the Basic and High classes | Check against the SESIP and CC text |

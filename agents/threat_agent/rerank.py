@@ -23,6 +23,9 @@ from agents.threat_agent.schemas import AssetModel
 from common.domain_tags import tags_for_text
 
 _HARDWARE_ASSET_TAGS = frozenset({"hardware", "firmware", "physical"})
+#: Tags of patterns that only make sense for one kind of product. A pattern with one of them
+#: is ranked down for an asset that carries none of them (a PLC pattern for a door lock).
+_PRODUCT_DOMAIN_TAGS = frozenset({"ics", "automotive"})
 
 
 @dataclass(frozen=True)
@@ -30,10 +33,11 @@ class RerankParams:
     tag_boost: float = 0.0
     hardware_penalty: float = 0.0
     max_overlap: int = 2
+    domain_penalty: float = 0.0
 
     @property
     def is_noop(self) -> bool:
-        return self.tag_boost == 0.0 and self.hardware_penalty == 0.0
+        return self.tag_boost == 0.0 and self.hardware_penalty == 0.0 and self.domain_penalty == 0.0
 
 
 def infer_asset_tags(asset: AssetModel) -> frozenset[str]:
@@ -55,6 +59,8 @@ def rerank_score(
     score = similarity + params.tag_boost * min(len(a & p), params.max_overlap)
     if "hardware" in p and not (a & _HARDWARE_ASSET_TAGS):
         score -= params.hardware_penalty
+    if (p & _PRODUCT_DOMAIN_TAGS) and not (a & _PRODUCT_DOMAIN_TAGS):
+        score -= params.domain_penalty
     return score
 
 

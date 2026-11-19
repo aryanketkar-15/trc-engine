@@ -87,3 +87,17 @@ bigger model adds cost for an unproven gain).
 2. **Company domain patterns** (their internal / hardware attack patterns): descriptions that match real assets are what made the seed KB work.
 3. Re-evaluate cross-encoder / hybrid retrieval only after step 1 gives reliable labels.
 4. Expert review of the held-out seeds; confirm `CAPEC-189` vs `CAPEC-622` for the company's T6.
+
+---
+
+## Addendum, 2026-11-20: ranking down patterns for another product domain
+
+Some patterns in the top ranks have a domain tag that cannot apply to the asset: for example
+`CAPEC-665` (Thunderbolt), `ATT&CK-T1693.001` and `T1695` carry `ics` and ranked for door-lock
+assets. `RETRIEVAL_RERANK_DOMAIN_PENALTY` (default 0.06, 0 = off) subtracts a penalty from a
+pattern tagged `ics` or `automotive` when the asset has neither tag. On the 17-query benchmark
+with the production setting (tag boost 0.02, hardware penalty 0.03): dev, held-out and every
+nDCG value are unchanged for penalties 0 to 0.20; company-split MRR rises from 0.090 to 0.107
+for penalties of 0.06 and above. It never lowered a number, but the benchmark has few queries
+where it can act, so this is "no measured harm" and not proof of a gain.
+

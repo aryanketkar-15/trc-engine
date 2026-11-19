@@ -59,6 +59,14 @@ python scripts/live_agents_check.py
    - Exit code 0 = all three agents used the model. 1 = at least one agent only fell back (the model is reachable but its answers are not usable). 2 = the setup is wrong (it prints why).
    - Bigger run: `python scripts/live_agents_check.py --assets 4 --paths 8`.
 
+5b. Measure how often a threat card is right on the first attempt (no human review, nothing approved):
+
+```bash
+python scripts/measure_first_pass.py --project projects/imported/<project>_project.json
+```
+
+   It reports, per use case, how many scenarios passed every automatic check at the first attempt and which checks failed. A rule-based fallback is never counted as a pass.
+
 6. Run the full chain with the real model:
 
 ```bash

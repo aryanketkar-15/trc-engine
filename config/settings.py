@@ -231,6 +231,16 @@ class Settings(BaseSettings):
             description="Penalty for hardware patterns on non-hardware assets.",
         ),
     ]
+    RETRIEVAL_RERANK_DOMAIN_PENALTY: Annotated[
+        float,
+        Field(
+            default=0.06, ge=0.0, le=1.0,
+            description=(
+                "Penalty for industrial-control or automotive patterns on assets that are "
+                "neither. 0 = off."
+            ),
+        ),
+    ]
     RETRIEVAL_ALL_SOURCES_WHEN_TAGGED: Annotated[
         bool,
         Field(

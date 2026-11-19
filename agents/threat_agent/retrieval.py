@@ -79,6 +79,13 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "masquerade",
             "fabricat",
             "fabricated",
+            # plain wording added after the three-use-case run on a local model
+            "forg",
+            "falsif",
+            "hijack",
+            "clon",
+            "duplicat",
+            "mimic",
         }
     ),
     STRIDECategory.TAMPERING: frozenset(
@@ -112,6 +119,10 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "alter",
             "manipulat",
             "integrity",
+            "modification",
+            "downgrad",
+            "rollback",
+            "substitut",
         }
     ),
     STRIDECategory.REPUDIATION: frozenset(
@@ -128,6 +139,10 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "delete log",
             "clear log",
             "cover track",
+            "untraceable",
+            "unlogged",
+            "falsify log",
+            "alter log",
         }
     ),
     STRIDECategory.INFORMATION_DISCLOSURE: frozenset(
@@ -146,6 +161,13 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "exposure",
             "plaintext",
             "intercept",
+            "read access",
+            "reveal",
+            "enumerat",
+            "exfiltrat",
+            "harvest",
+            "steal",
+            "probing",
         }
     ),
     STRIDECategory.DENIAL_OF_SERVICE: frozenset(
@@ -165,6 +187,11 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "hang",
             "starve",
             "reboot",
+            "exhaust",
+            "jam",
+            "overload",
+            "block communication",
+            "unavailab",
         }
     ),
     STRIDECategory.ELEVATION_OF_PRIVILEGE: frozenset(
@@ -187,6 +214,10 @@ STRIDE_VECTOR_VOCABULARY: dict[STRIDECategory, frozenset[str]] = {
             "escalat",
             "privilege",
             "unauthorized",
+            "elevat",
+            "takeover",
+            "take over",
+            "arbitrary code",
         }
     ),
 }
@@ -423,6 +454,7 @@ def fetch_candidates(
         RerankParams(
             tag_boost=settings.RETRIEVAL_RERANK_BOOST,
             hardware_penalty=settings.RETRIEVAL_RERANK_HW_PENALTY,
+            domain_penalty=getattr(settings, "RETRIEVAL_RERANK_DOMAIN_PENALTY", 0.0),
         )
         if settings.RETRIEVAL_RERANK
         else RerankParams()

@@ -68,6 +68,22 @@ class TestRerankScore:
         assert rerank_score(0.5, {"web"}, {"hardware"}, p) == pytest.approx(0.3)
         assert rerank_score(0.5, {"firmware"}, {"hardware"}, p) == 0.5
 
+    def test_domain_penalty_only_for_assets_outside_the_pattern_domain(self) -> None:
+        p = RerankParams(domain_penalty=0.2)
+        assert not p.is_noop
+        # an industrial-control pattern on a door-lock asset is ranked down ...
+        assert rerank_score(0.5, {"wireless", "firmware"}, {"ics", "firmware"}, p) == pytest.approx(0.3)
+        assert rerank_score(0.5, {"wireless"}, {"automotive"}, p) == pytest.approx(0.3)
+        # ... but not for an asset in the same domain, nor for a pattern with no product domain
+        assert rerank_score(0.5, {"ics"}, {"ics"}, p) == 0.5
+        assert rerank_score(0.5, {"automotive", "wireless"}, {"automotive"}, p) == 0.5
+        assert rerank_score(0.5, {"wireless"}, {"wireless", "crypto"}, p) == 0.5
+
+    def test_the_default_domain_penalty_is_on(self) -> None:
+        from config.settings import Settings
+
+        assert Settings.model_fields["RETRIEVAL_RERANK_DOMAIN_PENALTY"].default == 0.06
+
 
 class _Cur:
     def __init__(self, rows: list[tuple[dict[str, Any], float]]) -> None:
