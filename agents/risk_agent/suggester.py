@@ -115,6 +115,22 @@ def _user_prompt(
     return redact_pii(json.dumps(facts, default=str))
 
 
+_NO_VALUE = {"null", "none", "n/a", "na", ""}
+
+
+def _impact_values(impact: object) -> object:
+    """Impact axes a model marks as "no value" in words ("Null", "N/A") become a real None.
+
+    Only the impact object is read this way; feasibility values stay checked against the list.
+    """
+    if not isinstance(impact, dict):
+        return impact
+    return {
+        axis: None if isinstance(value, str) and value.strip().lower() in _NO_VALUE else value
+        for axis, value in impact.items()
+    }
+
+
 def _parse(raw: str, valid: dict[str, list[str]], tid: str) -> RiskInput:
     data = json.loads(extract_json_text(raw))
     feas = data["feasibility"]
@@ -123,7 +139,7 @@ def _parse(raw: str, valid: dict[str, list[str]], tid: str) -> RiskInput:
             raise ValueError(f"{key}='{feas[key]}' not in {allowed}")
     return RiskInput(
         tid=tid,
-        impact=ImpactRatings.model_validate(data["impact"]),
+        impact=ImpactRatings.model_validate(_impact_values(data["impact"])),
         feasibility_factors=FeasibilityFactors.model_validate(feas),
         ai_suggested=True,
         suggestion_basis=f"LLM suggestion: {str(data.get('reason', '')).strip()[:400]}",

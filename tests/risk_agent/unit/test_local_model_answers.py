@@ -153,3 +153,33 @@ def test_risk_agent_falls_back_when_the_model_does_not_answer_in_json(fake_ollam
     fake_ollama.answer = "{}"
     result = suggester.suggest(_threat(), None, valid)
     assert "rule-based" in (result.suggestion_basis or "")
+
+
+def _answer_with(valid: dict[str, list[str]], impact: dict[str, Any], **feasibility: Any) -> str:
+    feas = {k: v[0] for k, v in valid.items()} | feasibility
+    return json.dumps({"impact": impact, "feasibility": feas, "reason": "Remote and cheap."})
+
+
+@pytest.mark.parametrize("empty", ["Null", "None", " n/a ", "NA", ""])
+def test_words_for_no_value_on_an_unused_impact_axis_are_accepted(fake_ollama, empty: str) -> None:
+    valid = {k: list(v) for k, v in Ratings.load().points.items()}
+    fake_ollama.mode = "plain"
+    fake_ollama.answer = _answer_with(
+        valid,
+        {"safety": empty, "financial": "Moderate", "operational": "Severe", "privacy": "Null"},
+    )
+    result = suggester.suggest(_threat(), None, valid)
+    assert (result.suggestion_basis or "").startswith("LLM suggestion")
+    assert result.impact.safety is None and result.impact.privacy is None
+    assert result.impact.operational == ImpactLevel.SEVERE
+
+
+@pytest.mark.parametrize("bad", ["Null", "None", "Unknown value"])
+def test_a_wrong_feasibility_value_is_still_rejected_and_falls_back(fake_ollama, bad: str) -> None:
+    valid = {k: list(v) for k, v in Ratings.load().points.items()}
+    factor = next(iter(valid))
+    fake_ollama.mode = "plain"
+    fake_ollama.answer = _answer_with(valid, {"operational": "Severe"}, **{factor: bad})
+    result = suggester.suggest(_threat(), None, valid)
+    assert "rule-based" in (result.suggestion_basis or "")
+    assert not (result.suggestion_basis or "").startswith("LLM suggestion")
