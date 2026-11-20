@@ -26,7 +26,9 @@ With the full catalogue (2,300 entries) precision at 5 on our 40 labelled pairs 
 
 ## 5. Compliance mapping
 
-* The rules CR-1 to CR-5 and the resistance classes are Team 2's own version 1. The SESIP and EAL values for the Basic and High classes have not been checked against the SESIP text, which is not in the knowledge base, so SESIP levels carry no citation.
+* The rules CR-1 to CR-5 and the resistance classes are Team 2's own version 1.
+* **Checked on 2026-11-20:** the attacker class to AVA_VAN component mapping, and the EAL column, against the Common Criteria text in our knowledge base (CEM:2022 R1 Table B.3 and CC:2022 R1 Part 5). They agree: EAL2 contains AVA_VAN.2, EAL4 AVA_VAN.3, EAL5 AVA_VAN.4 and EAL6 AVA_VAN.5, so "EAL2+", "EAL4+" and "EAL5+" are valid augmentations (EAL5 and EAL6 would be the natural levels for AVA_VAN.4 and AVA_VAN.5). An EAL contains more than the vulnerability analysis; the table maps that one requirement.
+* **Not verified: the SESIP levels.** The SESIP methodology (GlobalPlatform GP_FST_070, v1.2 of July 2023) could not be read, because its free copy is behind a download button. A secondary GlobalPlatform presentation ties SESIP 3 to Enhanced-Basic, SESIP 4 to Moderate and SESIP 5 to High attack resistance. Our table gives SESIP 2, 3 and 4 for those classes, so the SESIP column may be one level too low for them. Treat it as provisional. The JIL and CC passages are cited on each record; SESIP carries no citation.
 * The written rationale is checked for the levels it names and the passages it cites, not for meaning. In the three-use-case run 9 of 13 records got a rationale; the others kept the rule-based justification.
 
 ## 6. The sample data is demo data

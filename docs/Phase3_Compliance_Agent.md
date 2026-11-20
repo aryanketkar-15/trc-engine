@@ -61,7 +61,7 @@ API under `/api/v1/compliance-agent/`: `rules`, `propose` (body: `assets`, `expl
 
 ## Limits
 
-* The risk-to-class rules and the SESIP and EAL values for the Basic and High classes are the project's own v1. SESIP text is
+* The risk-to-class rules are the project's own v1. The AVA_VAN and EAL columns were checked against the Common Criteria text on 2026-11-20 and agree. The SESIP column is **not verified** (the methodology could not be read; a secondary source suggests it may be one level too low for the upper three classes), see `rules.json` references. SESIP text is
   not in our knowledge base, so SESIP levels have no citation.
 * Criticality only counts required properties; it does not see how valuable an asset is. The expert can override the class.
 * The rationale was tried on the hosted `gpt-4o-mini`, not yet on Ollama. See `docs/Move_Laptop_and_Ollama.md`.

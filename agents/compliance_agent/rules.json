@@ -3,7 +3,9 @@
   "references": [
     "Attacker classes and the assurance component that resists them: Common Criteria CEM:2022 R1, Table B.3 (resisting Basic needs AVA_VAN.2, Enhanced-Basic AVA_VAN.3, Moderate AVA_VAN.4, High AVA_VAN.5)",
     "JIL Application of Attack Potential to Smartcards v3.2.1, Table 14 (rating of vulnerabilities and TOE resistance)",
-    "The JIL attack potential to claim is the level one step above the attacker class to resist"
+    "The JIL attack potential to claim is the level one step above the attacker class to resist",
+    "Verified 2026-11-20 against CC:2022 R1 Part 5 and CEM:2022 R1 Table B.3 (text in our knowledge base): the AVA_VAN component for each attacker class, and that EAL2 contains AVA_VAN.2, EAL4 contains AVA_VAN.3 and EAL5 contains AVA_VAN.4 and EAL6 AVA_VAN.5, so EAL2+, EAL4+ and EAL5+ are valid augmentations (the natural levels would be EAL5 for AVA_VAN.4 and EAL6 for AVA_VAN.5). An EAL contains more than AVA_VAN; this table maps the vulnerability-analysis requirement only.",
+    "NOT verified: the SESIP level for each class. The SESIP methodology (GlobalPlatform GP_FST_070 v1.2) could not be read. A secondary GlobalPlatform presentation ties SESIP 3 to Enhanced-Basic, SESIP 4 to Moderate and SESIP 5 to High attack resistance, one level higher than this table for those classes. Treat the sesip_level column as provisional until checked against the methodology."
   ],
   "citations": [
     {
