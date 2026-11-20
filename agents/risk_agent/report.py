@@ -50,12 +50,69 @@ def _match(item: dict[str, Any], project_id: str | None, use_case_id: str | None
     return not (use_case_id and item.get("use_case_id") not in (None, use_case_id))
 
 
+def _coverage(
+    state: StateManager,
+    threats: dict[str, dict[str, Any]],
+    assets: list[Any],
+    project_id: str | None,
+    use_case_id: str | None,
+) -> list[dict[str, Any]]:
+    """For each asset of the use case: how many approved threats it has and, if none, why.
+
+    The reason comes from the record: scenarios that were rejected or discarded are kept in the
+    revision history, so "all cards were discarded" can be told apart from "nothing was generated".
+    """
+    if not assets:
+        return []
+    dropped: dict[str, set[str]] = {}
+    for entries in state.get_revision_history().values():  # type: ignore[union-attr]
+        for entry in entries:
+            for scenario in entry.get("scenarios", []) or []:
+                if not isinstance(scenario, dict) or not _match(scenario, project_id, use_case_id):
+                    continue
+                tid = str(scenario.get("tid", ""))
+                if tid and tid not in threats:
+                    dropped.setdefault(str(scenario.get("asset_id")), set()).add(tid)
+    approved: dict[str, int] = {}
+    for threat in threats.values():
+        approved[str(threat.get("asset_id"))] = approved.get(str(threat.get("asset_id")), 0) + 1
+    rows = []
+    for asset in assets:
+        asset_id = str(getattr(asset, "asset_id", ""))
+        count = approved.get(asset_id, 0)
+        gone = len(dropped.get(asset_id, ()))
+        if count:
+            note = f"{gone} other scenario(s) rejected or discarded" if gone else ""
+        elif gone:
+            note = (
+                f"no approved threat: {gone} scenario(s) were rejected or discarded by the "
+                "reviewer. Add a scenario of your own, or record why no threat applies"
+            )
+        else:
+            note = (
+                "no approved threat and none was rejected: it was not analysed in this use "
+                "case, or nothing was generated. Check the run"
+            )
+        rows.append(
+            {
+                "asset_id": asset_id,
+                "name": str(getattr(asset, "name", "")),
+                "approved_threats": count,
+                "rejected_or_discarded": gone,
+                "note": note,
+            }
+        )
+    return rows
+
+
 def build_report(
     state: StateManager,
     project_id: str | None = None,
     use_case_id: str | None = None,
     assets: list[Any] | None = None,
+    use_case_assets: list[Any] | None = None,
 ) -> dict[str, Any]:
+    """The TARA report. ``use_case_assets`` (the assets of this use case) adds the coverage list."""
     threats = {
         str(t): v
         for t, v in state.get_threat_scenarios().items()
@@ -111,6 +168,7 @@ def build_report(
     for row in rows:
         levels[row["risk"]] += 1
     reduce = [r for r in rows if r["needs_requirement"]]
+    coverage = _coverage(state, threats, use_case_assets or [], project_id, use_case_id)
     return {
         "project_id": project_id,
         "use_case_id": use_case_id,
@@ -122,7 +180,9 @@ def build_report(
             "to_reduce_requirements": len(reduce),
             "residual_items": len(rows) - len(reduce),
             "with_resistance_level": sum(1 for r in rows if r["attacker_class"]),
+            "assets_without_threat": sum(1 for c in coverage if not c["approved_threats"]),
         },
+        "coverage": coverage,
         "by_asset": by_asset,
         "requirements_needed": [r["tid"] for r in reduce],
         "residual_risk": [
@@ -204,6 +264,13 @@ def to_markdown(report: dict[str, Any], title: str = "TARA report") -> str:
             out.append(
                 f"| {scope} | {t['attacker_class']} | {t['jil_attack_potential']} | "
                 f"{t['assurance_component']} | {t['sesip_level']} | {t['cc_eal']} |"
+            )
+    if report.get("coverage"):
+        out += ["", "## Asset coverage", ""]
+        out += ["| Asset | Name | Approved threats | Note |", "|---|---|---|---|"]
+        for c in report["coverage"]:
+            out.append(
+                f"| {c['asset_id']} | {c['name']} | {c['approved_threats']} | {c['note'] or '-'} |"
             )
     out += ["", "## Residual risk (accepted, shared or avoided)", ""]
     for r in report["residual_risk"]:

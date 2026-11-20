@@ -9,6 +9,7 @@ hear it from us first. Numbers come from the result files in `docs/research/` an
 * **These checks do not measure whether the pattern fits the asset.** One reviewer, not a security expert, read all 24 cards of one run. Of the 22 that passed the checks, none fit their cited pattern well, 8 fit loosely and 14 did not fit (for example a hardware "lock bit" pattern cited for a door-lock key). The most common cause is that the model writes "firmware" or "lock" into the attack for assets that are keys, permission records or images.
 * Searching the knowledge base again with the model's attack sentence was better for 5 of 21 comparable cards, the same for 14 and worse for 2, and no similarity floor separated good matches from bad ones. We did not adopt it.
 * **What this means for you:** treat the cited catalogue pattern as a pointer that a reviewer has to confirm, and do not use it as evidence that a threat is right.
+* **What we added:** the prompt now tells the model that the attack must be about the asset itself and not about firmware or a lock unless the asset is that. This was added after the audit and has not been re-read by a reviewer yet. The expert review sheet below records a person's verdict on every cited pattern, so that the number of good fits comes from a reviewer.
 
 ## 2. The automatic checker makes mistakes
 
@@ -21,6 +22,7 @@ With the full catalogue (2,300 entries) precision at 5 on our 40 labelled pairs 
 ## 4. Risk ratings
 
 * Impact and attack feasibility are suggested by the model, then computed by fixed rules. No expert has rated real threats.
+* **Impact now starts from Team 1's approved damage rating** (the highest severity and the impact categories of the asset's damage scenarios), shown to the model as facts and used for the rule-based default. It applies to assets imported after this change; it has not yet been measured on the three-use-case run.
 * With the new prompt the feasibility of 13 threats varies (Low, Medium, High) and risk varies (Medium, High). Impact is still nearly uniform (operational impact "Major" on 11 to 12 of 13). Agreement with the six reference risks is 5 of 18 exact matches, no better than before, because the earlier "everything High" matched three of them by chance.
 * Residual risk is the expert's judgement; there is no control-effectiveness model.
 
@@ -31,13 +33,15 @@ With the full catalogue (2,300 entries) precision at 5 on our 40 labelled pairs 
 * **Not verified: the SESIP levels.** The SESIP methodology (GlobalPlatform GP_FST_070, v1.2 of July 2023) could not be read, because its free copy is behind a download button. A secondary GlobalPlatform presentation ties SESIP 3 to Enhanced-Basic, SESIP 4 to Moderate and SESIP 5 to High attack resistance. Our table gives SESIP 2, 3 and 4 for those classes, so the SESIP column may be one level too low for them. Treat it as provisional. The JIL and CC passages are cited on each record; SESIP carries no citation.
 * The written rationale is checked for the levels it names and the passages it cites, not for meaning. In the three-use-case run 9 of 13 records got a rationale; the others kept the rule-based justification.
 
-## 6. The sample data is demo data
+## 6. The sample data is demo data (and how to replace it with a real review)
 
 Asset ratings and damage scenarios were entered by an AI reviewer following the project's example answers. Risk and compliance decisions were scripted, and Team 1's approvals are recorded as unverified. Named-user approvals work (a viewer and an analyst are refused, and the approver's verified name is recorded even if another name is typed), but they were only tested, not used by a real reviewer.
 
+**Expert review sheet.** `python scripts/review_sheet.py export --use-case UC-01 --input <project file> --out review_UC-01.xlsx` writes a workbook with one row per approved threat (attack, cited pattern with its title and text, impact, feasibility, risk) and drop-down answers for a reviewer: is the threat realistic, does the pattern fit, is the impact and the feasibility about right, and, per asset, is a threat missing. `python scripts/review_sheet.py summarise <filled file>` counts the answers. A file without a reviewer name is not counted as a review. Until a reviewer has filled it, the quality of the threats and ratings is unmeasured by an expert.
+
 ## 7. Coverage
 
-Some assets end with no approved threat because every card for them was discarded (6, 4 and 2 assets in UC-01, UC-02 and UC-03 of the sample run). The export lists the threats that exist; there is not yet a per-asset list that says why an asset has none.
+Some assets end with no approved threat because every card for them was discarded (6, 4 and 2 assets in UC-01, UC-02 and UC-03 of the sample run). The TARA report now has an "Asset coverage" table (run `scripts/tara_report.py --use-case UC-01 --input <project file>`): every asset of the use case with its number of approved threats and, when there is none, whether its cards were rejected or discarded or it was not analysed. The Team 3 export itself does not carry this list; it lists the threats that exist.
 
 ## 8. Operations
 

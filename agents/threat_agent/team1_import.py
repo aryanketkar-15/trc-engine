@@ -199,6 +199,26 @@ def _verdicts(asset: dict[str, Any]) -> tuple[SecurityAttributes, list[str]]:
     return SecurityAttributes(**flags), undecided
 
 
+_SEVERITY_ORDER = ("Negligible", "Moderate", "Major", "Severe")
+_IMPACT_CATEGORIES = ("Safety", "Financial", "Operational", "Privacy")
+
+
+def _damage_rating(asset: dict[str, Any]) -> tuple[str, list[str]]:
+    """The highest stated severity and the impact categories of an asset's damage scenarios."""
+    levels: list[int] = []
+    categories: list[str] = []
+    for item in asset.get("damage_scenarios", []):
+        severity = _text(item.get("severity")).capitalize()
+        if severity in _SEVERITY_ORDER:
+            levels.append(_SEVERITY_ORDER.index(severity))
+        for category in item.get("impact_categories", []) or []:
+            name = _text(category).capitalize()
+            if name in _IMPACT_CATEGORIES and name not in categories:
+                categories.append(name)
+    severity_name = _SEVERITY_ORDER[max(levels)] if levels else ""
+    return severity_name, [c for c in _IMPACT_CATEGORIES if c in categories]
+
+
 def _damage(asset: dict[str, Any]) -> str:
     parts = []
     for item in asset.get("damage_scenarios", []):
@@ -309,6 +329,8 @@ def asset_to_model(
         location=_text(asset.get("location")) or "unspecified",
         security_attributes=security,
         damage_scenario=_damage(asset),
+        damage_severity=_damage_rating(asset)[0],
+        damage_impact_categories=_damage_rating(asset)[1],
         dfd_context=DFDContext(
             interfaces=interfaces,
             trust_zone="; ".join(zones[:3]) if zones else "untrusted",

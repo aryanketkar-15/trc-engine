@@ -351,6 +351,23 @@ class TestMapping:
         detail = next(d for d in result.asset_details if d["asset_id"] == "AS-3")
         assert detail["source_elements"] == ["F4", "F6"]
 
+    def test_the_approved_severity_and_categories_reach_the_asset(self) -> None:
+        rated = {
+            **ASSET_FLOW,
+            "damage_scenarios": [
+                {
+                    "scenario": "Unauthorised entry",
+                    "severity": "Severe",
+                    "impact_categories": ["Privacy", "Financial"],
+                }
+            ],
+        }
+        data = bundle()
+        data["usecases"]["UC-01"]["assets"] = artefact({"assets": [rated, ASSET_STORE]})
+        asset = build_inputs(data).inputs[0].assets[0]
+        assert asset.damage_severity == "Severe"
+        assert asset.damage_impact_categories == ["Financial", "Privacy"]
+
     def test_missing_system_model_is_noted(self) -> None:
         data = bundle()
         data["usecases"]["UC-01"]["diagrams"] = None

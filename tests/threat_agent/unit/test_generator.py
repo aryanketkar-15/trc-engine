@@ -690,6 +690,11 @@ class TestFirstPassHelpers(unittest.TestCase):
         assert "InformationDisclosure" in prompt and "eavesdrop" in prompt
         assert "reuse words from the asset's own description" in prompt
 
+    def test_prompt_asks_for_an_attack_on_the_asset_itself(self):
+        prompt = _build_user_prompt(self.path, _make_context(), run_id="r")
+        assert "attack on THE ASSET ITSELF" in prompt
+        assert "unless the asset is that component" in prompt
+
     def test_wrong_title_with_the_right_id_is_written_as_the_kb_spells_it(self):
         item = _make_valid_llm_item()
         item["citation"] = "CAPEC-94: Something Else Entirely"

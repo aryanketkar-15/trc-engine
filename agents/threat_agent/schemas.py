@@ -953,6 +953,30 @@ class AssetModel(BaseModel):
         ),
     ]
 
+    damage_severity: Annotated[
+        str,
+        Field(
+            default="",
+            description=(
+                "Highest severity (Negligible, Moderate, Major, Severe) that the upstream "
+                "team's approved asset table gives to this asset's damage scenarios. "
+                "Empty when none was given. The Risk Agent uses it as the starting point "
+                "for impact."
+            ),
+        ),
+    ]
+
+    damage_impact_categories: Annotated[
+        list[str],
+        Field(
+            default_factory=list,
+            description=(
+                "Impact categories (Safety, Financial, Operational, Privacy) that the "
+                "approved damage scenarios of this asset name."
+            ),
+        ),
+    ]
+
     # ── DFD Context (sourced from §2.3.1) ───────────────────────────────────
 
     dfd_context: Annotated[

@@ -43,9 +43,26 @@ _STRIDE_PROPERTY = {
 }
 
 
+def _upstream_impact(asset: AssetModel | None) -> ImpactRatings | None:
+    """Impact as the upstream team's approved asset table states it, when it does.
+
+    Each impact category the approved damage scenarios name gets their highest severity; the
+    other axes stay empty. Nothing is invented: without a severity and a category, None.
+    """
+    if asset is None or not asset.damage_severity or not asset.damage_impact_categories:
+        return None
+    try:
+        level = ImpactLevel(asset.damage_severity)
+    except ValueError:
+        return None
+    values = {c.lower(): level for c in asset.damage_impact_categories}
+    return ImpactRatings(**{k: v for k, v in values.items() if k in ImpactRatings.model_fields})
+
+
 def deterministic_suggestion(scenario: ThreatScenario, asset: AssetModel | None) -> RiskInput:
     """Rule-based starting point: the attacked property decides how many axes are hit."""
     prop = _STRIDE_PROPERTY.get(scenario.stride_category.value, "integrity")
+    upstream = _upstream_impact(asset)
     required = bool(asset and getattr(asset.security_attributes, prop))
     # a property the asset actually needs is hurt harder
     hit = ImpactLevel.SEVERE if required else ImpactLevel.MODERATE
@@ -62,16 +79,25 @@ def deterministic_suggestion(scenario: ThreatScenario, asset: AssetModel | None)
         window="moderate",
         equipment="specialized",
     )
+    basis = (
+        f"rule-based default: {scenario.stride_category.value} attacks {prop}"
+        f" ({'required' if required else 'not required'} for this asset); "
+        "feasibility is a neutral starting value, please review"
+    )
+    if upstream is not None:
+        impact = upstream
+        basis = (
+            f"rule-based default: impact taken from the approved asset table "
+            f"({asset.damage_severity if asset else ''}: "
+            f"{', '.join(asset.damage_impact_categories) if asset else ''}); "
+            "feasibility is a neutral starting value, please review"
+        )
     return RiskInput(
         tid=scenario.tid,
         impact=impact,
         feasibility_factors=factors,
         ai_suggested=True,
-        suggestion_basis=(
-            f"rule-based default: {scenario.stride_category.value} attacks {prop}"
-            f" ({'required' if required else 'not required'} for this asset); "
-            "feasibility is a neutral starting value, please review"
-        ),
+        suggestion_basis=basis,
     )
 
 
@@ -184,6 +210,10 @@ def _system_prompt(valid: dict[str, list[str]]) -> str:
         "time), and a very hard value needs several such facts. If a fact is not given, do not "
         "assume the easiest or the hardest value.\n"
         f"{_EXAMPLES}\n"
+        "When the facts include approved_damage_severity and approved_damage_impact_categories, "
+        "they come from the upstream team's approved asset table: use that severity for those "
+        "impact axes, and leave the other axes null unless the attack itself clearly harms "
+        "them. Do not rate an axis above the approved severity.\n"
         "Use only the facts given; do not invent facts about the product. "
         "Your answer is a proposal that a human will review."
     )
@@ -201,6 +231,10 @@ def _user_prompt(
             asset.security_attributes.model_dump() if asset else "unknown"
         ),
         "asset_damage_scenario": getattr(asset, "damage_scenario", None) if asset else None,
+        "approved_damage_severity": (asset.damage_severity or None) if asset else None,
+        "approved_damage_impact_categories": (
+            asset.damage_impact_categories if asset and asset.damage_impact_categories else None
+        ),
         "asset_interfaces": asset.dfd_context.interfaces if asset else "unknown",
         "asset_trust_zone": asset.dfd_context.trust_zone if asset else "unknown",
         "stride": scenario.stride_category.value,

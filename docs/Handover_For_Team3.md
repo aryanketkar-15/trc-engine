@@ -58,7 +58,7 @@ This proves the shape of the data. It does not prove the quality of any threat, 
 ## 5. What you will see in the sample data
 
 * **Demo data.** The sample three-use-case export comes from a run in which the asset ratings were entered by an AI reviewer following the project's example answers, the risk and compliance decisions were scripted, and Team 1's approvals are recorded as unverified. No security expert reviewed it.
-* **Assets with no approved threat.** In that run 6, 4 and 2 assets (UC-01, UC-02, UC-03) have no approved threat, because cards were discarded. Your orphan check will list them. A per-asset coverage list is planned.
+* **Assets with no approved threat.** In that run 6, 4 and 2 assets (UC-01, UC-02, UC-03) have no approved threat, because cards were discarded. Your orphan check will list them. The TARA report has an "Asset coverage" table that says, for each asset, why there is none (`scripts/tara_report.py --use-case UC-01 --input <project file>`).
 * **Impact is nearly uniform** (operational impact "Major" on most threats), so risk is mostly High or Medium.
 
 ## 6. Running it yourself
@@ -78,4 +78,5 @@ The risk and compliance scripts ask for an approver's name and for each decision
 
 * How our results are stored in Team 1's database, and how an approval made in our tool is recorded there, depends on Team 1.
 * A real expert review of the threats and ratings has not been done.
-* Quality improvements follow in a second delivery without changing the format: a check that a cited pattern fits the asset, a list of assets with no threat, and Team 1's damage severity as an input to impact.
+* A real expert review of the threats and ratings: `scripts/review_sheet.py` produces the review workbook and counts the answers (see `docs/Handover_Known_Limits.md`, section 6).
+* The SESIP levels are not verified against the SESIP methodology (see the limits, section 5).

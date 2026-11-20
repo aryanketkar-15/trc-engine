@@ -38,12 +38,17 @@ def main() -> int:
         print(f"No shared state at {scrs}. Run scripts/scrp_demo.py first.")
         return 1
     assets: list[Any] = []
+    use_case_assets: list[Any] = []
     if args.input:
         seen: dict[str, Any] = {}
         for run in load_inputs(Path(args.input), "REPORT"):
             seen.update({a.asset_id: a for a in run.assets})
+            if args.use_case and run.use_case_id == args.use_case:
+                use_case_assets = list(run.assets)
         assets = list(seen.values())
-    data = report.build_report(StateManager(scrs), args.project_id, args.use_case, assets)
+    data = report.build_report(
+        StateManager(scrs), args.project_id, args.use_case, assets, use_case_assets
+    )
     if not data["summary"]["approved_threats"]:
         print("No approved threats found for this selection.")
         return 1
@@ -55,6 +60,9 @@ def main() -> int:
     (out / f"{stem}.csv").write_text(report.to_csv(data), encoding="utf-8")
     (out / f"{stem}.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
     s = data["summary"]
+    if s["assets_without_threat"]:
+        count = s["assets_without_threat"]
+        print(f"{count} asset(s) have no approved threat: see 'Asset coverage' in the report.")
     print(
         f"{s['scored']} of {s['approved_threats']} approved threats scored; "
         f"{s['to_reduce_requirements']} need requirements, {s['residual_items']} residual."
