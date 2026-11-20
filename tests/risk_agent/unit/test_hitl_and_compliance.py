@@ -209,12 +209,12 @@ class TestComplianceMapping:
         mod = rules.table["Moderate"]
         assert (eb["jil_attack_potential"], eb["sesip_level"], eb["cc_eal"]) == (
             "Moderate",
-            "SESIP 2",
+            "SESIP 3",
             "EAL2+",
         )
         assert (mod["jil_attack_potential"], mod["sesip_level"], mod["cc_eal"]) == (
             "High",
-            "SESIP 3",
+            "SESIP 4",
             "EAL4+",
         )
         assert eb["required_resistance"].endswith("Enhanced-Basic attackers")
@@ -224,7 +224,7 @@ class TestComplianceMapping:
         assert (rec.attacker_class, rec.rule_id, rec.sesip_level, rec.cc_eal) == (
             "Moderate",
             "CR-1",
-            "SESIP 3",
+            "SESIP 4",
             "EAL4+",
         )
         assert rec.status.value == "pending_human" and rec.assurance_component == "AVA_VAN.4"
@@ -269,7 +269,7 @@ class TestComplianceMapping:
             ComplianceDecision(approver="X", attacker_class="High", override_reason="critical key"),
         )
         assert (rec.jil_attack_potential, rec.assurance_component) == ("Beyond High", "AVA_VAN.5")
-        assert (rec.sesip_level, rec.cc_eal) == ("SESIP 4", "EAL5+")
+        assert (rec.sesip_level, rec.cc_eal) == ("SESIP 5", "EAL5+")
         assert {c: rules.table[c]["assurance_component"] for c in rules.classes} == {
             "Basic": "AVA_VAN.2",
             "Enhanced-Basic": "AVA_VAN.3",
@@ -285,7 +285,7 @@ class TestComplianceMapping:
         assert low.effective_risk == RiskLevel.MEDIUM
         rec = cengine.propose(low, rules)
         assert (rec.attacker_class, rec.rule_id) == ("Moderate", "CR-2+CR-4")
-        assert rec.sesip_level == "SESIP 3" and "CR-2+CR-4" in rec.justification
+        assert rec.sesip_level == "SESIP 4" and "CR-2+CR-4" in rec.justification
 
     def test_only_reduce_is_mapped_by_default(self, ratings: Ratings) -> None:
         retain = engine.apply_treatment(

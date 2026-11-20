@@ -56,7 +56,7 @@ Status is what the code does and what tests or a real run showed.
 | Checker wrongly accepts 15.38% and rejects 0.00% (was 8.33%; tuned on the same set, see the addendum in `docs/research/validator_far_frr_results.md`) | Accepted limit: human approval is the safeguard. Re-measure on new labelled cases |
 | No expert has rated real threats | A real expert review of the door-lock threats |
 | T4, T5, T1 and T6 differ from our rules | Company answer at the next meeting. Tables are config files |
-| SESIP and EAL for the Basic and High classes | Check against the SESIP and CC text |
+| ~~SESIP and EAL for the Basic and High classes~~ | Done 2026-11-20: EAL and AVA_VAN agree with the CC text; SESIP was one level too low in every class and is corrected in rules v2 (SESIP Methodology v1.2, Table B-2) |
 | Independent security review | "Industry ready" here means the engineering below. No outside party has tested or certified it |
 
 ## Known production limits

@@ -93,7 +93,7 @@
     <text x="34" y="392">2. Threat: an attacker replays a captured BLE unlock command (Spoofing / Tampering, CAPEC-94).</text>
     <text x="34" y="410">3. Impact Severe (operational) with Medium feasibility gives High risk. It ranks first for AS-1.</text>
     <text x="34" y="428">4. Treatment Reduce: add a fresh nonce and a signature check. Residual risk Low (a compromised key remains).</text>
-    <text x="34" y="446">5. Resistance: Moderate attacker class, JIL High, SESIP 3, EAL4+ (AVA_VAN.4).   6. A requirement is written and traced to this threat.</text>
+    <text x="34" y="446">5. Resistance: Moderate attacker class, JIL High, SESIP 4, EAL4+ (AVA_VAN.4).   6. A requirement is written and traced to this threat.</text>
   </g>
 
   <!-- change loop -->

@@ -162,7 +162,7 @@ class TestShapes:
     def test_compliance_mappings(self, state: StateManager) -> None:
         mapping = build_export(state, UC)["compliance"]["mappings"]
         assert [m["threat_id"] for m in mapping] == ["T1"]
-        assert (mapping[0]["sesip_level"], mapping[0]["cc_eal"]) == ("SESIP 3", "EAL4+")
+        assert (mapping[0]["sesip_level"], mapping[0]["cc_eal"]) == ("SESIP 4", "EAL4+")
         assert mapping[0]["assurance_component"] == "AVA_VAN.4"
         assert mapping[0]["confirmed_by"] == "Dr. Gaikwad"
 
@@ -187,7 +187,7 @@ class TestShapes:
                     ref["reference_id"],
                 )
             )
-        assert derived == [("T1", ["AS-1"], "High", "SESIP 3", "CAPEC", "CAPEC-94")]
+        assert derived == [("T1", ["AS-1"], "High", "SESIP 4", "CAPEC", "CAPEC-94")]
         assert {"threat", "risk", "compliance"} <= set(out["versions"])
 
 

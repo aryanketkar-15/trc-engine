@@ -121,7 +121,7 @@ def test_report_groups_by_asset_ranks_and_splits_requirements_from_residual(tmp_
     assert data["not_yet_scored"][0]["tid"] == "THR-D"
     # THR-C: Severe impact, Low feasibility -> Medium risk -> raised to Moderate by rule CR-4
     c = next(r for r in data["by_asset"]["AS-2"] if r["tid"] == "THR-C")
-    assert (c["attacker_class"], c["sesip_level"], c["cc_eal"]) == ("Moderate", "SESIP 3", "EAL4+")
+    assert (c["attacker_class"], c["sesip_level"], c["cc_eal"]) == ("Moderate", "SESIP 4", "EAL4+")
 
 
 def test_report_formats(tmp_path: Path) -> None:

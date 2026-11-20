@@ -79,4 +79,4 @@ The risk and compliance scripts ask for an approver's name and for each decision
 * How our results are stored in Team 1's database, and how an approval made in our tool is recorded there, depends on Team 1.
 * A real expert review of the threats and ratings has not been done.
 * A real expert review of the threats and ratings: `scripts/review_sheet.py` produces the review workbook and counts the answers (see `docs/Handover_Known_Limits.md`, section 6).
-* The SESIP levels are not verified against the SESIP methodology (see the limits, section 5).
+* Compliance rules are version `v2`: the SESIP levels were checked against the SESIP Methodology v1.2 on 2026-11-20 and corrected (they were one level too low). Exports made before that carry `v1` values; re-run the compliance step to refresh them.

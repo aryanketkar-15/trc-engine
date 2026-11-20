@@ -56,10 +56,10 @@ if any, is used.
 
 | Class | JIL attack potential | Assurance component (CEM Table B.3) | SESIP | CC EAL |
 |---|---|---|---|---|
-| Basic | Enhanced-Basic | AVA_VAN.2 | SESIP 1 | EAL2 |
-| Enhanced-Basic | Moderate | AVA_VAN.3 | SESIP 2 | EAL2+ |
-| Moderate | High | AVA_VAN.4 | SESIP 3 | EAL4+ |
-| High | Beyond High | AVA_VAN.5 | SESIP 4 | EAL5+ |
+| Basic | Enhanced-Basic | AVA_VAN.2 | SESIP 2 | EAL2 |
+| Enhanced-Basic | Moderate | AVA_VAN.3 | SESIP 3 | EAL2+ |
+| Moderate | High | AVA_VAN.4 | SESIP 4 | EAL4+ |
+| High | Beyond High | AVA_VAN.5 | SESIP 5 | EAL5+ |
 
 The expert can override the class (reason mandatory), for example a High-risk threat that is reachable only from Bluetooth range.
 

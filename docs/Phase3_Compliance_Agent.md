@@ -9,7 +9,7 @@ workflow in the company document. Steps 7 to 9 (requirements, trace and audit, c
 | Output: required protection level | Per threat, per asset and for the product |
 | Rule base for standards mappings | `agents/compliance_agent/rules.json`; no LLM ever decides a value |
 | LLM only for reasoning | An optional written rationale, checked before it is kept |
-| Citations on every recommendation | Every record cites CEM Table B.3 and JIL Table 14; each rationale lists the text it used |
+| Citations on every recommendation | Every record cites CEM Table B.3, JIL Table 14 and SESIP Table B-2; each rationale lists the text it used |
 | Expert confirms | Confirm, override with a reason, or reject with a reason. All are audited with the person's name |
 | Audit of AI use | Each record keeps the evidence, match score, model and prompt version |
 | Change handling | A mapping goes stale if its risk, feasibility or treatment changes |
@@ -29,10 +29,10 @@ Asset criticality: 3 or 4 required properties (confidentiality, integrity, avail
 
 | Class | JIL attack potential | Assurance component | SESIP | CC EAL |
 |---|---|---|---|---|
-| Basic | Enhanced-Basic | AVA_VAN.2 | SESIP 1 | EAL2 |
-| Enhanced-Basic | Moderate | AVA_VAN.3 | SESIP 2 | EAL2+ |
-| Moderate | High | AVA_VAN.4 | SESIP 3 | EAL4+ |
-| High | Beyond High | AVA_VAN.5 | SESIP 4 | EAL5+ |
+| Basic | Enhanced-Basic | AVA_VAN.2 | SESIP 2 | EAL2 |
+| Enhanced-Basic | Moderate | AVA_VAN.3 | SESIP 3 | EAL2+ |
+| Moderate | High | AVA_VAN.4 | SESIP 4 | EAL4+ |
+| High | Beyond High | AVA_VAN.5 | SESIP 5 | EAL5+ |
 
 The protection target of an asset or of the product is the strongest class among its confirmed records.
 
@@ -61,7 +61,7 @@ API under `/api/v1/compliance-agent/`: `rules`, `propose` (body: `assets`, `expl
 
 ## Limits
 
-* The risk-to-class rules are the project's own v1. The AVA_VAN and EAL columns were checked against the Common Criteria text on 2026-11-20 and agree. The SESIP column is **not verified** (the methodology could not be read; a secondary source suggests it may be one level too low for the upper three classes), see `rules.json` references. SESIP text is
+* The risk-to-class rules are the project's own. The AVA_VAN and EAL columns were checked against the Common Criteria text on 2026-11-20 and agree. The SESIP column was checked the same day against the SESIP Methodology v1.2 (Table B-2, p. 77) and was **one level too low in every class**; rules version `v2` corrects it (Basic = SESIP 2, Enhanced-Basic = SESIP 3, Moderate = SESIP 4, High = SESIP 5). SESIP 4 and 5 are, per the methodology (p. 55), obtained as a complement to an existing SOG-IS/EUCC certificate. SESIP text is
   not in our knowledge base, so SESIP levels have no citation.
 * Criticality only counts required properties; it does not see how valuable an asset is. The expert can override the class.
 * The rationale was tried on the hosted `gpt-4o-mini`, not yet on Ollama. See `docs/Move_Laptop_and_Ollama.md`.

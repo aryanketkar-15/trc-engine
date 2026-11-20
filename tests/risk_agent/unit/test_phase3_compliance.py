@@ -130,6 +130,7 @@ class TestCitations:
         assert {(c["doc"], c["locator"]) for c in rec.citations} == {
             ("CEM:2022 R1", "p. 464.1"),
             ("JIL Application of Attack Potential to Smartcards v3.2.1", "p. 30.2"),
+            ("GlobalPlatform SESIP Methodology v1.2 (GP_FST_070)", "Table B-2, p. 77"),
         }
 
 
@@ -144,7 +145,7 @@ class TestProtectionTargets:
         assert out["per_asset"]["AS-1"]["attacker_class"] == "Moderate"
         assert out["per_asset"]["AS-1"]["driven_by"] == ["THR-B"]
         assert out["per_asset"]["AS-2"]["cc_eal"] == "EAL2+"
-        assert out["product"]["sesip_level"] == "SESIP 3"
+        assert out["product"]["sesip_level"] == "SESIP 4"
 
     def test_no_records_means_no_product_target(self, rules: Rules) -> None:
         assert cengine.protection_targets([], rules) == {"per_asset": {}, "product": None}
@@ -179,7 +180,7 @@ class TestRationaleGuards:
         return monkeypatch
 
     def _record(self, rules: Rules) -> Any:
-        return cengine.propose(_risk(impact=ImpactLevel.SEVERE), rules)  # Moderate, EAL4+, SESIP 3
+        return cengine.propose(_risk(impact=ImpactLevel.SEVERE), rules)  # Moderate, EAL4+, SESIP 4
 
     def test_good_answer_is_kept_with_its_evidence(self, live: Any, rules: Rules) -> None:
         text = "AVA_VAN.4 at EAL4+ resists Moderate attackers, per the rating table."

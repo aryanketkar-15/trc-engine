@@ -1,11 +1,11 @@
 {
-  "rules_version": "v1",
+  "rules_version": "v2",
   "references": [
     "Attacker classes and the assurance component that resists them: Common Criteria CEM:2022 R1, Table B.3 (resisting Basic needs AVA_VAN.2, Enhanced-Basic AVA_VAN.3, Moderate AVA_VAN.4, High AVA_VAN.5)",
     "JIL Application of Attack Potential to Smartcards v3.2.1, Table 14 (rating of vulnerabilities and TOE resistance)",
     "The JIL attack potential to claim is the level one step above the attacker class to resist",
     "Verified 2026-11-20 against CC:2022 R1 Part 5 and CEM:2022 R1 Table B.3 (text in our knowledge base): the AVA_VAN component for each attacker class, and that EAL2 contains AVA_VAN.2, EAL4 contains AVA_VAN.3 and EAL5 contains AVA_VAN.4 and EAL6 AVA_VAN.5, so EAL2+, EAL4+ and EAL5+ are valid augmentations (the natural levels would be EAL5 for AVA_VAN.4 and EAL6 for AVA_VAN.5). An EAL contains more than AVA_VAN; this table maps the vulnerability-analysis requirement only.",
-    "NOT verified: the SESIP level for each class. The SESIP methodology (GlobalPlatform GP_FST_070 v1.2) could not be read. A secondary GlobalPlatform presentation ties SESIP 3 to Enhanced-Basic, SESIP 4 to Moderate and SESIP 5 to High attack resistance, one level higher than this table for those classes. Treat the sesip_level column as provisional until checked against the methodology."
+    "SESIP column checked on 2026-11-20 against GlobalPlatform SESIP Methodology v1.2 (GP_FST_070, July 2023), Tables 4-1 to 4-5 and Table B-2 (p. 77): SESIP2 = AVA_VAN.2 (resists Basic), SESIP3 = AVA_VAN.3 (Enhanced-Basic), SESIP4 = AVA_VAN.4 (Moderate), SESIP5 = AVA_VAN.5 (High). Version v1 of this table was one level too low in every class and was corrected in v2. Note (p. 55): SESIP4 and SESIP5 are obtained as a complement to an existing SOG-IS/EUCC certificate."
   ],
   "citations": [
     {
@@ -19,6 +19,12 @@
       "doc": "JIL Application of Attack Potential to Smartcards v3.2.1",
       "locator": "p. 30.2",
       "supports": "Table 14: rating of vulnerabilities and TOE resistance"
+    },
+    {
+      "standard": "SESIP",
+      "doc": "GlobalPlatform SESIP Methodology v1.2 (GP_FST_070)",
+      "locator": "Table B-2, p. 77",
+      "supports": "SESIP level and the AVA_VAN component that it requires and the attack potential it resists"
     }
   ],
   "asset_criticality": {
@@ -37,28 +43,28 @@
       "required_resistance": "Resistant to Basic attackers",
       "jil_attack_potential": "Enhanced-Basic",
       "assurance_component": "AVA_VAN.2",
-      "sesip_level": "SESIP 1",
+      "sesip_level": "SESIP 2",
       "cc_eal": "EAL2"
     },
     "Enhanced-Basic": {
       "required_resistance": "Resistant to Enhanced-Basic attackers",
       "jil_attack_potential": "Moderate",
       "assurance_component": "AVA_VAN.3",
-      "sesip_level": "SESIP 2",
+      "sesip_level": "SESIP 3",
       "cc_eal": "EAL2+"
     },
     "Moderate": {
       "required_resistance": "Resistant to Moderate attackers",
       "jil_attack_potential": "High",
       "assurance_component": "AVA_VAN.4",
-      "sesip_level": "SESIP 3",
+      "sesip_level": "SESIP 4",
       "cc_eal": "EAL4+"
     },
     "High": {
       "required_resistance": "Resistant to High attackers",
       "jil_attack_potential": "Beyond High",
       "assurance_component": "AVA_VAN.5",
-      "sesip_level": "SESIP 4",
+      "sesip_level": "SESIP 5",
       "cc_eal": "EAL5+"
     }
   },

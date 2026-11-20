@@ -64,7 +64,7 @@ def env(tmp_path: Path) -> tuple[TestClient, Path]:
 def test_rules_endpoint_returns_the_rule_base(env: Any) -> None:
     client, _ = env
     body = client.get("/compliance-agent/rules").json()
-    assert body["rules_version"] == "v1" and "provisional" not in body
+    assert body["rules_version"] == "v2" and "provisional" not in body
     assert body["class_table"]["Moderate"]["cc_eal"] == "EAL4+"
 
 

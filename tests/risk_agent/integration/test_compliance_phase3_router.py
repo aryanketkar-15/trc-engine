@@ -41,7 +41,7 @@ def _asset_json() -> dict[str, Any]:
 def test_propose_works_without_a_body_and_cites_standards(env: Any) -> None:
     client, _ = env
     rec = client.post("/compliance-agent/propose").json()["proposals"][0]
-    assert rec["asset_criticality"] == "Unknown" and len(rec["citations"]) == 2
+    assert rec["asset_criticality"] == "Unknown" and len(rec["citations"]) == 3
     assert rec["ai_rationale"] is None
 
 
@@ -103,4 +103,4 @@ def test_targets_endpoint(env: Any) -> None:
     items = [{"tid": "THR-A", "decision": {"approver": "Dr. A"}}]
     client.post("/compliance-agent/confirm", json={"items": items})
     out = client.get("/compliance-agent/targets").json()
-    assert out["product"]["sesip_level"] == "SESIP 3" and "AS-1" in out["per_asset"]
+    assert out["product"]["sesip_level"] == "SESIP 4" and "AS-1" in out["per_asset"]
