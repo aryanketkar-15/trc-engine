@@ -1,5 +1,8 @@
 # Team 2 (Threat · Risk · Compliance) → Team 3: handoff package
 
+> **Superseded.** Start with `docs/Handover_For_Team3.md` and read `docs/Handover_Known_Limits.md`. This file describes an earlier state (12 to 29 Oct 2026) and is kept for the field-level detail.
+
+
 *From: Team 2, group TY-A9 (VIT Pune, guide Dr. Vidya Gaikwad). For: Team 3 (Requirements, Trace/Audit,
 Consistency). Date: 12 Oct 2026. Please tell us if anything here is unclear or missing.*
 

@@ -1,5 +1,8 @@
 # 04 · Risk and Compliance outputs
 
+> **Superseded.** Start with `docs/Handover_For_Team3.md` and read `docs/Handover_Known_Limits.md`. This file describes an earlier state (12 to 29 Oct 2026) and is kept for the field-level detail.
+
+
 > **Update 29 Oct 2026:** a first version of the Risk Agent is built (tables are placeholders). Field names and the full design are in `docs/Phase2_Risk_Agent_Design.md` in the repository. This file keeps the original proposal; the built `RiskAssessment` adds `rank_in_asset`, `residual_risk`, `risk_basis` and `approved_by`.
 
 Team 2 owns three agents. Only the **Threat Agent** exists. The next two follow the company document

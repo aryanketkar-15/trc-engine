@@ -1,5 +1,8 @@
 # 05 · Honest status, limits, and what we need from Team 3
 
+> **Superseded.** Start with `docs/Handover_For_Team3.md` and read `docs/Handover_Known_Limits.md`. This file describes an earlier state (12 to 29 Oct 2026) and is kept for the field-level detail.
+
+
 *Updated 29 Oct 2026: Risk and resistance mapping added (see file 06).*
 
 ## 1. Status (12 Oct 2026)
